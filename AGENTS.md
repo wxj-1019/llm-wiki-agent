@@ -1,49 +1,151 @@
-# LLM Wiki Agent — Schema & Workflow Instructions
+<!-- From: e:\A_Project\llm-wiki-agent\AGENTS.md -->
+# LLM Wiki Agent — Project Guide for AI Coding Agents
 
-This wiki is maintained entirely by your coding agent. No API key or Python scripts needed — just open this repo in Codex, OpenCode, or any agent that reads this file, and talk to it.
+> **What this is:** This file is the primary configuration read by AI coding agents (Codex, OpenCode, Gemini CLI, Claude Code, etc.). It defines workflows, conventions, and project architecture. If you are an AI agent reading this, follow these instructions to maintain the wiki.
 
-## How to Use
+---
 
-Describe what you want in plain English:
-- *"Ingest this file: raw/papers/my-paper.md"*
-- *"What does the wiki say about transformer models?"*
-- *"Check the wiki for orphan pages and contradictions"*
-- *"Build the knowledge graph"*
+## Project Overview
 
-Or use shorthand triggers:
-- `ingest <file>` → runs the Ingest Workflow
-- `query: <question>` → runs the Query Workflow
-- `health` → runs the Health Workflow (fast, every session)
-- `lint` → runs the Lint Workflow (expensive, periodic)
-- `build graph` → runs the Graph Workflow
+**LLM Wiki Agent** is an agent-driven knowledge management system that turns raw documents into a persistent, interlinked markdown wiki. Unlike traditional RAG (which re-derives knowledge every query), this system **compiles knowledge once at ingest time** and keeps it current through structured markdown pages maintained entirely by AI agents.
+
+Users drop source documents into `raw/` and tell the agent to "ingest" them. The agent reads the document, extracts knowledge, auto-creates entity/concept pages, cross-references everything with `[[wikilinks]]`, flags contradictions, and updates a living overview. Over time, the wiki compounds — every new source makes it richer.
+
+**Key principle:** No API key or Python setup is needed when using an agent that reads this file. The agent performs all operations via its own tools. Standalone Python scripts in `tools/` are available for headless/batch usage.
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| **Language** | Python 3.10–3.13 |
+| **Package Manager** | Poetry (`pyproject.toml`) |
+| **Core Dependencies** | `markitdown[all]` (auto-conversion of 20+ formats), `tqdm` (progress bars) |
+| **LLM Gateway** | `litellm` (~1.83.10) — universal API for Claude, OpenAI, Gemini, etc. |
+| **Graph Analysis** | `networkx` (~3.6.1) — Louvain community detection |
+| **Visualization** | Self-contained HTML with vis.js (CDN-loaded, no server needed) |
+
+**Environment Variables:**
+- `LLM_MODEL` — model identifier passed to litellm (default: `claude-3-5-sonnet-latest`)
+- Provider-specific API keys as required by litellm (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.)
+
+**Security Note:** `litellm` is pinned to `~=1.83.10` in `requirements.txt` because versions `1.82.7–1.82.8` were compromised in a supply chain attack (March 2026). Never downgrade this dependency.
 
 ---
 
 ## Directory Layout
 
 ```
-raw/          # Immutable source documents — never modify these
-wiki/         # Agent owns this layer entirely
-  index.md    # Catalog of all pages — update on every ingest
-  log.md      # Append-only chronological record
-  overview.md # Living synthesis across all sources
-  sources/    # One summary page per source document
-  entities/   # People, companies, projects, products
-  concepts/   # Ideas, frameworks, methods, theories
-  syntheses/  # Saved query answers
-graph/        # Auto-generated graph data
-tools/        # Standalone Python scripts
-  health.py   # Structural checks (deterministic, no LLM calls)
-  lint.py     # Content quality checks (uses LLM for semantic analysis)
-  build_graph.py  # Knowledge graph generation
+llm-wiki-agent/
+├── raw/                    # Immutable source documents — NEVER modify these
+│   └── .gitkeep
+├── wiki/                   # Agent-maintained knowledge layer (you own this)
+│   ├── index.md            # Catalog of all pages — update on every ingest
+│   ├── log.md              # Append-only chronological record
+│   ├── overview.md         # Living synthesis across all sources
+│   ├── sources/            # One summary page per source document
+│   ├── entities/           # People, companies, projects, products
+│   ├── concepts/           # Ideas, frameworks, methods, theories
+│   └── syntheses/          # Saved query answers
+├── graph/                  # Auto-generated graph data
+│   ├── graph.json          # Node/edge data (SHA256-cached)
+│   ├── graph.html          # Interactive vis.js visualization
+│   ├── .cache.json         # Inference cache
+│   ├── .inferred_edges.jsonl  # Checkpoint for resume
+│   └── .refresh_cache.json    # Refresh operation cache
+├── tools/                  # Standalone Python scripts (see Tools Reference below)
+├── docs/                   # Documentation
+│   └── automated-sync.md   # Cron/launchd automation guide
+├── examples/               # Example content
+│   └── cjk-showcase/       # Chinese language processing demo
+├── .claude/commands/       # Claude Code slash command definitions
+├── AGENTS.md               # This file — schema for Codex/OpenCode/generic agents
+├── CLAUDE.md               # Schema for Claude Code
+├── GEMINI.md               # Schema for Gemini CLI
+├── README.md               # Human-facing documentation
+├── pyproject.toml          # Poetry-based project config
+└── requirements.txt        # Additional pinned dependencies (litellm, networkx)
 ```
 
 ---
 
-## Page Format
+## Tools Reference
 
-Every wiki page uses this frontmatter:
+All scripts in `tools/` are standalone and can be run directly. They require `litellm` and optionally `markitdown`/`networkx`.
 
+| Script | Purpose | LLM Calls? | Usage |
+|---|---|---|---|
+| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files via markitdown; supports batch, `--no-convert`, `--validate-only` |
+| `query.py` | Query wiki and synthesize answers | Yes | `python tools/query.py "<question>" [--save [<path>]]` |
+| `lint.py` | Content quality checks | Yes (semantic) | `python tools/lint.py [--save]` — orphans, broken links, contradictions, missing entities, data gaps |
+| `health.py` | Structural integrity checks | **No** | `python tools/health.py [--save] [--json]` — empty stubs, index sync, log coverage |
+| `build_graph.py` | Knowledge graph generation | Yes (inference) | `python tools/build_graph.py [--no-infer] [--open]` — two-pass build with Louvain clustering |
+| `heal.py` | Auto-heal missing entity pages | Yes | `python tools/heal.py` — scans for missing entities and generates pages from context |
+| `refresh.py` | Refresh stale source pages | Yes (via ingest) | `python tools/refresh.py [--force] [--page sources/X]` — hash-based change detection |
+| `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
+| `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
+
+**Design Boundary (health vs lint):**
+- `health.py` = structural integrity, deterministic, **zero LLM calls**, run every session
+- `lint.py` = content quality, semantic analysis (uses LLM), run every 10–15 ingests
+- Always run `health` first — linting an empty file wastes tokens.
+
+---
+
+## Build and Run Commands
+
+This project has **no build step** and **no formal test suite**. It runs entirely locally with plain markdown files.
+
+**Install dependencies (for standalone script usage):**
+```bash
+pip install -r requirements.txt
+# or, for markitdown conversion support:
+pip install markitdown
+```
+
+**Poetry users:**
+```bash
+poetry install
+```
+
+**Run workflows:**
+```bash
+# Ingest a document
+python tools/ingest.py raw/papers/my-paper.md
+
+# Query the wiki
+python tools/query.py "What are the main themes?"
+
+# Health check (fast, deterministic)
+python tools/health.py
+
+# Lint (semantic, uses LLM)
+python tools/lint.py
+
+# Build knowledge graph
+python tools/build_graph.py --open
+
+# Heal missing entities
+python tools/heal.py
+
+# Refresh stale sources
+python tools/refresh.py
+```
+
+---
+
+## Code Style and Conventions
+
+**Python scripts in `tools/`:**
+- Use `#!/usr/bin/env python3` shebang and `from __future__ import annotations`
+- Reproducible constants at module top: `REPO_ROOT = Path(__file__).parent.parent`
+- Helper functions: `read_file(path: Path) -> str`, `write_file(path: Path, content: str)`
+- LLM calls go through `litellm.completion` with `os.getenv("LLM_MODEL", default)`
+- Use type hints where practical
+- Scripts are self-contained; no shared package structure
+
+**Wiki page format (YAML frontmatter required):**
 ```yaml
 ---
 title: "Page Title"
@@ -54,11 +156,69 @@ last_updated: YYYY-MM-DD
 ---
 ```
 
-Use `[[PageName]]` wikilinks to link to other wiki pages.
+**Naming Conventions:**
+- Source slugs / filenames: `kebab-case.md`
+- Entity pages: `TitleCase.md` (e.g., `OpenAI.md`, `SamAltman.md`)
+- Concept pages: `TitleCase.md` (e.g., `ReinforcementLearning.md`, `RAG.md`)
+- Wikilinks: `[[PageName]]`
+
+**Index Format (`wiki/index.md`):**
+```markdown
+# Wiki Index
+
+## Overview
+- [Overview](overview.md) — living synthesis
+
+## Sources
+- [Source Title](sources/slug.md) — one-line summary
+
+## Entities
+- [Entity Name](entities/EntityName.md) — one-line description
+
+## Concepts
+- [Concept Name](concepts/ConceptName.md) — one-line description
+
+## Syntheses
+- [Analysis Title](syntheses/slug.md) — what question it answers
+```
+
+**Log Format (`wiki/log.md`):**
+```markdown
+## [YYYY-MM-DD] <operation> | <title>
+```
+Operations: `ingest`, `query`, `health`, `lint`, `graph`, `report`
 
 ---
 
-## Ingest Workflow
+## Testing Strategy
+
+There is **no automated test suite** (no `tests/` directory, no CI/CD). Quality assurance relies on:
+
+1. **`health.py`** — deterministic structural checks (stub files, index sync, log coverage)
+2. **`lint.py`** — semantic content quality checks (orphans, broken links, contradictions)
+3. **Post-ingest validation** in `ingest.py` — broken wikilink detection, unindexed page detection
+4. **Graph health reports** from `build_graph.py --report` — orphan nodes, god nodes, fragile bridges, phantom hubs
+
+When modifying tools, run the relevant workflow manually to verify behavior:
+```bash
+python tools/health.py
+python tools/ingest.py --validate-only
+```
+
+---
+
+## Security Considerations
+
+- **`litellm` version pinning:** Keep `litellm~=1.83.10` in `requirements.txt`. Do not upgrade to unverified versions due to the March 2026 supply chain compromise.
+- **API keys:** Stored via standard environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.). Never commit keys to the repo.
+- **Raw documents:** The `raw/` directory is treated as immutable. Scripts must not modify source files.
+- **No server / no network services:** The project is entirely file-based. `graph.html` is a static self-contained file.
+
+---
+
+## Workflows
+
+### Ingest Workflow
 
 Triggered by: *"ingest <file>"*
 
@@ -107,7 +267,7 @@ source_file: raw/...
 
 ### Domain-Specific Templates
 
-If the source falls into a specific domain (e.g., personal diary, meeting notes), the agent should use a specialized template instead of the default generic one above:
+If the source falls into a specific domain (e.g., personal diary, meeting notes), use a specialized template:
 
 #### Diary / Journal Template
 ```markdown
@@ -147,9 +307,7 @@ date: YYYY-MM-DD
 ...
 ```
 
----
-
-## Query Workflow
+### Query Workflow
 
 Triggered by: *"query: <question>"*
 
@@ -159,9 +317,7 @@ Steps:
 3. Synthesize an answer with inline citations as `[[PageName]]` wikilinks
 4. Ask the user if they want the answer filed as `wiki/syntheses/<slug>.md`
 
----
-
-## Lint Workflow
+### Lint Workflow
 
 Triggered by: *"lint"*
 
@@ -181,9 +337,7 @@ Graph-aware checks (require `graph.json` from `build graph`):
 
 Output a lint report and ask if the user wants it saved to `wiki/lint-report.md`.
 
----
-
-## Health Workflow
+### Health Workflow
 
 Triggered by: *"health"*
 
@@ -196,23 +350,7 @@ Fast structural integrity checks — **zero LLM calls**, safe to run every sessi
 
 Output a health report. Use `--save` to write to `wiki/health-report.md`.
 
-### Health vs Lint Boundary
-
-| Dimension | `health` | `lint` |
-|---|---|---|
-| **Scope** | Structural integrity | Content quality |
-| **LLM calls** | Zero | Yes (semantic analysis) |
-| **Cost** | Free | Tokens |
-| **Frequency** | Every session, before other work | Every 10-15 ingests |
-| **Checks** | Empty files, index sync, log sync | Orphans, broken links, contradictions, gaps |
-| **Tool** | `tools/health.py` | `tools/lint.py` |
-| **Run order** | First (pre-flight) | After health passes |
-
-> Run `health` first — linting an empty file wastes tokens.
-
----
-
-## Graph Workflow
+### Graph Workflow
 
 Triggered by: *"build graph"*
 
@@ -225,44 +363,7 @@ If Python/deps unavailable, build manually:
 4. Write `graph/graph.json` with `{nodes, edges, built: date}`
 5. Write `graph/graph.html` as a self-contained vis.js visualization
 
----
-
-## Naming Conventions
-
-- Source slugs: `kebab-case` matching source filename
-- Entity pages: `TitleCase.md` (e.g. `OpenAI.md`, `SamAltman.md`)
-- Concept pages: `TitleCase.md` (e.g. `ReinforcementLearning.md`, `RAG.md`)
-
-## Index Format
-
-```markdown
-# Wiki Index
-
-## Overview
-- [Overview](overview.md) — living synthesis
-
-## Sources
-- [Source Title](sources/slug.md) — one-line summary
-
-## Entities
-- [Entity Name](entities/EntityName.md) — one-line description
-
-## Concepts
-- [Concept Name](concepts/ConceptName.md) — one-line description
-
-## Syntheses
-- [Analysis Title](syntheses/slug.md) — what question it answers
-```
-
-## Log Format
-
-`## [YYYY-MM-DD] <operation> | <title>`
-
-Operations: `ingest`, `query`, `health`, `lint`, `graph`, `report`
-
----
-
-## Graph Health Report
+### Graph Health Report
 
 Triggered by: *"graph report"* or `python tools/build_graph.py --report`
 
