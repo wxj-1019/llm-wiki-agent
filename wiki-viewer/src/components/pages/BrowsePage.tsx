@@ -31,10 +31,10 @@ export function BrowsePage() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'connected'>('default');
 
+  const typeParam = searchParams.get('t');
   useEffect(() => {
-    const t = searchParams.get('t') || 'all';
-    setFilterType(t);
-  }, [searchParams]);
+    setFilterType(typeParam || 'all');
+  }, [typeParam]);
   const [sortOpen, setSortOpen] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes || [];
