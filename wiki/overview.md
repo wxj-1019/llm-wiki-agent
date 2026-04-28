@@ -2,16 +2,33 @@
 title: "Overview"
 type: synthesis
 tags: []
-sources: []
-last_updated: ""
+sources: [attention-is-all-you-need, intro-to-llms]
+last_updated: 2026-04-28
 ---
 
 # Overview
 
 *This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.*
 
-No sources ingested yet. Add your first source with:
+## Current Wiki State
 
-```bash
-python tools/ingest.py raw/your-source.md
-```
+The wiki contains **2 sources**, **2 entities**, **2 concepts**, and **1 synthesis** — a total of 7 pages forming a knowledge graph centered on the Transformer architecture and large language models.
+
+### Sources
+- [[Attention Is All You Need]] — the seminal paper introducing the Transformer architecture
+- [[Introduction to Large Language Models]] — a comprehensive overview of LLMs
+
+### Key Themes
+1. **The Transformer Architecture** — The foundational innovation that replaced recurrence with self-attention, enabling parallel training and better handling of long-range dependencies. [[Google]] invented it; [[OpenAI]] scaled it.
+2. **Attention Mechanisms** — The core computation behind Transformers: scaled dot-product attention, multi-head attention, and variants like causal/masked attention.
+3. **Scaling Laws** — Model capability improves predictably with compute, data, and parameters. Emergent abilities appear at certain scale thresholds.
+4. **The LLM Ecosystem** — The rise of decoder-only models ([[GPT]]), bidirectional encoders ([[BERT]]), and the competitive landscape between labs.
+
+### Contradictions & Open Questions
+- Whether emergent abilities in LLMs are a fundamental property or a metric artifact is debated
+- The original work by [[Bahdanau]] introduced attention for RNNs; the Transformer paper demonstrated attention alone is sufficient
+
+### Knowledge Gaps
+- Missing entity pages for key researchers: [[Vaswani]], [[Bahdanau]], [[SamAltman]], and others
+- Missing concept pages for major model architectures: [[GPT]], [[BERT]], [[T5]], [[LLaMA]]
+- No sources yet on: RLHF, multimodal models, open-source LLM ecosystem

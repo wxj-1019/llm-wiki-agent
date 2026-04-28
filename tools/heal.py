@@ -13,6 +13,7 @@ Usage:
 import os
 import sys
 from pathlib import Path
+from datetime import date
 
 try:
     from litellm import completion
@@ -28,49 +29,103 @@ from tools.lint import find_missing_entities, all_wiki_pages
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
 ENTITIES_DIR = WIKI_DIR / "entities"
+INDEX_FILE = WIKI_DIR / "index.md"
+LOG_FILE = WIKI_DIR / "log.md"
+
+
+def read_file(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+LOG_HEADER = (
+    "# Wiki Log\n\n"
+    "> Append-only chronological record of all operations.\n\n"
+    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+    "---\n"
+)
+
 
 def call_llm(prompt: str, max_tokens: int = 1500) -> str:
-    # Use litellm standard environment variables
-    # e.g., GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY
-    model = os.getenv("LLM_MODEL", "claude-3-5-haiku-latest") # default to fast model
-    
-    response = completion(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens
-    )
-    return response.choices[0].message.content
+    model = os.getenv("LLM_MODEL", "claude-3-5-haiku-latest")
+    try:
+        response = completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"  [ERROR] LLM call failed: {e}")
+        raise
+
 
 def search_sources(entity: str, pages: list[Path]) -> list[Path]:
     """Find up to 15 pages where this entity is mentioned natively."""
     sources = []
     for p in pages:
-        if "entities" not in str(p.parent) and "concepts" not in str(p.parent):
+        parent_name = p.parent.name.lower()
+        if parent_name != "entities" and parent_name != "concepts":
             content = p.read_text(encoding="utf-8")
             if entity.lower() in content.lower():
                 sources.append(p)
     return sources[:15]
 
+
+def update_index(entries: list[str]):
+    """Add entity entries to index.md under ## Entities section."""
+    content = read_file(INDEX_FILE)
+    if not content:
+        content = "# Wiki Index\n\n## Overview\n- [Overview](overview.md) — living synthesis\n\n## Sources\n\n## Entities\n\n## Concepts\n\n## Syntheses\n"
+    for entry in entries:
+        if entry.strip() in content:
+            continue
+        section_header = "## Entities"
+        if section_header in content:
+            content = content.replace(section_header + "\n", section_header + "\n" + entry + "\n")
+        else:
+            content += f"\n{section_header}\n{entry}\n"
+    INDEX_FILE.write_text(content, encoding="utf-8")
+
+
+def append_log(entry: str):
+    entry_text = entry.strip()
+    if not LOG_FILE.exists():
+        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+        return
+    existing = read_file(LOG_FILE).strip()
+    if existing.startswith("# Wiki Log"):
+        parts = existing.split("\n---\n", 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+        else:
+            new_content = entry_text + "\n\n" + existing
+    else:
+        new_content = entry_text + "\n\n" + existing
+    LOG_FILE.write_text(new_content, encoding="utf-8")
+
+
 def heal_missing_entities():
     pages = all_wiki_pages()
     missing_entities = find_missing_entities(pages)
-    
+
     if not missing_entities:
         print("Graph is fully connected. No missing entities found!")
         return
 
     ENTITIES_DIR.mkdir(exist_ok=True, parents=True)
     print(f"Found {len(missing_entities)} missing entity nodes. Commencing auto-heal...")
-    
+
+    created = []
     for entity in missing_entities:
         print(f"Healing entity page for: {entity}")
         sources = search_sources(entity, pages)
-        
+
         context = ""
         for s in sources:
             context += f"\n\n### {s.name}\n{s.read_text(encoding='utf-8')[:800]}"
-        
-        prompt = f"""You are filling a data gap in the Personal LLM Wiki. 
+
+        prompt = f"""You are filling a data gap in the Personal LLM Wiki.
 Create an Entity definition page for "{entity}".
 
 Here is how the entity appears in the current sources:
@@ -90,11 +145,29 @@ Write a comprehensive paragraph defining what `{entity}` means in the context of
 """
         try:
             result = call_llm(prompt)
-            out_path = ENTITIES_DIR / f"{entity}.md"
+            # Sanitize entity name to prevent path traversal
+            safe_entity = Path(entity).name
+            if not safe_entity or safe_entity in (".", ".."):
+                print(f" [!] Skipping invalid entity name: {entity!r}")
+                continue
+            out_path = ENTITIES_DIR / f"{safe_entity}.md"
             out_path.write_text(result, encoding="utf-8")
             print(f" -> Saved to {out_path.relative_to(REPO_ROOT)}")
+            created.append(entity)
         except Exception as e:
             print(f" [!] Failed to generate {entity}: {e}")
+
+    # Update index with newly created entities
+    if created:
+        today = date.today().isoformat()
+        entries = [f"- [{e}](entities/{e}.md) — auto-healed entity" for e in created]
+        update_index(entries)
+        print(f"  indexed: {len(entries)} entity page(s)")
+
+        # Append to log
+        names = ", ".join(created)
+        append_log(f"## [{today}] heal | Auto-healed missing entities\n\nCreated entity pages for: {names}.")
+
 
 if __name__ == "__main__":
     heal_missing_entities()

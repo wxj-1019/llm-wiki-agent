@@ -50,11 +50,17 @@ def all_wiki_pages() -> list[Path]:
 
 
 def strip_frontmatter(content: str) -> str:
-    """Remove YAML frontmatter (--- ... ---) from content."""
+    """Remove YAML frontmatter (--- ... ---) from content.
+
+    Handles frontmatter values that contain '---' by matching the
+    first newline-delimited --- boundary after the opening ---.
+    """
     if content.startswith("---"):
-        end = content.find("---", 3)
-        if end != -1:
-            return content[end + 3:].strip()
+        # Match --- at the start of a line after the opening ---
+        match = re.search(r"^---\s*$", content[3:], re.MULTILINE)
+        if match:
+            end_pos = 3 + match.end()
+            return content[end_pos:].strip()
     return content.strip()
 
 
@@ -195,7 +201,7 @@ def run_health() -> dict:
 def format_report(results: dict) -> str:
     """Format health check results as markdown."""
     lines = [
-        f"# Wiki Health Report — {results['date']}",
+        f"# Wiki Health Report - {results['date']}",
         "",
         f"Scanned {results['total_pages']} wiki pages. "
         "Checks are purely structural (no LLM calls).",
@@ -210,10 +216,10 @@ def format_report(results: dict) -> str:
         lines.append("| Page | Total Bytes | Body Bytes | Status |")
         lines.append("|---|---|---|---|")
         for ef in empty:
-            emoji = "🔴" if ef["status"] == "empty" else "🟡"
+            emoji = "[EMPTY]" if ef["status"] == "empty" else "[STUB]"
             lines.append(f"| `{ef['path']}` | {ef['total_bytes']} | {ef['body_bytes']} | {emoji} {ef['status']} |")
     else:
-        lines.append("All pages have content beyond frontmatter. ✅")
+        lines.append("All pages have content beyond frontmatter. [OK]")
     lines.append("")
 
     # ── Index Sync
@@ -237,7 +243,7 @@ def format_report(results: dict) -> str:
         lines.append("")
 
     if not stale and not missing:
-        lines.append("index.md is in sync with disk. ✅")
+        lines.append("index.md is in sync with disk. [OK]")
         lines.append("")
 
     # ── Log Coverage
@@ -250,7 +256,7 @@ def format_report(results: dict) -> str:
         for lm in log_missing:
             lines.append(f"- `{lm['path']}` — {lm['title']}")
     else:
-        lines.append("All source pages have corresponding log entries. ✅")
+        lines.append("All source pages have corresponding log entries. [OK]")
     lines.append("")
 
     return "\n".join(lines)

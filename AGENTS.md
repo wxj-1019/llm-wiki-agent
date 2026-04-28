@@ -85,6 +85,7 @@ All scripts in `tools/` are standalone and can be run directly. They require `li
 | `refresh.py` | Refresh stale source pages | Yes (via ingest) | `python tools/refresh.py [--force] [--page sources/X]` — hash-based change detection |
 | `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
 | `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
+| `api_server.py` | Optional local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
 
 **Design Boundary (health vs lint):**
 - `health.py` = structural integrity, deterministic, **zero LLM calls**, run every session
@@ -212,7 +213,9 @@ python tools/ingest.py --validate-only
 - **`litellm` version pinning:** Keep `litellm~=1.83.10` in `requirements.txt`. Do not upgrade to unverified versions due to the March 2026 supply chain compromise.
 - **API keys:** Stored via standard environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.). Never commit keys to the repo.
 - **Raw documents:** The `raw/` directory is treated as immutable. Scripts must not modify source files.
-- **No server / no network services:** The project is entirely file-based. `graph.html` is a static self-contained file.
+- **Optional local server:** `tools/api_server.py` provides an optional FastAPI server for the React wiki viewer (localhost only, CORS-restricted). The core project remains file-based; the server is not required for any workflow.
+- **Path traversal protection:** All tools sanitize LLM-generated filenames and user-provided paths against directory traversal (e.g., `../../etc/passwd`). Invalid paths are rejected before any file operation.
+- **XSS prevention:** `graph/graph.html` escapes `</script>` sequences when embedding JSON to prevent script injection from wiki content.
 
 ---
 

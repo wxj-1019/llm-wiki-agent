@@ -62,6 +62,18 @@ def read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
+    """Ensure a path stays within base_dir. Raises ValueError if escaped."""
+    target = (base_dir / path_str).resolve()
+    base = base_dir.resolve()
+    # On Windows, both paths need to be resolved for proper comparison
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise ValueError(f"Path traversal blocked: {path_str!r} resolves outside {base}")
+    return target
+
+
 def call_llm(prompt: str, max_tokens: int = 8192) -> str:
     try:
         from litellm import completion
@@ -119,6 +131,9 @@ def update_index(new_entry: str, section: str = "Sources"):
     content = read_file(INDEX_FILE)
     if not content:
         content = "# Wiki Index\n\n## Overview\n- [Overview](overview.md) — living synthesis\n\n## Sources\n\n## Entities\n\n## Concepts\n\n## Syntheses\n"
+    # Deduplication: skip if exact line already present
+    if new_entry.strip() in content:
+        return
     section_header = f"## {section}"
     if section_header in content:
         content = content.replace(section_header + "\n", section_header + "\n" + new_entry + "\n")
@@ -127,9 +142,32 @@ def update_index(new_entry: str, section: str = "Sources"):
     write_file(INDEX_FILE, content)
 
 
+LOG_HEADER = (
+    "# Wiki Log\n\n"
+    "> Append-only chronological record of all operations.\n\n"
+    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+    "---\n"
+)
+
+
 def append_log(entry: str):
-    existing = read_file(LOG_FILE)
-    write_file(LOG_FILE, entry.strip() + "\n\n" + existing)
+    entry_text = entry.strip()
+    if not LOG_FILE.exists():
+        write_file(LOG_FILE, LOG_HEADER + "\n" + entry_text + "\n")
+        return
+    existing = read_file(LOG_FILE).strip()
+    # Keep header at top: find where the header block ends
+    if existing.startswith("# Wiki Log"):
+        # Split after the --- separator (end of header block)
+        parts = existing.split("\n---\n", 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+        else:
+            new_content = entry_text + "\n\n" + existing
+    else:
+        new_content = entry_text + "\n\n" + existing
+    write_file(LOG_FILE, new_content)
 
 
 def extract_wikilinks(content: str) -> list[str]:
@@ -139,9 +177,10 @@ def extract_wikilinks(content: str) -> list[str]:
 
 def all_wiki_pages() -> set[str]:
     """Return set of all wiki page stems (case-insensitive)."""
+    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
     pages = set()
     for p in WIKI_DIR.rglob("*.md"):
-        if p.name not in ("index.md", "log.md", "lint-report.md"):
+        if p.name not in exclude:
             pages.add(p.stem.lower())
     return pages
 
@@ -163,7 +202,7 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
         scan_paths = [WIKI_DIR / p for p in changed_pages if (WIKI_DIR / p).exists()]
     else:
         scan_paths = [p for p in WIKI_DIR.rglob("*.md")
-                      if p.name not in ("index.md", "log.md", "lint-report.md")]
+                      if p.name not in ("index.md", "log.md", "lint-report.md", "health-report.md")]
 
     # Check 1: Broken wikilinks
     broken_links = []
@@ -171,8 +210,8 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
         content = read_file(page_path)
         rel = str(page_path.relative_to(WIKI_DIR))
         for link in extract_wikilinks(content):
-            # Normalize: strip paths, check stem only
-            link_stem = Path(link).stem.lower() if '/' in link else link.lower()
+            # Normalize: strip paths (both / and \), check stem only
+            link_stem = Path(link.replace("\\", "/")).stem.lower()
             if link_stem not in existing_pages:
                 broken_links.append((rel, link))
 
@@ -285,27 +324,42 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
 }}
 """
 
-    print(f"  calling API (model: ...)")
+    print(f"  calling API (model: {os.getenv('LLM_MODEL', 'claude-3-5-sonnet-latest')})")
     raw = call_llm(prompt, max_tokens=8192)
     try:
         data = parse_json_from_response(raw)
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error parsing API response: {e}")
-        print("Raw response saved to /tmp/ingest_debug.txt")
-        Path("/tmp/ingest_debug.txt").write_text(raw)
+        debug_path = Path(tempfile.gettempdir()) / "ingest_debug.txt"
+        debug_path.write_text(raw, encoding="utf-8")
+        print(f"Raw response saved to {debug_path}")
+        sys.exit(1)
+
+    # Validate required keys
+    required_keys = ["slug", "source_page", "index_entry", "log_entry"]
+    missing_keys = [k for k in required_keys if k not in data]
+    if missing_keys:
+        print(f"Error: LLM response missing required keys: {missing_keys}")
         sys.exit(1)
 
     # Write source page
     slug = data["slug"]
-    write_file(WIKI_DIR / "sources" / f"{slug}.md", data["source_page"])
+    # Sanitize slug to prevent path traversal
+    safe_slug = Path(slug).name
+    if not safe_slug or safe_slug == "." or safe_slug == "..":
+        print(f"Error: invalid slug from LLM: {slug!r}")
+        sys.exit(1)
+    write_file(WIKI_DIR / "sources" / f"{safe_slug}.md", data["source_page"])
 
     # Write entity pages
     for page in data.get("entity_pages", []):
-        write_file(WIKI_DIR / page["path"], page["content"])
+        page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
+        write_file(page_path, page["content"])
 
     # Write concept pages
     for page in data.get("concept_pages", []):
-        write_file(WIKI_DIR / page["path"], page["content"])
+        page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
+        write_file(page_path, page["content"])
 
     # Update overview
     if data.get("overview_update"):
@@ -418,6 +472,9 @@ if __name__ == "__main__":
                 print(f"  ⚠️  Skipping unsupported format: {p.name} ({ext})")
         elif p.is_dir():
             for f in p.rglob("*"):
+                # Skip hidden files, .git, and temp files
+                if any(part.startswith(".") for part in f.relative_to(p).parts):
+                    continue
                 if f.is_file() and f.suffix.lower() in ALL_SUPPORTED_EXTENSIONS:
                     paths_to_process.append(f)
         else:

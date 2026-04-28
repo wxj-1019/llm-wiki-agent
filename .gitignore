@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.venv/
 
 # Playwright temp files
 .playwright-mcp/
@@ -26,3 +27,11 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Local settings
+.claude/settings.local.json
+
+# Graph cache files
+graph/.cache.json
+graph/.inferred_edges.jsonl
+graph/.refresh_cache.json

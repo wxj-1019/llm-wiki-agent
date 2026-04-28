@@ -64,13 +64,20 @@ def find_relevant_pages(question: str, index_content: str) -> list[Path]:
     for title, href in md_links:
         title_lower = title.lower()
         # For CJK: check if any 2+ char substring of the title appears in question
-        has_cjk = any('\u4e00' <= ch <= '\u9fff' for ch in title)
+        # Covers CJK Unified Ideographs (U+4E00-U+9FFF) + Extension A (U+3400-U+4DBF)
+        has_cjk = any(
+            '\u3400' <= ch <= '\u4dbf' or '\u4e00' <= ch <= '\u9fff'
+            for ch in title
+        )
         if has_cjk:
             # Sliding window: check if any 2-char CJK bigram from title exists in question
             matched = any(
                 title_lower[j:j+2] in question_lower
                 for j in range(len(title_lower) - 1)
-                if any('\u4e00' <= c <= '\u9fff' for c in title_lower[j:j+2])
+                if any(
+                    '\u3400' <= c <= '\u4dbf' or '\u4e00' <= c <= '\u9fff'
+                    for c in title_lower[j:j+2]
+                )
             )
         else:
             # Latin: original word-based match (lowered threshold to >2)
@@ -96,8 +103,10 @@ def find_relevant_pages(question: str, index_content: str) -> list[Path]:
                         neighbors.add(edge['from'])
             for nid in neighbors:
                 np = WIKI_DIR / f"{nid}.md"
-                if np.exists() and np not in relevant:
-                    relevant.append(np)
+                if np.exists():
+                    np_resolved = np.resolve()
+                    if not any(np_resolved == r.resolve() for r in relevant):
+                        relevant.append(np)
         except (json.JSONDecodeError, KeyError):
             pass
 
@@ -108,9 +117,30 @@ def find_relevant_pages(question: str, index_content: str) -> list[Path]:
     return relevant[:15]  # cap to avoid context overflow
 
 
+LOG_HEADER = (
+    "# Wiki Log\n\n"
+    "> Append-only chronological record of all operations.\n\n"
+    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+    "---\n"
+)
+
+
 def append_log(entry: str):
-    existing = read_file(LOG_FILE)
-    LOG_FILE.write_text(entry.strip() + "\n\n" + existing, encoding="utf-8")
+    entry_text = entry.strip()
+    if not LOG_FILE.exists():
+        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+        return
+    existing = read_file(LOG_FILE).strip()
+    if existing.startswith("# Wiki Log"):
+        parts = existing.split("\n---\n", 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+        else:
+            new_content = entry_text + "\n\n" + existing
+    else:
+        new_content = entry_text + "\n\n" + existing
+    LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
 def query(question: str, save_path: str | None = None):
@@ -180,8 +210,10 @@ Write a well-structured markdown answer with headers, bullets, and [[wikilink]] 
             save_path = f"syntheses/{slug}.md"
 
         full_save_path = WIKI_DIR / save_path
+        # Escape quotes in the question to avoid breaking YAML frontmatter
+        safe_title = question[:80].replace('"', '\\"')
         frontmatter = f"""---
-title: "{question[:80]}"
+title: "{safe_title}"
 type: synthesis
 tags: []
 sources: []

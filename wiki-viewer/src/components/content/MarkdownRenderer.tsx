@@ -18,9 +18,14 @@ function processWikiLinks(children: React.ReactNode): React.ReactNode {
     return parts.map((part, i) => {
       const match = part.match(/^\[\[([^\]]+)\]\]$/);
       if (match) {
+        const rawTarget = match[1];
+        // Handle piped links: [[Target|Display text]] → target=Target, display=Display text
+        const pipeIdx = rawTarget.indexOf('|');
+        const target = pipeIdx >= 0 ? rawTarget.substring(0, pipeIdx) : rawTarget;
+        const display = pipeIdx >= 0 ? rawTarget.substring(pipeIdx + 1) : rawTarget;
         return (
-          <WikiLink key={i} target={match[1]}>
-            {match[1]}
+          <WikiLink key={i} target={target}>
+            {display}
           </WikiLink>
         );
       }
@@ -52,7 +57,7 @@ export function MarkdownRenderer({ content }: Props) {
         li: ({ children }) => <li className="text-[var(--text-primary)]">{processWikiLinks(children)}</li>,
         blockquote: ({ children }) => (
           <blockquote className="border-l-[3px] border-apple-blue pl-5 my-6 py-3 bg-apple-blue/[0.04] rounded-r-xl">
-            {children}
+            {processWikiLinks(children)}
           </blockquote>
         ),
         code: ({ className, children, ...props }) => {
@@ -86,6 +91,8 @@ export function MarkdownRenderer({ content }: Props) {
             {children}
           </a>
         ),
+        strong: ({ children }) => <strong>{processWikiLinks(children)}</strong>,
+        em: ({ children }) => <em>{processWikiLinks(children)}</em>,
         hr: () => <hr className="my-8 border-[var(--border-default)]" />,
       }}
     >

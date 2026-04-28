@@ -24,6 +24,7 @@ interface WikiState {
   addRecentPage: (pageId: string) => void;
   toggleFavorite: (pageId: string) => void;
   isFavorite: (pageId: string) => boolean;
+  setReadingProgress: (pageId: string, progress: number) => void;
 }
 
 function getSystemTheme(): 'light' | 'dark' {
@@ -118,6 +119,14 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   },
 
   isFavorite: (pageId) => get().favorites.includes(pageId),
+
+  setReadingProgress: (pageId, progress) => {
+    set((s) => {
+      const readingProgress = { ...s.readingProgress, [pageId]: progress };
+      return { readingProgress };
+    });
+    persistState(get());
+  },
 }));
 
 function persistState(state: WikiState) {

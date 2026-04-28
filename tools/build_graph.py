@@ -91,16 +91,26 @@ def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 
 
 
 def sha256(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
 def all_wiki_pages() -> list[Path]:
+    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
     return [p for p in WIKI_DIR.rglob("*.md")
-            if p.name not in ("index.md", "log.md", "lint-report.md")]
+            if p.name not in exclude]
 
 
 def extract_wikilinks(content: str) -> list[str]:
     return list(set(re.findall(r'\[\[([^\]]+)\]\]', content)))
+
+
+def strip_frontmatter(content: str) -> str:
+    """Remove YAML frontmatter, handling values that contain '---'."""
+    if content.startswith("---"):
+        match = re.search(r"^---\s*$", content[3:], re.MULTILINE)
+        if match:
+            return content[3 + match.end():].strip()
+    return content.strip()
 
 
 def extract_frontmatter_type(content: str) -> str:
@@ -127,7 +137,7 @@ def load_cache() -> dict:
 
 def save_cache(cache: dict):
     GRAPH_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(json.dumps(cache, indent=2))
+    CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False))
 
 
 def build_nodes(pages: list[Path]) -> list[dict]:
@@ -137,7 +147,7 @@ def build_nodes(pages: list[Path]) -> list[dict]:
         node_type = extract_frontmatter_type(content)
         title_match = re.search(r'^title:\s*"?([^"\n]+)"?', content, re.MULTILINE)
         label = title_match.group(1).strip() if title_match else p.stem
-        body = re.sub(r"^---\n.*?\n---\n?", "", content, flags=re.DOTALL)
+        body = strip_frontmatter(content)
         preview_lines = [line.strip() for line in body.splitlines() if line.strip()]
         preview = " ".join(preview_lines[:3])[:220]
         nodes.append({
@@ -154,27 +164,31 @@ def build_nodes(pages: list[Path]) -> list[dict]:
 
 def build_extracted_edges(pages: list[Path]) -> list[dict]:
     """Pass 1: deterministic wikilink edges."""
-    # Build a map from stem (lower) -> page_id for resolution
-    stem_map = {p.stem.lower(): page_id(p) for p in pages}
+    # Build a map from stem (lower) -> list of page_ids for resolution.
+    # Multiple pages may share a stem (e.g. sources/RAG.md and concepts/RAG.md).
+    stem_map: dict[str, list[str]] = {}
+    for p in pages:
+        stem_map.setdefault(p.stem.lower(), []).append(page_id(p))
     edges = []
     seen = set()
     for p in pages:
         content = read_file(p)
         src = page_id(p)
         for link in extract_wikilinks(content):
-            target = stem_map.get(link.lower())
-            if target and target != src:
-                key = (src, target)
-                if key not in seen:
-                    seen.add(key)
-                    edges.append({
-                        "id": edge_id(src, target, "EXTRACTED"),
-                        "from": src,
-                        "to": target,
-                        "type": "EXTRACTED",
-                        "color": EDGE_COLORS["EXTRACTED"],
-                        "confidence": 1.0,
-                    })
+            candidates = stem_map.get(link.lower(), [])
+            for target in candidates:
+                if target != src:
+                    key = (src, target)
+                    if key not in seen:
+                        seen.add(key)
+                        edges.append({
+                            "id": edge_id(src, target, "EXTRACTED"),
+                            "from": src,
+                            "to": target,
+                            "type": "EXTRACTED",
+                            "color": EDGE_COLORS["EXTRACTED"],
+                            "confidence": 1.0,
+                        })
     return edges
 
 
@@ -365,14 +379,31 @@ Rules:
 
 
 def deduplicate_edges(edges: list[dict]) -> list[dict]:
-    """Merge duplicate and bidirectional edges, keeping highest confidence."""
-    best = {}  # (min(a,b), max(a,b)) -> edge
+    """Merge duplicate edges (same from→to pair) keeping highest confidence.
+
+    Uses (from, to, type) as key to preserve directionality for EXTRACTED edges.
+    For INFERRED/AMBIGUOUS edges, also checks bidirectional equivalents.
+    """
+    best: dict[str, dict] = {}  # "from->to:type" -> best edge
+
     for e in edges:
-        a, b = e["from"], e["to"]
-        key = (min(a, b), max(a, b))
+        from_id = e["from"]
+        to_id = e["to"]
+        etype = e.get("type", "INFERRED")
+
+        # Primary key: exact direction + type
+        key = f"{from_id}->{to_id}:{etype}"
         existing = best.get(key)
         if not existing or e.get("confidence", 0) > existing.get("confidence", 0):
             best[key] = e
+
+        # For non-EXTRACTED edges, also check bidirectional dup
+        if etype != "EXTRACTED":
+            rev_key = f"{to_id}->{from_id}:{etype}"
+            rev_existing = best.get(rev_key)
+            if not rev_existing or e.get("confidence", 0) > rev_existing.get("confidence", 0):
+                best[rev_key] = e
+
     deduped = []
     for edge in best.values():
         rel_type = edge.get("type", "INFERRED")
@@ -624,8 +655,9 @@ COMMUNITY_COLORS = [
 
 def render_html(nodes: list[dict], edges: list[dict]) -> str:
     """Generate self-contained vis.js HTML with interactive filtering."""
-    nodes_json = json.dumps(nodes, indent=2, ensure_ascii=False)
-    edges_json = json.dumps(edges, indent=2, ensure_ascii=False)
+    # Escape </script> sequences in JSON to prevent XSS
+    nodes_json = json.dumps(nodes, indent=2, ensure_ascii=False).replace("</", "<\\/")
+    edges_json = json.dumps(edges, indent=2, ensure_ascii=False).replace("</", "<\\/")
 
     legend_items = "".join(
         f'<span style="background:{color};padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">{t}</span>'
@@ -1180,25 +1212,32 @@ applyFilters();
 </html>"""
 
 
+LOG_HEADER = (
+    "# Wiki Log\n\n"
+    "> Append-only chronological record of all operations.\n\n"
+    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+    "---\n"
+)
+
+
 def append_log(entry: str):
     log_path = WIKI_DIR / "log.md"
     entry_text = entry.strip()
     if not log_path.exists():
-        log_path.write_text(
-            "# Wiki Log\n\n"
-            "> Records important additions, revisions, and clarifications in the project knowledge layer. Maintained in append-only mode for agent and human traceability.\n\n"
-            f"{entry_text}\n",
-            encoding="utf-8",
-        )
+        log_path.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
         return
 
-    existing = read_file(log_path).rstrip()
-    if not existing:
-        existing = (
-            "# Wiki Log\n\n"
-            "> Records important additions, revisions, and clarifications in the project knowledge layer. Maintained in append-only mode for agent and human traceability."
-        )
-    log_path.write_text(existing + "\n\n" + entry_text + "\n", encoding="utf-8")
+    existing = read_file(log_path).strip()
+    if existing.startswith("# Wiki Log"):
+        parts = existing.split("\n---\n", 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+        else:
+            new_content = entry_text + "\n\n" + existing
+    else:
+        new_content = entry_text + "\n\n" + existing
+    log_path.write_text(new_content, encoding="utf-8")
 
 
 def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = False,

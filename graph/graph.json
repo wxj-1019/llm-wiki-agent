@@ -4,95 +4,190 @@
       "id": "overview",
       "label": "Overview",
       "type": "synthesis",
-      "color": "#9C27B0",
+      "color": "#E91E63",
       "path": "wiki\\overview.md",
-      "markdown": "---\ntitle: \"Overview\"\ntype: synthesis\ntags: []\nsources: []\nlast_updated: \"\"\n---\n\n# Overview\n\n*This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.*\n\nNo sources ingested yet. Add your first source with:\n\n```bash\npython tools/ingest.py raw/your-source.md\n```\n",
-      "preview": "# Overview *This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.* No sources ingested yet. Add your first source with:",
-      "group": -1,
-      "value": 1
+      "markdown": "---\ntitle: \"Overview\"\ntype: synthesis\ntags: []\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Overview\n\n*This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.*\n\n## Current Wiki State\n\nThe wiki contains **2 sources**, **2 entities**, **2 concepts**, and **1 synthesis** â€” a total of 7 pages forming a knowledge graph centered on the Transformer architecture and large language models.\n\n### Sources\n- [[Attention Is All You Need]] â€” the seminal paper introducing the Transformer architecture\n- [[Introduction to Large Language Models]] â€” a comprehensive overview of LLMs\n\n### Key Themes\n1. **The Transformer Architecture** â€” The foundational innovation that replaced recurrence with self-attention, enabling parallel training and better handling of long-range dependencies. [[Google]] invented it; [[OpenAI]] scaled it.\n2. **Attention Mechanisms** â€” The core computation behind Transformers: scaled dot-product attention, multi-head attention, and variants like causal/masked attention.\n3. **Scaling Laws** â€” Model capability improves predictably with compute, data, and parameters. Emergent abilities appear at certain scale thresholds.\n4. **The LLM Ecosystem** â€” The rise of decoder-only models ([[GPT]]), bidirectional encoders ([[BERT]]), and the competitive landscape between labs.\n\n### Contradictions & Open Questions\n- Whether emergent abilities in LLMs are a fundamental property or a metric artifact is debated\n- The original work by [[Bahdanau]] introduced attention for RNNs; the Transformer paper demonstrated attention alone is sufficient\n\n### Knowledge Gaps\n- Missing entity pages for key researchers: [[Vaswani]], [[Bahdanau]], [[SamAltman]], and others\n- Missing concept pages for major model architectures: [[GPT]], [[BERT]], [[T5]], [[LLaMA]]\n- No sources yet on: RLHF, multimodal models, open-source LLM ecosystem\n",
+      "preview": "# Overview *This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.* ## Current Wiki State",
+      "group": 0,
+      "value": 6
     },
     {
       "id": "concepts/AttentionMechanism",
       "label": "Attention Mechanism",
       "type": "concept",
-      "color": "#FF9800",
+      "color": "#8BC34A",
       "path": "wiki\\concepts\\AttentionMechanism.md",
-      "markdown": "---\ntitle: \"Attention Mechanism\"\ntype: concept\ntags: [mechanism, nlp, deep-learning]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-28\n---\n\n# Attention Mechanism\n\n**Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output.\n\n## Self-Attention\n\nIn self-attention, each position in the sequence attends to all other positions:\n\n```\nAttention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V\n```\n\nWhere:\n- **Q** (Query): What am I looking for?\n- **K** (Key): What do I contain?\n- **V** (Value): What information do I provide?\n\n## Multi-Head Attention\nMultiple attention heads operate in parallel, allowing the model to jointly attend to information from different representation subspaces.\n\n## Types\n- **Scaled Dot-Product Attention**: Used in the [[Transformer]]\n- **Cross-Attention**: Queries from one sequence attend to keys/values from another\n- **Causal/Masked Attention**: Prevents attending to future positions (used in [[GPT]])\n\n## Connections\n- [[Transformer]] ¡ª architecture built entirely on attention\n- [[GPT]] ¡ª uses causal self-attention\n- [[BERT]] ¡ª uses bidirectional self-attention\n- [[OpenAI]] ¡ª pioneered scaling attention-based models\n",
+      "markdown": "---\ntitle: \"Attention Mechanism\"\ntype: concept\ntags: [mechanism, nlp, deep-learning]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-28\n---\n\n# Attention Mechanism\n\n**Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output.\n\n## Self-Attention\n\nIn self-attention, each position in the sequence attends to all other positions:\n\n```\nAttention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V\n```\n\nWhere:\n- **Q** (Query): What am I looking for?\n- **K** (Key): What do I contain?\n- **V** (Value): What information do I provide?\n\n## Multi-Head Attention\nMultiple attention heads operate in parallel, allowing the model to jointly attend to information from different representation subspaces.\n\n## Types\n- **Scaled Dot-Product Attention**: Used in the [[Transformer]]\n- **Cross-Attention**: Queries from one sequence attend to keys/values from another\n- **Causal/Masked Attention**: Prevents attending to future positions (used in [[GPT]])\n\n## Connections\n- [[Transformer]] â€” architecture built entirely on attention\n- [[GPT]] â€” uses causal self-attention\n- [[BERT]] â€” uses bidirectional self-attention\n- [[OpenAI]] â€” pioneered scaling attention-based models\n",
       "preview": "# Attention Mechanism **Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output. ## Self-Attention",
-      "group": -1,
-      "value": 7
+      "group": 2,
+      "value": 11
     },
     {
       "id": "concepts/Transformer",
       "label": "Transformer",
       "type": "concept",
-      "color": "#FF9800",
+      "color": "#8BC34A",
       "path": "wiki\\concepts\\Transformer.md",
-      "markdown": "---\ntitle: \"Transformer\"\ntype: concept\ntags: [architecture, nlp, deep-learning]\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2024-03-15\n---\n\n# Transformer\n\nThe **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research.\n\n## Architecture\n\n### Encoder\n- Multi-head self-attention\n- Position-wise feed-forward networks\n- Layer normalization and residual connections\n\n### Decoder\n- Masked self-attention (autoregressive)\n- Cross-attention over encoder outputs\n- Position-wise feed-forward networks\n\n## Key Innovation\nThe Transformer replaces recurrence with [[AttentionMechanism|self-attention]], allowing:\n- Parallel computation across sequence positions\n- Direct modeling of long-range dependencies\n- Better gradient flow during training\n\n## Variants\n- **Encoder-only**: [[BERT]], [[RoBERTa]], [[DistilBERT]]\n- **Decoder-only**: [[GPT]] series, [[LLaMA]], [[Claude]]\n- **Encoder-decoder**: [[T5]], [[BART]], [[UL2]]\n\n## Connections\n- [[AttentionMechanism]] ¡ª core operation\n- [[OpenAI]] ¡ª scaled decoder-only Transformers via [[GPT]]\n- [[Google]] ¡ª original inventors\n",
+      "markdown": "---\ntitle: \"Transformer\"\ntype: concept\ntags: [architecture, nlp, deep-learning]\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2024-03-15\n---\n\n# Transformer\n\nThe **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research.\n\n## Architecture\n\n### Encoder\n- Multi-head self-attention\n- Position-wise feed-forward networks\n- Layer normalization and residual connections\n\n### Decoder\n- Masked self-attention (autoregressive)\n- Cross-attention over encoder outputs\n- Position-wise feed-forward networks\n\n## Key Innovation\nThe Transformer replaces recurrence with [[AttentionMechanism|self-attention]], allowing:\n- Parallel computation across sequence positions\n- Direct modeling of long-range dependencies\n- Better gradient flow during training\n\n## Variants\n- **Encoder-only**: [[BERT]], [[RoBERTa]], [[DistilBERT]]\n- **Decoder-only**: [[GPT]] series, [[LLaMA]], [[Claude]]\n- **Encoder-decoder**: [[T5]], [[BART]], [[UL2]]\n\n## Connections\n- [[AttentionMechanism]] â€” core operation\n- [[OpenAI]] â€” scaled decoder-only Transformers via [[GPT]]\n- [[Google]] â€” original inventors\n",
       "preview": "# Transformer The **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research. ## Architecture",
-      "group": -1,
+      "group": 2,
+      "value": 14
+    },
+    {
+      "id": "entities/Bahdanau",
+      "label": "Bahdanau",
+      "type": "entity",
+      "color": "#E91E63",
+      "path": "wiki\\entities\\Bahdanau.md",
+      "markdown": "---\ntitle: \"Bahdanau\"\ntype: entity\ntags: [person, researcher]\nsources: [attention-is-all-you-need]\nlast_updated: 2026-04-28\n---\n\n# Dzmitry Bahdanau\n\n**Dzmitry Bahdanau** is a machine learning researcher known for introducing the attention mechanism for recurrent neural networks (RNNs) in neural machine translation. His 2014 paper proposed \"Bahdanau attention\" (also known as additive attention), which allowed RNN-based encoder-decoder models to focus on relevant parts of the input sequence during translation.\n\nThe subsequent [[Attention Is All You Need]] paper by [[Vaswani]] et al. demonstrated that attention alone is sufficient, dispensing with recurrence entirely.\n\n## Connections\n- [[AttentionMechanism]] â€” pioneered attention for RNNs\n- [[Transformer]] â€” the next evolution beyond RNN-based attention\n- [[Google]] â€” affiliated academic work\n",
+      "preview": "# Dzmitry Bahdanau **Dzmitry Bahdanau** is a machine learning researcher known for introducing the attention mechanism for recurrent neural networks (RNNs) in neural machine translation. His 2014 paper proposed \"Bahdanau",
+      "group": 0,
       "value": 7
     },
     {
       "id": "entities/Google",
       "label": "Google",
       "type": "entity",
-      "color": "#2196F3",
+      "color": "#E91E63",
       "path": "wiki\\entities\\Google.md",
-      "markdown": "---\ntitle: \"Google\"\ntype: entity\ntags: [company, tech, research]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-10\n---\n\n# Google\n\n**Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning.\n\n## AI Research\n- Published the original [[Transformer]] architecture (2017)\n- Developed [[BERT]], a bidirectional encoder representation model\n- Created [[T5]] and [[PaLM]] language models\n\n## Key Teams\n- Google Research\n- DeepMind (acquired 2014)\n- Google Brain (merged into DeepMind)\n\n## Connections\n- [[OpenAI]] ¡ª competitor; many OpenAI researchers formerly at Google\n- [[Transformer]] ¡ª invented at Google Research\n- [[AttentionMechanism]] ¡ª foundational work at Google\n",
+      "markdown": "---\ntitle: \"Google\"\ntype: entity\ntags: [company, tech, research]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-10\n---\n\n# Google\n\n**Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning.\n\n## AI Research\n- Published the original [[Transformer]] architecture (2017)\n- Developed [[BERT]], a bidirectional encoder representation model\n- Created [[T5]] and [[PaLM]] language models\n\n## Key Teams\n- Google Research\n- DeepMind (acquired 2014)\n- Google Brain (merged into DeepMind)\n\n## Connections\n- [[OpenAI]] â€” competitor; many OpenAI researchers formerly at Google\n- [[Transformer]] â€” invented at Google Research\n- [[AttentionMechanism]] â€” foundational work at Google\n",
       "preview": "# Google **Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning. ## AI Research",
-      "group": -1,
+      "group": 0,
+      "value": 12
+    },
+    {
+      "id": "entities/GregBrockman",
+      "label": "Greg Brockman",
+      "type": "entity",
+      "color": "#00BCD4",
+      "path": "wiki\\entities\\GregBrockman.md",
+      "markdown": "---\ntitle: \"Greg Brockman\"\ntype: entity\ntags: [person, engineer]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Greg Brockman\n\n**Greg Brockman** is a co-founder and former CTO of [[OpenAI]]. He was previously the CTO of Stripe before joining [[SamAltman]], [[IlyaSutskever]], and others to found OpenAI in 2015.\n\nAt OpenAI, he played a key role in scaling the engineering organization that built [[GPT]], [[ChatGPT]], and [[GPT4]].\n\n## Connections\n- [[OpenAI]] â€” co-founder and former CTO\n- [[GPT]] â€” key contributor to the GPT series\n- [[SamAltman]] â€” co-founder\n",
+      "preview": "# Greg Brockman **Greg Brockman** is a co-founder and former CTO of [[OpenAI]]. He was previously the CTO of Stripe before joining [[SamAltman]], [[IlyaSutskever]], and others to found OpenAI in 2015. At OpenAI, he playe",
+      "group": 1,
       "value": 6
+    },
+    {
+      "id": "entities/IlyaSutskever",
+      "label": "Ilya Sutskever",
+      "type": "entity",
+      "color": "#00BCD4",
+      "path": "wiki\\entities\\IlyaSutskever.md",
+      "markdown": "---\ntitle: \"Ilya Sutskever\"\ntype: entity\ntags: [person, researcher]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Ilya Sutskever\n\n**Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and the invention of the [[Transformer]] architecture.\n\nAt OpenAI, he led the research direction behind the [[GPT]] series, including [[GPT4]]. He left OpenAI in 2024 to found Safe Superintelligence Inc. (SSI).\n\n## Connections\n- [[OpenAI]] â€” co-founder and former Chief Scientist\n- [[Transformer]] â€” contributed to its invention at Google Brain\n- [[GPT]] â€” research direction under his leadership\n- [[Google]] â€” previous affiliation\n",
+      "preview": "# Ilya Sutskever **Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and th",
+      "group": 1,
+      "value": 7
     },
     {
       "id": "entities/OpenAI",
       "label": "OpenAI",
       "type": "entity",
-      "color": "#2196F3",
+      "color": "#00BCD4",
       "path": "wiki\\entities\\OpenAI.md",
-      "markdown": "---\ntitle: \"OpenAI\"\ntype: entity\ntags: [company, ai, research]\nsources: [intro-to-llms]\nlast_updated: 2024-03-20\n---\n\n# OpenAI\n\n**OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others.\n\n## Key Products\n- [[ChatGPT]] ¡ª conversational AI based on [[GPT]] architecture\n- [[GPT4]] ¡ª large multimodal language model\n- [[DALL-E]] ¡ª text-to-image generation model\n\n## Research Contributions\n- Pioneered the scaling of [[Transformer]]-based models through the [[GPT]] series\n- Demonstrated emergent capabilities in [[LargeLanguageModels]]\n- Developed [[RLHF]] for alignment\n\n## Connections\n- [[Google]] ¡ª competitor in the LLM space\n- [[Transformer]] ¡ª architecture used in their models\n- [[AttentionMechanism]] ¡ª core technique\n\n## Timeline\n- 2015: Founded as non-profit\n- 2018: GPT-1 released\n- 2019: GPT-2 released\n- 2020: GPT-3 released\n- 2022: ChatGPT launched\n- 2023: GPT-4 released\n",
+      "markdown": "---\ntitle: \"OpenAI\"\ntype: entity\ntags: [company, ai, research]\nsources: [intro-to-llms]\nlast_updated: 2024-03-20\n---\n\n# OpenAI\n\n**OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others.\n\n## Key Products\n- [[ChatGPT]] â€” conversational AI based on [[GPT]] architecture\n- [[GPT4]] â€” large multimodal language model\n- [[DALL-E]] â€” text-to-image generation model\n\n## Research Contributions\n- Pioneered the scaling of [[Transformer]]-based models through the [[GPT]] series\n- Demonstrated emergent capabilities in [[LargeLanguageModels]]\n- Developed [[RLHF]] for alignment\n\n## Connections\n- [[Google]] â€” competitor in the LLM space\n- [[Transformer]] â€” architecture used in their models\n- [[AttentionMechanism]] â€” core technique\n\n## Timeline\n- 2015: Founded as non-profit\n- 2018: GPT-1 released\n- 2019: GPT-2 released\n- 2020: GPT-3 released\n- 2022: ChatGPT launched\n- 2023: GPT-4 released\n",
       "preview": "# OpenAI **OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others. ## Key Products",
-      "group": -1,
-      "value": 6
+      "group": 1,
+      "value": 16
+    },
+    {
+      "id": "entities/SamAltman",
+      "label": "Sam Altman",
+      "type": "entity",
+      "color": "#00BCD4",
+      "path": "wiki\\entities\\SamAltman.md",
+      "markdown": "---\ntitle: \"Sam Altman\"\ntype: entity\ntags: [person, entrepreneur]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Sam Altman\n\n**Sam Altman** is the CEO of [[OpenAI]], which he has led since 2019. Under his leadership, OpenAI launched [[ChatGPT]] (2022) and [[GPT4]] (2023), catalyzing the widespread adoption of [[LargeLanguageModels]].\n\nPrior to OpenAI, he was the president of Y Combinator. He co-founded OpenAI alongside [[GregBrockman]], [[IlyaSutskever]], and others in 2015.\n\n## Connections\n- [[OpenAI]] â€” CEO since 2019\n- [[ChatGPT]] â€” launched under his leadership\n- [[GPT]] â€” scaled during his tenure\n",
+      "preview": "# Sam Altman **Sam Altman** is the CEO of [[OpenAI]], which he has led since 2019. Under his leadership, OpenAI launched [[ChatGPT]] (2022) and [[GPT4]] (2023), catalyzing the widespread adoption of [[LargeLanguageModels",
+      "group": 1,
+      "value": 7
+    },
+    {
+      "id": "entities/Vaswani",
+      "label": "Vaswani",
+      "type": "entity",
+      "color": "#E91E63",
+      "path": "wiki\\entities\\Vaswani.md",
+      "markdown": "---\ntitle: \"Vaswani\"\ntype: entity\ntags: [person, researcher]\nsources: [attention-is-all-you-need]\nlast_updated: 2026-04-28\n---\n\n# Ashish Vaswani\n\n**Ashish Vaswani** is the first author of the seminal paper \"[[Attention Is All You Need]]\" (2017), which introduced the [[Transformer]] architecture. At the time of publication, he was a researcher at [[Google]] Research.\n\nThe Transformer architecture has since become the foundation for virtually all modern [[LargeLanguageModels]], including [[GPT]], [[BERT]], [[T5]], and [[LLaMA]].\n\n## Connections\n- [[Transformer]] â€” architecture introduced in his paper\n- [[AttentionMechanism]] â€” core technique\n- [[Google]] â€” research institution at time of publication\n",
+      "preview": "# Ashish Vaswani **Ashish Vaswani** is the first author of the seminal paper \"[[Attention Is All You Need]]\" (2017), which introduced the [[Transformer]] architecture. At the time of publication, he was a researcher at [",
+      "group": 0,
+      "value": 8
     },
     {
       "id": "sources/attention-is-all-you-need",
       "label": "Attention Is All You Need",
       "type": "source",
-      "color": "#4CAF50",
+      "color": "#E91E63",
       "path": "wiki\\sources\\attention-is-all-you-need.md",
-      "markdown": "---\ntitle: \"Attention Is All You Need\"\ntype: source\ntags: [paper, nlp, transformer]\ndate: 2017-06-12\nsource_file: raw/attention-is-all-you-need.pdf\n---\n\n## Summary\nThe seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms.\n\n## Key Claims\n- The [[Transformer]] achieves state-of-the-art translation quality while being more parallelizable and requiring significantly less training time.\n- Self-attention layers are faster than recurrent layers when the sequence length is smaller than the representation dimensionality.\n- The proposed architecture generalizes well to other tasks beyond machine translation.\n\n## Key Quotes\n> \"We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.\"\n\n> \"The Transformer is the first transduction model based entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution.\"\n\n## Connections\n- [[Transformer]] ¡ª architecture introduced in this paper\n- [[AttentionMechanism]] ¡ª core concept\n- [[Google]] ¡ª research institution\n- [[Vaswani]] ¡ª first author\n\n## Contradictions\n- Earlier work by [[Bahdanau]] proposed attention for RNNs; this paper shows attention alone is sufficient.\n",
+      "markdown": "---\ntitle: \"Attention Is All You Need\"\ntype: source\ntags: [paper, nlp, transformer]\ndate: 2017-06-12\nsource_file: raw/attention-is-all-you-need.pdf\n---\n\n## Summary\nThe seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms.\n\n## Key Claims\n- The [[Transformer]] achieves state-of-the-art translation quality while being more parallelizable and requiring significantly less training time.\n- Self-attention layers are faster than recurrent layers when the sequence length is smaller than the representation dimensionality.\n- The proposed architecture generalizes well to other tasks beyond machine translation.\n\n## Key Quotes\n> \"We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.\"\n\n> \"The Transformer is the first transduction model based entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution.\"\n\n## Connections\n- [[Transformer]] â€” architecture introduced in this paper\n- [[AttentionMechanism]] â€” core concept\n- [[Google]] â€” research institution\n- [[Vaswani]] â€” first author\n\n## Contradictions\n- Earlier work by [[Bahdanau]] proposed attention for RNNs; this paper shows attention alone is sufficient.\n",
       "preview": "## Summary The seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms. ## Key C",
-      "group": -1,
-      "value": 4
+      "group": 0,
+      "value": 6
     },
     {
       "id": "sources/intro-to-llms",
       "label": "Introduction to Large Language Models",
       "type": "source",
-      "color": "#4CAF50",
+      "color": "#8BC34A",
       "path": "wiki\\sources\\intro-to-llms.md",
-      "markdown": "---\ntitle: \"Introduction to Large Language Models\"\ntype: source\ntags: [article, llm, overview]\ndate: 2024-01-15\nsource_file: raw/intro-to-llms.md\n---\n\n## Summary\nA comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures.\n\n## Key Claims\n- LLMs are fundamentally next-token predictors trained on vast corpora.\n- Scaling laws predict that model capability improves predictably with compute, data, and parameters.\n- Emergent abilities appear abruptly at certain scale thresholds.\n\n## Key Quotes\n> \"The surprising effectiveness of simply predicting the next word at scale has reshaped our understanding of intelligence.\"\n\n## Connections\n- [[GPT]] ¡ª decoder-only architecture\n- [[BERT]] ¡ª encoder-only architecture\n- [[Transformer]] ¡ª foundational architecture\n- [[OpenAI]] ¡ª leading research lab\n- [[AttentionMechanism]] ¡ª core mechanism\n\n## Contradictions\n- Some researchers argue emergent abilities are a metric artifact rather than a fundamental property.\n",
+      "markdown": "---\ntitle: \"Introduction to Large Language Models\"\ntype: source\ntags: [article, llm, overview]\ndate: 2024-01-15\nsource_file: raw/intro-to-llms.md\n---\n\n## Summary\nA comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures.\n\n## Key Claims\n- LLMs are fundamentally next-token predictors trained on vast corpora.\n- Scaling laws predict that model capability improves predictably with compute, data, and parameters.\n- Emergent abilities appear abruptly at certain scale thresholds.\n\n## Key Quotes\n> \"The surprising effectiveness of simply predicting the next word at scale has reshaped our understanding of intelligence.\"\n\n## Connections\n- [[GPT]] â€” decoder-only architecture\n- [[BERT]] â€” encoder-only architecture\n- [[Transformer]] â€” foundational architecture\n- [[OpenAI]] â€” leading research lab\n- [[AttentionMechanism]] â€” core mechanism\n\n## Contradictions\n- Some researchers argue emergent abilities are a metric artifact rather than a fundamental property.\n",
       "preview": "## Summary A comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures. ## Key Claims",
-      "group": -1,
+      "group": 2,
       "value": 4
     },
     {
       "id": "syntheses/foundation-models-overview",
       "label": "Foundation Models Overview",
       "type": "synthesis",
-      "color": "#9C27B0",
+      "color": "#8BC34A",
       "path": "wiki\\syntheses\\foundation-models-overview.md",
-      "markdown": "---\ntitle: \"Foundation Models Overview\"\ntype: synthesis\ntags: [overview, llm, foundation-models]\nsources: [intro-to-llms, attention-is-all-you-need]\nlast_updated: 2024-03-25\n---\n\n# Foundation Models Overview\n\nFoundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks.\n\n## The Transformer Era\n\nThe modern foundation model era began with the [[Transformer]] architecture (2017), which introduced [[AttentionMechanism|self-attention]] as a replacement for recurrent layers. [[Google]] invented it; [[OpenAI]] scaled it.\n\n## Key Model Families\n\n| Model | Architecture | Organization | Notable Feature |\n|---|---|---|---|\n| [[GPT]] | Decoder-only | [[OpenAI]] | Autoregressive generation |\n| [[BERT]] | Encoder-only | [[Google]] | Bidirectional understanding |\n| [[T5]] | Encoder-decoder | [[Google]] | Text-to-text framework |\n| [[LLaMA]] | Decoder-only | Meta | Open weights |\n\n## Scaling Laws\n\nModel capability improves predictably with:\n- Compute (FLOPs)\n- Data (tokens)\n- Parameters (model size)\n\n## Connections\n- [[Transformer]] ¡ª universal architecture\n- [[AttentionMechanism]] ¡ª core mechanism\n- [[OpenAI]] ¡ª commercial leader\n- [[Google]] ¡ª research leader\n",
+      "markdown": "---\ntitle: \"Foundation Models Overview\"\ntype: synthesis\ntags: [overview, llm, foundation-models]\nsources: [intro-to-llms, attention-is-all-you-need]\nlast_updated: 2024-03-25\n---\n\n# Foundation Models Overview\n\nFoundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks.\n\n## The Transformer Era\n\nThe modern foundation model era began with the [[Transformer]] architecture (2017), which introduced [[AttentionMechanism|self-attention]] as a replacement for recurrent layers. [[Google]] invented it; [[OpenAI]] scaled it.\n\n## Key Model Families\n\n| Model | Architecture | Organization | Notable Feature |\n|---|---|---|---|\n| [[GPT]] | Decoder-only | [[OpenAI]] | Autoregressive generation |\n| [[BERT]] | Encoder-only | [[Google]] | Bidirectional understanding |\n| [[T5]] | Encoder-decoder | [[Google]] | Text-to-text framework |\n| [[LLaMA]] | Decoder-only | Meta | Open weights |\n\n## Scaling Laws\n\nModel capability improves predictably with:\n- Compute (FLOPs)\n- Data (tokens)\n- Parameters (model size)\n\n## Connections\n- [[Transformer]] â€” universal architecture\n- [[AttentionMechanism]] â€” core mechanism\n- [[OpenAI]] â€” commercial leader\n- [[Google]] â€” research leader\n",
       "preview": "# Foundation Models Overview Foundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks. ## The Transformer Era",
-      "group": -1,
+      "group": 2,
       "value": 5
     }
   ],
   "edges": [
     {
-      "id": "concepts/AttentionMechanism->entities/OpenAI:EXTRACTED",
-      "from": "concepts/AttentionMechanism",
+      "id": "overview->entities/Bahdanau:EXTRACTED",
+      "from": "overview",
+      "to": "entities/Bahdanau",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "overview->entities/Google:EXTRACTED",
+      "from": "overview",
+      "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "overview->entities/SamAltman:EXTRACTED",
+      "from": "overview",
+      "to": "entities/SamAltman",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "overview->entities/Vaswani:EXTRACTED",
+      "from": "overview",
+      "to": "entities/Vaswani",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "overview->entities/OpenAI:EXTRACTED",
+      "from": "overview",
       "to": "entities/OpenAI",
       "type": "EXTRACTED",
       "color": "#555555",
@@ -111,9 +206,39 @@
       "label": ""
     },
     {
+      "id": "concepts/AttentionMechanism->entities/OpenAI:EXTRACTED",
+      "from": "concepts/AttentionMechanism",
+      "to": "entities/OpenAI",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
       "id": "concepts/Transformer->entities/Google:EXTRACTED",
       "from": "concepts/Transformer",
       "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "concepts/Transformer->concepts/AttentionMechanism:EXTRACTED",
+      "from": "concepts/Transformer",
+      "to": "concepts/AttentionMechanism",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "concepts/Transformer->entities/Vaswani:EXTRACTED",
+      "from": "concepts/Transformer",
+      "to": "entities/Vaswani",
       "type": "EXTRACTED",
       "color": "#555555",
       "confidence": 1.0,
@@ -131,6 +256,46 @@
       "label": ""
     },
     {
+      "id": "entities/Bahdanau->entities/Google:EXTRACTED",
+      "from": "entities/Bahdanau",
+      "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Bahdanau->concepts/AttentionMechanism:EXTRACTED",
+      "from": "entities/Bahdanau",
+      "to": "concepts/AttentionMechanism",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Bahdanau->entities/Vaswani:EXTRACTED",
+      "from": "entities/Bahdanau",
+      "to": "entities/Vaswani",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Bahdanau->concepts/Transformer:EXTRACTED",
+      "from": "entities/Bahdanau",
+      "to": "concepts/Transformer",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
       "id": "entities/Google->concepts/AttentionMechanism:EXTRACTED",
       "from": "entities/Google",
       "to": "concepts/AttentionMechanism",
@@ -141,9 +306,199 @@
       "label": ""
     },
     {
+      "id": "entities/Google->concepts/Transformer:EXTRACTED",
+      "from": "entities/Google",
+      "to": "concepts/Transformer",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
       "id": "entities/Google->entities/OpenAI:EXTRACTED",
       "from": "entities/Google",
       "to": "entities/OpenAI",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/GregBrockman->entities/IlyaSutskever:EXTRACTED",
+      "from": "entities/GregBrockman",
+      "to": "entities/IlyaSutskever",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/GregBrockman->entities/SamAltman:EXTRACTED",
+      "from": "entities/GregBrockman",
+      "to": "entities/SamAltman",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/GregBrockman->entities/OpenAI:EXTRACTED",
+      "from": "entities/GregBrockman",
+      "to": "entities/OpenAI",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/IlyaSutskever->entities/Google:EXTRACTED",
+      "from": "entities/IlyaSutskever",
+      "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/IlyaSutskever->entities/OpenAI:EXTRACTED",
+      "from": "entities/IlyaSutskever",
+      "to": "entities/OpenAI",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/IlyaSutskever->concepts/Transformer:EXTRACTED",
+      "from": "entities/IlyaSutskever",
+      "to": "concepts/Transformer",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->entities/Google:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->entities/GregBrockman:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "entities/GregBrockman",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->entities/IlyaSutskever:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "entities/IlyaSutskever",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->entities/SamAltman:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "entities/SamAltman",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->concepts/AttentionMechanism:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "concepts/AttentionMechanism",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/OpenAI->concepts/Transformer:EXTRACTED",
+      "from": "entities/OpenAI",
+      "to": "concepts/Transformer",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/SamAltman->entities/GregBrockman:EXTRACTED",
+      "from": "entities/SamAltman",
+      "to": "entities/GregBrockman",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/SamAltman->entities/IlyaSutskever:EXTRACTED",
+      "from": "entities/SamAltman",
+      "to": "entities/IlyaSutskever",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/SamAltman->entities/OpenAI:EXTRACTED",
+      "from": "entities/SamAltman",
+      "to": "entities/OpenAI",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Vaswani->entities/Google:EXTRACTED",
+      "from": "entities/Vaswani",
+      "to": "entities/Google",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Vaswani->concepts/AttentionMechanism:EXTRACTED",
+      "from": "entities/Vaswani",
+      "to": "concepts/AttentionMechanism",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "entities/Vaswani->concepts/Transformer:EXTRACTED",
+      "from": "entities/Vaswani",
+      "to": "concepts/Transformer",
       "type": "EXTRACTED",
       "color": "#555555",
       "confidence": 1.0,
@@ -164,6 +519,26 @@
       "id": "sources/attention-is-all-you-need->concepts/AttentionMechanism:EXTRACTED",
       "from": "sources/attention-is-all-you-need",
       "to": "concepts/AttentionMechanism",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "sources/attention-is-all-you-need->entities/Bahdanau:EXTRACTED",
+      "from": "sources/attention-is-all-you-need",
+      "to": "entities/Bahdanau",
+      "type": "EXTRACTED",
+      "color": "#555555",
+      "confidence": 1.0,
+      "title": "",
+      "label": ""
+    },
+    {
+      "id": "sources/attention-is-all-you-need->entities/Vaswani:EXTRACTED",
+      "from": "sources/attention-is-all-you-need",
+      "to": "entities/Vaswani",
       "type": "EXTRACTED",
       "color": "#555555",
       "confidence": 1.0,

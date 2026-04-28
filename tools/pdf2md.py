@@ -75,7 +75,7 @@ def convert_arxiv(arxiv_id: str, output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     cmd = ["arxiv2md", arxiv_id, "-o", str(output)]
     print(f"  Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
     if result.returncode != 0:
         print(f"Error: arxiv2md failed:\n{result.stderr}")
@@ -99,7 +99,7 @@ def convert_marker(pdf_path: Path, output: Path) -> Path:
     tmp_dir = output.parent / f".marker_tmp_{output.stem}"
     cmd = ["marker_single", str(pdf_path), "--output_dir", str(tmp_dir)]
     print(f"  Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
 
     if result.returncode != 0:
         print(f"Error: marker failed:\n{result.stderr}")
@@ -150,9 +150,14 @@ BACKENDS = {
 
 def slugify(name: str) -> str:
     """Turn a filename or arXiv ID into a safe kebab-case slug."""
-    name = Path(name).stem if "." in name else name
-    name = re.sub(r"[^\w\s-]", "", name.lower())
-    return re.sub(r"[\s_]+", "-", name).strip("-")
+    # For arXiv IDs like 2401.12345, keep the dot; for file names, use stem.
+    # Heuristic: if it looks like an arXiv ID (digits.digits), don't use Path.stem.
+    if re.match(r"^\d{4}\.\d{4,5}$", name):
+        base = name
+    else:
+        base = Path(name).stem if "." in name else name
+    base = re.sub(r"[^\w\s.-]", "", base.lower())
+    return re.sub(r"[\s_]+", "-", base).strip("-")
 
 
 def resolve_output(source: str, arxiv_id: str | None, output_arg: str | None) -> Path:

@@ -56,18 +56,19 @@ def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 
 
 
 def all_wiki_pages() -> list[Path]:
+    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
     return [p for p in WIKI_DIR.rglob("*.md")
-            if p.name not in ("index.md", "log.md", "lint-report.md")]
+            if p.name not in exclude]
 
 
 def extract_wikilinks(content: str) -> list[str]:
     return re.findall(r'\[\[([^\]]+)\]\]', content)
 
 
-def page_name_to_path(name: str) -> list[Path]:
+def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:
     """Try to resolve a [[WikiLink]] to a file path."""
     candidates = []
-    for p in all_wiki_pages():
+    for p in pages:
         if p.stem.lower() == name.lower() or p.stem == name:
             candidates.append(p)
     return candidates
@@ -78,7 +79,7 @@ def find_orphans(pages: list[Path]) -> list[Path]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            resolved = page_name_to_path(link)
+            resolved = page_name_to_path(link, pages)
             for r in resolved:
                 inbound[r] += 1
     return [p for p in pages if inbound[p] == 0 and p != WIKI_DIR / "overview.md"]
@@ -89,7 +90,7 @@ def find_broken_links(pages: list[Path]) -> list[tuple[Path, str]]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            if not page_name_to_path(link):
+            if not page_name_to_path(link, pages):
                 broken.append((p, link))
     return broken
 
@@ -138,7 +139,14 @@ def load_graph_data() -> dict | None:
     if not GRAPH_JSON.exists():
         return None
     try:
-        return json.loads(GRAPH_JSON.read_text(encoding="utf-8"))
+        text = GRAPH_JSON.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = GRAPH_JSON.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError:
+            text = GRAPH_JSON.read_text(encoding="utf-8", errors="replace")
+    try:
+        return json.loads(text)
     except (json.JSONDecodeError, IOError):
         print("  [warn] graph.json is corrupted — skipping graph-aware checks")
         return None
@@ -299,8 +307,8 @@ def run_lint():
         print("  [skip] no graph.json — run build_graph.py first for graph-aware checks")
 
     # Build context for semantic checks (contradictions, gaps)
-    # Use a sample of pages to stay within context limits
-    sample = pages[:20]
+    # Use a deterministic sample of pages to stay within context limits
+    sample = sorted(pages, key=lambda p: p.relative_to(REPO_ROOT).as_posix())[:20]
     pages_context = ""
     for p in sample:
         rel = p.relative_to(REPO_ROOT)
@@ -350,12 +358,13 @@ Be specific — name the exact pages and claims involved.
 
     if missing_entities:
         report_lines.append("### Missing Entity Pages (mentioned 3+ times but no page)")
-        report_lines.append("> [!warning] Action Required\n> Run `python3 generate_missing_entities.py` to automatically materialize these missing hubs.")
+        report_lines.append("> [!warning] Action Required\n> Run `python tools/heal.py` to automatically materialize these missing hubs.")
         for name in missing_entities:
             report_lines.append(f"- `[[{name}]]`")
         report_lines.append("")
 
-    if not orphans and not broken and not missing_entities and not sparse_pages:
+    has_structural_issues = bool(orphans or broken or missing_entities or sparse_pages)
+    if not has_structural_issues:
         report_lines.append("No structural issues found.")
         report_lines.append("")
 
@@ -432,9 +441,30 @@ Be specific — name the exact pages and claims involved.
     return report
 
 
+LOG_HEADER = (
+    "# Wiki Log\n\n"
+    "> Append-only chronological record of all operations.\n\n"
+    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+    "---\n"
+)
+
+
 def append_log(entry: str):
-    existing = read_file(LOG_FILE)
-    LOG_FILE.write_text(entry.strip() + "\n\n" + existing, encoding="utf-8")
+    entry_text = entry.strip()
+    if not LOG_FILE.exists():
+        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+        return
+    existing = read_file(LOG_FILE).strip()
+    if existing.startswith("# Wiki Log"):
+        parts = existing.split("\n---\n", 1)
+        if len(parts) == 2:
+            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+        else:
+            new_content = entry_text + "\n\n" + existing
+    else:
+        new_content = entry_text + "\n\n" + existing
+    LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
 if __name__ == "__main__":

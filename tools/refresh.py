@@ -16,11 +16,13 @@ import sys
 import json
 import hashlib
 import re
+import importlib.util
 from typing import Optional
 from pathlib import Path
 from datetime import date
 
 REPO_ROOT = Path(__file__).parent.parent
+TOOLS_DIR = Path(__file__).parent
 WIKI_DIR = REPO_ROOT / "wiki"
 RAW_DIR = REPO_ROOT / "raw"
 SOURCES_DIR = WIKI_DIR / "sources"
@@ -53,7 +55,7 @@ def extract_source_file(content: str) -> Optional[str]:
     """Extract source_file from YAML frontmatter."""
     match = re.search(r'^source_file:\s*(.+)$', content, re.MULTILINE)
     if match:
-        return match.group(1).strip().strip('"').strip("'")
+        return match.group(1).strip().strip('"').strip("'").strip()
     return None
 
 
@@ -71,10 +73,16 @@ def find_stale_sources(force: bool = False) -> list[tuple[Path, Path]]:
         if not source_file:
             continue
 
-        raw_path = REPO_ROOT / source_file
+        # Resolve raw path and ensure it stays within project
+        raw_path = (REPO_ROOT / source_file).resolve()
+        try:
+            raw_path.relative_to(REPO_ROOT.resolve())
+        except ValueError:
+            print(f"  [WARN] Skipping out-of-bounds source_file in {wiki_page.name}: {source_file}")
+            continue
         if not raw_path.exists():
             # Try relative to raw/
-            raw_path = RAW_DIR / source_file
+            raw_path = (RAW_DIR / source_file).resolve()
             if not raw_path.exists():
                 continue
 
@@ -90,15 +98,19 @@ def find_stale_sources(force: bool = False) -> list[tuple[Path, Path]]:
 
 def refresh_page(wiki_page: Path, raw_path: Path) -> bool:
     """Re-ingest a single source document."""
-    # Import ingest function
-    sys.path.insert(0, str(Path(__file__).parent))
+    # Import ingest module safely via importlib
     try:
-        from ingest import ingest
+        spec = importlib.util.spec_from_file_location("ingest", TOOLS_DIR / "ingest.py")
+        if spec is None or spec.loader is None:
+            print(f"  [ERROR] Could not load ingest module")
+            return False
+        ingest_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ingest_mod)
         print(f"\n{'='*60}")
         print(f"  Refreshing: {wiki_page.name}")
         print(f"  From:       {raw_path}")
         print(f"{'='*60}")
-        ingest(str(raw_path))
+        ingest_mod.ingest(str(raw_path))
         return True
     except Exception as e:
         print(f"  [ERROR] Failed to refresh {wiki_page.name}: {e}")
@@ -126,9 +138,14 @@ def main():
         if not source_file:
             print(f"No source_file found in frontmatter of {wiki_page.name}")
             sys.exit(1)
-        raw_path = REPO_ROOT / source_file
+        raw_path = (REPO_ROOT / source_file).resolve()
+        try:
+            raw_path.relative_to(REPO_ROOT.resolve())
+        except ValueError:
+            print(f"Error: source_file resolves outside repo: {source_file}")
+            sys.exit(1)
         if not raw_path.exists():
-            raw_path = RAW_DIR / source_file
+            raw_path = (RAW_DIR / source_file).resolve()
         if not raw_path.exists():
             print(f"Raw document not found: {source_file}")
             sys.exit(1)

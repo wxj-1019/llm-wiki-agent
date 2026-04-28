@@ -1,11 +1,21 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock } from 'lucide-react';
+import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion } from 'framer-motion';
+import { typeLabelKey } from '@/i18n';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function HomePage() {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
+  const loading = useWikiStore((s) => s.loading);
+  const error = useWikiStore((s) => s.error);
+  const initialize = useWikiStore((s) => s.initialize);
   const recentPages = useWikiStore((s) => s.recentPages);
+  const favorites = useWikiStore((s) => s.favorites);
   const nodes = graphData?.nodes || [];
 
   const sources = nodes.filter((n) => n.type === 'source');
@@ -18,14 +28,17 @@ export function HomePage() {
     .filter(Boolean)
     .slice(0, 3);
 
-  const randomNode = nodes.length > 0 ? nodes[Math.floor(Math.random() * nodes.length)] : null;
+  const [randomNode, setRandomNode] = useState<typeof nodes[0] | null>(null);
+  useEffect(() => {
+    if (nodes.length > 0) {
+      setRandomNode(nodes[Math.floor(Math.random() * nodes.length)]);
+    }
+  }, [nodes.length]);
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning~';
-    if (hour < 18) return 'Good afternoon~';
-    return 'Good evening~';
-  };
+  useDocumentTitle();
+
+  const hour = new Date().getHours();
+  const greetingKey = hour < 12 ? 'greeting.morning' : hour < 18 ? 'greeting.afternoon' : 'greeting.evening';
 
   return (
     <div className="relative">
@@ -42,29 +55,92 @@ export function HomePage() {
           className="mb-10"
         >
           <h1 className="text-4xl font-rounded font-semibold text-[var(--text-primary)] mb-2">
-            {greeting()}
+            {t(greetingKey)}
           </h1>
           <p className="text-[var(--text-secondary)] text-lg">
-            What do you want to explore today?
+            {t('home.subtitle')}
           </p>
         </motion.div>
 
-        {/* Search bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-12"
-        >
-          <Link
-            to="/search"
-            className="flex items-center gap-3 w-full max-w-xl px-5 py-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue/40 hover:shadow-md transition-all duration-200"
+        {/* Empty state: wiki has no pages yet */}
+        {nodes.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mb-12"
           >
-            <Search size={18} className="text-[var(--text-tertiary)]" />
-            <span className="text-[var(--text-tertiary)]">Search your knowledge base...</span>
-            <kbd className="ml-auto px-2 py-0.5 text-xs bg-[var(--bg-primary)] rounded border border-[var(--border-default)]">Ctrl K</kbd>
-          </Link>
-        </motion.div>
+            <div className="warm-card p-8 max-w-3xl">
+              <div className="text-center mb-8">
+                <div className="text-5xl mb-4">📖</div>
+                <h2 className="text-xl font-semibold mb-2">{t('empty.title')}</h2>
+                <p className="text-sm text-[var(--text-secondary)]">{t('empty.description')}</p>
+              </div>
+
+              {/* 3-step guide */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                {[
+                  { icon: '📝', title: t('home.empty.step1.title'), desc: t('home.empty.step1.desc') },
+                  { icon: '⚙️', title: t('home.empty.step2.title'), desc: t('home.empty.step2.desc') },
+                  { icon: '👁️', title: t('home.empty.step3.title'), desc: t('home.empty.step3.desc') },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-3 sm:block text-left sm:text-center">
+                    <div className="text-3xl mb-0 sm:mb-2">{step.icon}</div>
+                    <div>
+                      <div className="font-medium text-sm">{step.title}</div>
+                      <div className="text-xs text-[var(--text-secondary)]">{step.desc}</div>
+                    </div>
+                    {i < 2 && (
+                      <div className="hidden sm:block text-[var(--text-tertiary)] my-1">
+                        <ArrowRight size={14} className="mx-auto rotate-90 sm:rotate-0" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Command copy */}
+              <div className="bg-[var(--bg-secondary)] rounded-xl p-4 text-center">
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">{t('empty.ingestHint')}</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <code className="text-sm font-mono text-apple-blue bg-[var(--bg-primary)] px-3 py-1.5 rounded-lg">
+                    {t('empty.ingestCommand')}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(t('empty.ingestCommand'));
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)]"
+                  >
+                    {copied ? <Check size={12} className="text-apple-green" /> : <Copy size={12} />}
+                    {copied ? t('home.empty.copied') : t('home.empty.copyCommand')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Search bar */}
+        {nodes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mb-12"
+          >
+            <Link
+              to="/search"
+              className="flex items-center gap-3 w-full max-w-xl px-5 py-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue/40 hover:shadow-md transition-all duration-200"
+            >
+              <Search size={18} className="text-[var(--text-tertiary)]" />
+              <span className="text-[var(--text-tertiary)]">{t('home.searchPlaceholder')}</span>
+              <kbd className="ml-auto px-2 py-0.5 text-xs bg-[var(--bg-primary)] rounded border border-[var(--border-default)]">{t('shortcut.ctrlK')}</kbd>
+            </Link>
+          </motion.div>
+        )}
 
         {/* Stats */}
         <motion.div
@@ -74,22 +150,52 @@ export function HomePage() {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
         >
           {[
-            { label: 'Sources', count: sources.length, icon: BookOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10' },
-            { label: 'Entities', count: entities.length, icon: Sparkles, color: 'text-apple-green', bg: 'bg-apple-green/10' },
-            { label: 'Concepts', count: concepts.length, icon: Network, color: 'text-apple-purple', bg: 'bg-apple-purple/10' },
-            { label: 'Syntheses', count: syntheses.length, icon: BookOpen, color: 'text-apple-orange', bg: 'bg-apple-orange/10' },
+            { labelKey: 'stat.sources', count: sources.length, icon: BookOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10' },
+            { labelKey: 'stat.entities', count: entities.length, icon: Sparkles, color: 'text-apple-green', bg: 'bg-apple-green/10' },
+            { labelKey: 'stat.concepts', count: concepts.length, icon: Network, color: 'text-apple-purple', bg: 'bg-apple-purple/10' },
+            { labelKey: 'stat.syntheses', count: syntheses.length, icon: BookOpen, color: 'text-apple-orange', bg: 'bg-apple-orange/10' },
           ].map((stat) => (
-            <div key={stat.label} className="apple-card p-4">
+            <div key={stat.labelKey} className="apple-card p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
                   <stat.icon size={14} />
                 </div>
-                <span className="text-sm text-[var(--text-secondary)]">{stat.label}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t(stat.labelKey)}</span>
               </div>
               <div className="text-2xl font-semibold">{stat.count}</div>
             </div>
           ))}
         </motion.div>
+
+        {/* Favorites */}
+        {nodes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="mb-12"
+          >
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Heart size={18} className="text-red-500" />
+              {t('home.favorites.title')}
+            </h2>
+            {favorites.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {favorites
+                  .map((id) => nodes.find((n) => n.id === id))
+                  .filter(Boolean)
+                  .slice(0, 6)
+                  .map((node) => (
+                    <PageCard key={node!.id} node={node!} />
+                  ))}
+              </div>
+            ) : (
+              <div className="apple-card p-6 text-center text-sm text-[var(--text-secondary)]">
+                {t('home.favorites.empty')}
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Continue Reading */}
         {recentNodes.length > 0 && (
@@ -101,7 +207,7 @@ export function HomePage() {
           >
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Clock size={18} />
-              Continue Reading
+              {t('home.sections.continueReading')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {recentNodes.map((node) => (
@@ -119,7 +225,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="mb-12"
           >
-            <h2 className="text-xl font-semibold mb-4">Random Discovery</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('home.sections.randomDiscovery')}</h2>
             <div className="warm-card p-6">
               <div className="flex items-start justify-between">
                 <div>
@@ -133,7 +239,7 @@ export function HomePage() {
               </div>
               <div className="mt-4">
                 <PageLink node={randomNode} className="apple-button-warm text-sm">
-                  Explore <ArrowRight size={14} />
+                  {t('action.explore')} <ArrowRight size={14} />
                 </PageLink>
               </div>
             </div>
@@ -141,42 +247,61 @@ export function HomePage() {
         )}
 
         {/* Knowledge Graph Mini */}
-        {graphData && (
+        {graphData ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Knowledge Graph</h2>
+              <h2 className="text-xl font-semibold">{t('home.sections.knowledgeGraph')}</h2>
               <Link to="/graph" className="text-sm text-apple-blue hover:underline flex items-center gap-1">
-                Explore <ArrowRight size={14} />
+                {t('action.explore')} <ArrowRight size={14} />
               </Link>
             </div>
             <div className="apple-card p-6">
               <div className="flex items-center justify-center gap-8 text-sm text-[var(--text-secondary)]">
                 <div className="text-center">
                   <div className="text-2xl font-semibold text-[var(--text-primary)]">{nodes.length}</div>
-                  <div>Nodes</div>
+                  <div>{t('stat.nodes')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-semibold text-[var(--text-primary)]">{graphData.edges.length}</div>
-                  <div>Edges</div>
+                  <div>{t('stat.edges')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-semibold text-[var(--text-primary)]">{new Set(nodes.map((n) => n.group)).size}</div>
-                  <div>Communities</div>
+                  <div>{t('stat.communities')}</div>
                 </div>
               </div>
             </div>
           </motion.div>
-        )}
+        ) : nodes.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <h2 className="text-xl font-semibold mb-4">{t('home.sections.knowledgeGraph')}</h2>
+            <div className="apple-card p-6 text-center">
+              <p className="text-sm text-[var(--text-secondary)] mb-4">{t('home.graph.error')}</p>
+              <button
+                onClick={() => initialize()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-secondary)] text-sm font-medium hover:bg-[var(--bg-tertiary)] transition-colors"
+              >
+                <RefreshCw size={14} />
+                {t('home.graph.retry')}
+              </button>
+            </div>
+          </motion.div>
+        ) : null}
       </div>
     </div>
   );
 }
 
 function TypeBadge({ type }: { type: string }) {
+  const { t } = useTranslation();
   const colors: Record<string, string> = {
     source: 'bg-apple-blue/10 text-apple-blue',
     entity: 'bg-apple-green/10 text-apple-green',
@@ -185,7 +310,7 @@ function TypeBadge({ type }: { type: string }) {
   };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[type] || 'bg-gray-100 text-gray-600'}`}>
-      {type}
+      {t(typeLabelKey(type))}
     </span>
   );
 }

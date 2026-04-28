@@ -1,6 +1,28 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # LLM Wiki Agent — Schema & Workflow Instructions
 
 This wiki is maintained entirely by Claude Code. No API key or Python scripts needed — just open this repo in Claude Code and talk to it.
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| **Language** | Python 3.10–3.13 |
+| **Package Manager** | Poetry (`pyproject.toml`) |
+| **Core Dependencies** | `markitdown[all]` (auto-conversion of 20+ formats), `tqdm` (progress bars) |
+| **LLM Gateway** | `litellm` (~1.83.10) — universal API for Claude, OpenAI, Gemini, etc. |
+| **Graph Analysis** | `networkx` (~3.6.1) — Louvain community detection |
+| **Frontend** | React 18 + TypeScript + Vite (`wiki-viewer/`) with Tailwind CSS 4, vis-network, Zustand |
+| **Visualization** | Self-contained HTML with vis.js (CDN-loaded, no server needed) |
+
+**Environment Variables:**
+- `LLM_MODEL` — model identifier passed to litellm (default: `claude-3-5-sonnet-latest`)
+- Provider-specific API keys as required by litellm (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.)
+
+**Security:** `litellm` is pinned to `~=1.83.10` in `requirements.txt` because versions `1.82.7–1.82.8` were compromised in a supply chain attack (March 2026). Never downgrade this dependency. All tools sanitize LLM-generated filenames against path traversal. `graph/graph.html` escapes `</script>` sequences to prevent XSS from wiki content.
 
 ## Slash Commands (Claude Code)
 
@@ -35,11 +57,51 @@ wiki/         # Claude owns this layer entirely
   concepts/   # Ideas, frameworks, methods, theories
   syntheses/  # Saved query answers
 graph/        # Auto-generated graph data
+  graph.json          # Node/edge data (SHA256-cached)
+  graph.html          # Interactive vis.js visualization
+  .cache.json         # Inference cache
+  .inferred_edges.jsonl  # Checkpoint for resume
+  .refresh_cache.json    # Refresh operation cache
 tools/        # Standalone Python scripts
-  health.py   # Structural checks (deterministic, no LLM calls)
-  lint.py     # Content quality checks (uses LLM for semantic analysis)
-  build_graph.py  # Knowledge graph generation
+wiki-viewer/  # React + TypeScript wiki browser (Vite, Tailwind CSS 4)
 ```
+
+## Tools Reference
+
+All scripts in `tools/` are standalone and require `litellm` (and optionally `markitdown`/`networkx`).
+
+| Script | Purpose | LLM Calls? | Usage |
+|---|---|---|---|
+| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files; supports batch, `--no-convert`, `--validate-only` |
+| `query.py` | Query wiki and synthesize answers | Yes | `python tools/query.py "<question>" [--save [<path>]]` |
+| `lint.py` | Content quality checks | Yes (semantic) | `python tools/lint.py [--save]` — orphans, broken links, contradictions, missing entities, sparse pages, data gaps |
+| `health.py` | Structural integrity checks | **No** | `python tools/health.py [--save] [--json]` — empty stubs, index sync, log coverage |
+| `build_graph.py` | Knowledge graph generation | Yes (inference) | `python tools/build_graph.py [--no-infer] [--open] [--report]` — two-pass build with Louvain clustering |
+| `heal.py` | Auto-heal missing entity pages | Yes | `python tools/heal.py` — scans for missing entities and generates pages from context |
+| `refresh.py` | Refresh stale source pages | Yes (via ingest) | `python tools/refresh.py [--force] [--page sources/X]` — hash-based change detection |
+| `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
+| `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
+| `api_server.py` | Local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
+
+## Wiki Viewer (React Frontend)
+
+The `wiki-viewer/` directory contains a React + TypeScript + Vite frontend for browsing the wiki. It connects to `api_server.py` on port 8000.
+
+```bash
+cd wiki-viewer
+npm install        # install dependencies (one-time)
+npm run dev        # development server with HMR (port 5173 by default)
+npm run build      # production build → wiki-viewer/dist/
+npm run preview    # preview production build (port 3000)
+npm run lint       # ESLint with max-warnings 0
+```
+
+Or use the convenience script to start both servers at once:
+```bash
+python start_servers.py    # starts api_server (port 8000) + vite preview (port 3000)
+```
+
+Tech: React 18, React Router 7, Tailwind CSS 4, Zustand (state), fuse.js (search), vis-network (graph), Shiki (syntax highlighting), react-markdown + remark-gfm.
 
 ---
 
@@ -174,7 +236,13 @@ Use Grep and Read tools to check for:
 - **Contradictions** — claims that conflict across pages
 - **Stale summaries** — pages not updated after newer sources
 - **Missing entity pages** — entities mentioned in 3+ pages but lacking their own page
+- **Sparse pages** — pages with fewer than 2 outbound `[[wikilinks]]` (link density budget)
 - **Data gaps** — questions the wiki can't answer; suggest new sources
+
+Graph-aware checks (require `graph.json` from `build_graph.py`):
+- **Hub stubs** — god nodes (degree > μ+2σ) with thin content (< 500 chars)
+- **Fragile bridges** — community pairs connected by only 1 edge
+- **Isolated communities** — clusters with zero external connections
 
 Output a lint report and ask if the user wants it saved to `wiki/lint-report.md`.
 
@@ -225,6 +293,19 @@ If the user doesn't have Python/dependencies set up, instead generate the graph 
 3. Write `graph/graph.json` directly
 4. Write `graph/graph.html` using the vis.js template
 
+### Graph Health Report
+
+Triggered by: `python tools/build_graph.py --report`
+
+The `--report` flag generates a structured graph health report covering:
+- **Health summary** — edges/node ratio, orphan %, community count, link density
+- **Orphan nodes** — pages with zero graph connections
+- **God nodes** — hub pages with degree > μ+2σ (disproportionate connectivity)
+- **Fragile bridges** — community pairs connected by only 1 edge
+- **Phantom hubs** — `[[wikilinks]]` referenced by 2+ existing pages but pointing to non-existent pages (page creation signals)
+
+Use `--save` to write the report to `graph/graph-report.md`.
+
 ---
 
 ## Naming Conventions
@@ -264,3 +345,21 @@ grep "^## \[" wiki/log.md | tail -10
 ```
 
 Operations: `ingest`, `query`, `health`, `lint`, `graph`
+
+---
+
+## Phase 3 Design Constraints (Auto-Linking — Open)
+
+Phase 3 proposes automatic `[[wikilink]]` insertion based on graph analysis. The following hard rules apply:
+
+### Promotion Gate: `draft → stable`
+- Auto-linked edges start as `DRAFT` (visible in graph, not written to page body)
+- A dedicated `promote` pass validates source grounding + consistency
+- Only edges that pass get materialized as `[[wikilinks]]` in the page
+- **Link density budget**: a page must have ≥2 outbound wikilinks before promotion
+
+### Hard Rules
+| ID | Rule | Rationale |
+|---|---|---|
+| HG-WA-01 | Graph layer MUST NOT auto-create pages from broken links — report only | LLM ingest produces hallucinated wikilinks; auto-creating amplifies noise |
+| HG-WA-02 | New slash commands MUST NOT duplicate existing command coverage | Prevents user confusion; merge into existing commands instead |

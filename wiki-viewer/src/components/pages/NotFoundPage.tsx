@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function NotFoundPage() {
+  const { t } = useTranslation();
+  useDocumentTitle(t('notFound.title'));
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <motion.div
@@ -12,11 +16,11 @@ export function NotFoundPage() {
         className="empty-state-warm"
       >
         <div className="text-6xl mb-4">🤔</div>
-        <h2 className="font-rounded text-2xl font-semibold mb-2">Page not found</h2>
-        <p className="text-[var(--text-secondary)] mb-6">This page doesn't exist in the wiki.</p>
+        <h2 className="font-rounded text-2xl font-semibold mb-2">{t('notFound.title')}</h2>
+        <p className="text-[var(--text-secondary)] mb-6">{t('notFound.description')}</p>
         <Link to="/" className="apple-button-warm">
           <Home size={16} />
-          Back to Home
+          {t('notFound.backToHome')}
         </Link>
       </motion.div>
     </div>
