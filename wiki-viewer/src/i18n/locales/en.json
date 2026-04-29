@@ -249,6 +249,9 @@
   "agentKit.assets.empty.title": "No assets generated yet",
   "agentKit.assets.empty.description": "Run the generator above to create MCP Server and Skill files",
   "agentKit.assets.noFiles": "No files in this category",
+  "agentKit.search.placeholder": "Search files...",
+  "agentKit.search.noResults": "No files match your search",
+  "agentKit.files.loading": "Loading files...",
   "settings.archive.title": "Auto Archive",
   "settings.archive.ttlLabel": "Default source page TTL (days)",
   "settings.archive.ttlHint": "Source pages older than this will be moved to archive/ during maintenance."

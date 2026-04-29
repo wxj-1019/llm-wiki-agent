@@ -249,6 +249,9 @@
   "agentKit.assets.empty.title": "尚未生成任何产物",
   "agentKit.assets.empty.description": "运行上方的生成器以创建 MCP Server 和 Skill 文件",
   "agentKit.assets.noFiles": "该分类下暂无文件",
+  "agentKit.search.placeholder": "搜索文件...",
+  "agentKit.search.noResults": "没有匹配的文件",
+  "agentKit.files.loading": "加载文件中...",
   "settings.archive.title": "自动归档",
   "settings.archive.ttlLabel": "默认源页面有效期（天）",
   "settings.archive.ttlHint": "超过此天数的源页面将在维护时被移动到 archive/ 目录。"

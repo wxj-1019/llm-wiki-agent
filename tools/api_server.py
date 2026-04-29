@@ -400,7 +400,7 @@ async def agent_kit_generate(payload: dict):
 
 
 @app.get("/api/agent-kit/files")
-def agent_kit_files(path: str = Query("")):
+def agent_kit_files(path: str = Query(""), recursive: bool = Query(False)):
     """List files and directories under agent-kit/."""
     base = AGENT_KIT_DIR.resolve()
     target = (base / path).resolve() if path else base
@@ -418,7 +418,27 @@ def agent_kit_files(path: str = Query("")):
                 "path": target.relative_to(base).as_posix(),
                 "size": target.stat().st_size,
                 "is_dir": False,
-            }]
+            }],
+            "stats": {"total_files": 1, "total_size": target.stat().st_size},
+        }
+
+    if recursive:
+        items = []
+        total_files = 0
+        total_size = 0
+        for p in target.rglob("*"):
+            if p.is_file():
+                items.append({
+                    "name": p.name,
+                    "path": p.relative_to(base).as_posix(),
+                    "size": p.stat().st_size,
+                    "is_dir": False,
+                })
+                total_files += 1
+                total_size += p.stat().st_size
+        return {
+            "files": items,
+            "stats": {"total_files": total_files, "total_size": total_size},
         }
 
     items = []
@@ -429,7 +449,7 @@ def agent_kit_files(path: str = Query("")):
             "size": p.stat().st_size if p.is_file() else 0,
             "is_dir": p.is_dir(),
         })
-    return {"files": items}
+    return {"files": items, "stats": None}
 
 
 @app.get("/api/agent-kit/download")

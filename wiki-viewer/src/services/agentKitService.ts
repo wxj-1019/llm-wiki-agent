@@ -14,6 +14,7 @@ export interface AgentKitFile {
 
 export interface AgentKitFilesResponse {
   files: AgentKitFile[];
+  stats: { total_files: number; total_size: number } | null;
 }
 
 export interface GenerateOptions {
@@ -46,8 +47,11 @@ export async function generateAgentKit(options: GenerateOptions): Promise<Genera
   return res.json();
 }
 
-export async function fetchAgentKitFiles(path: string = ''): Promise<AgentKitFilesResponse> {
-  const query = path ? `?path=${encodeURIComponent(path)}` : '';
+export async function fetchAgentKitFiles(path: string = '', recursive: boolean = false): Promise<AgentKitFilesResponse> {
+  const params = new URLSearchParams();
+  if (path) params.set('path', path);
+  if (recursive) params.set('recursive', '1');
+  const query = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`/api/agent-kit/files${query}`);
   if (!res.ok) throw new Error(`Failed to fetch files: ${res.status}`);
   return res.json();
