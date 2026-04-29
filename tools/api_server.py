@@ -4,8 +4,11 @@ from __future__ import annotations
 """Lightweight API server for LLM Wiki Agent."""
 
 import json
+import re
+import sys
+import subprocess
 from pathlib import Path
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,12 +19,20 @@ WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
 FRONTEND_DIST = REPO / "wiki-viewer" / "dist"
 
+ALLOWED_EXTENSIONS = {
+    ".md", ".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".xls",
+    ".html", ".htm", ".csv", ".json", ".xml",
+    ".rst", ".rtf", ".epub", ".ipynb",
+    ".yaml", ".yml", ".tsv",
+}
+MAX_UPLOAD_SIZE = 20 * 1024 * 1024
+
 app = FastAPI(title="LLM Wiki API")
 # Restrict CORS to localhost for security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"],
-    allow_methods=["GET"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -104,6 +115,188 @@ def health():
         "graph_ready": graph_exists,
         "wiki_dir": str(WIKI),
     }
+
+
+@app.get("/api/raw-files")
+def list_raw_files():
+    raw_dir = REPO / "raw"
+    files = []
+    for p in raw_dir.rglob("*"):
+        if p.is_file() and p.name != ".gitkeep":
+            files.append({
+                "path": p.relative_to(REPO).as_posix(),
+                "name": p.name,
+                "size": p.stat().st_size,
+                "modified": p.stat().st_mtime,
+            })
+    files.sort(key=lambda x: x["modified"], reverse=True)
+    return {"files": files}
+
+
+@app.get("/api/raw-file-content")
+def get_raw_file_content(path: str = Query(..., min_length=1)):
+    """Return the text content of a raw file for preview."""
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+    target = (REPO / path).resolve()
+    raw_dir = (REPO / "raw").resolve()
+    try:
+        target.relative_to(raw_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path must be within raw/")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if not target.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+    try:
+        content = target.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File is not text-readable")
+    return {"content": content}
+
+
+@app.post("/api/upload/file")
+async def upload_file(file: UploadFile = File(...)):
+    safe_name = Path(file.filename or "unnamed").name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    suffix = Path(safe_name).suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type not allowed. Supported: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+
+    uploads_dir = REPO / "raw" / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    target = uploads_dir / safe_name
+    counter = 1
+    stem = target.stem
+    orig_suffix = target.suffix
+    while target.exists():
+        target = uploads_dir / f"{stem}_{counter}{orig_suffix}"
+        counter += 1
+
+    # Stream read with early size check to avoid loading huge files into memory
+    content = b""
+    while True:
+        chunk = await file.read(1024 * 1024)  # 1 MB chunks
+        if not chunk:
+            break
+        content += chunk
+        if len(content) > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+
+    target.write_bytes(content)
+
+    # Try markitdown conversion for non-text files
+    converted = None
+    if suffix.lower() not in (".md", ".txt"):
+        try:
+            from markitdown import MarkItDown
+            md = MarkItDown(enable_plugins=False)
+            result = md.convert(str(target))
+            converted_path = target.with_suffix(".md")
+            converted_path.write_text(result.text_content, encoding="utf-8")
+            converted = converted_path.relative_to(REPO).as_posix()
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "path": target.relative_to(REPO).as_posix(),
+        "converted_path": converted,
+        "size": len(content),
+    }
+
+
+@app.post("/api/upload/text")
+async def upload_text(payload: dict):
+    title = payload.get("title", "").strip()
+    content = payload.get("content", "")
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    safe_title = re.sub(r'[\\/*?:"<>|]', "_", title)
+    if not safe_title.endswith(".md"):
+        safe_title += ".md"
+
+    uploads_dir = REPO / "raw" / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    target = uploads_dir / safe_title
+
+    counter = 1
+    stem = target.stem
+    suffix = target.suffix
+    while target.exists():
+        target = uploads_dir / f"{stem}_{counter}{suffix}"
+        counter += 1
+
+    target.write_text(content, encoding="utf-8")
+
+    return {
+        "success": True,
+        "path": target.relative_to(REPO).as_posix(),
+    }
+
+
+@app.delete("/api/raw-files/{path:path}")
+def delete_raw_file(path: str):
+    """Delete a file from raw/uploads directory. Returns 400 if path escapes raw/."""
+    raw_dir = (REPO / "raw").resolve()
+    target = (REPO / path).resolve()
+    try:
+        target.relative_to(raw_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path must be within raw/")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if not target.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+    try:
+        target.unlink()
+        return {"success": True, "path": str(target.relative_to(REPO))}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Delete failed: {e}")
+
+
+@app.post("/api/ingest")
+async def api_ingest(payload: dict):
+    path_str = payload.get("path", "")
+    if not path_str:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    target = (REPO / path_str).resolve()
+    raw_dir = (REPO / "raw").resolve()
+    try:
+        target.relative_to(raw_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path must be within raw/")
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(REPO / "tools" / "ingest.py"), str(target)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
 
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():

@@ -112,7 +112,7 @@ def build_wiki_context() -> str:
     if sources_dir.exists():
         recent = sorted(sources_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
         for p in recent:
-            parts.append(f"## {p.relative_to(REPO_ROOT)}\n{p.read_text()}")
+            parts.append(f"## {p.relative_to(REPO_ROOT)}\n{read_file(p)}")
     return "\n\n---\n\n".join(parts)
 
 
