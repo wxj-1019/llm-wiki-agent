@@ -1,0 +1,11 @@
+# arXiv search queries for llm-wiki-agent
+# Run: python tools/fetchers/arxiv_fetcher.py --config config/arxiv_sources.yaml
+queries:
+  - label: "LLMs & Agents"
+    query: "cat:cs.AI OR cat:cs.CL OR cat:cs.LG"
+
+  - label: "Knowledge Graphs"
+    query: "all:knowledge graph AND (cat:cs.AI OR cat:cs.DB)"
+
+  - label: "RAG Systems"
+    query: "all:retrieval augmented generation OR all:RAG"

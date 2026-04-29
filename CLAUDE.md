@@ -17,10 +17,12 @@ This wiki is maintained entirely by Claude Code. No API key or Python scripts ne
 | **Graph Analysis** | `networkx` (~3.6.1) — Louvain community detection |
 | **Frontend** | React 18 + TypeScript + Vite (`wiki-viewer/`) with Tailwind CSS 4, vis-network, Zustand |
 | **Visualization** | Self-contained HTML with vis.js (CDN-loaded, no server needed) |
+| **Automation** | `schedule` (daemon) + `feedparser`/`requests` (fetchers) |
 
 **Environment Variables:**
 - `LLM_MODEL` — model identifier passed to litellm (default: `claude-3-5-sonnet-latest`)
 - Provider-specific API keys as required by litellm (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.)
+- `GITHUB_TOKEN` — GitHub personal access token for higher rate limits in `github_fetcher.py`
 
 **Security:** `litellm` is pinned to `~=1.83.10` in `requirements.txt` because versions `1.82.7–1.82.8` were compromised in a supply chain attack (March 2026). Never downgrade this dependency. All tools sanitize LLM-generated filenames against path traversal. `graph/graph.html` escapes `</script>` sequences to prevent XSS from wiki content.
 
@@ -48,6 +50,15 @@ Claude Code reads this file automatically and follows the workflows below.
 
 ```
 raw/          # Immutable source documents — never modify these
+raw-inbox/    # Automation pipeline staging area
+  fetched/    #   Fetcher output: one .md per item (rss/, arxiv/, github/)
+  batches/    #   Compiled weekly batches ready for ingest
+    archived/ #   Successfully ingested batches moved here
+  state.json  #   Dedup state, processed URLs, last-run timestamps
+config/       # Automation data source configs (YAML)
+  rss_sources.yaml
+  arxiv_sources.yaml
+  github_sources.yaml
 wiki/         # Claude owns this layer entirely
   index.md    # Catalog of all pages — update on every ingest
   log.md      # Append-only chronological record
@@ -66,9 +77,13 @@ tools/        # Standalone Python scripts
 wiki-viewer/  # React + TypeScript wiki browser (Vite, Tailwind CSS 4)
 ```
 
+---
+
 ## Tools Reference
 
 All scripts in `tools/` are standalone and require `litellm` (and optionally `markitdown`/`networkx`).
+
+### Core Wiki Tools
 
 | Script | Purpose | LLM Calls? | Usage |
 |---|---|---|---|
@@ -82,6 +97,27 @@ All scripts in `tools/` are standalone and require `litellm` (and optionally `ma
 | `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
 | `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
 | `api_server.py` | Local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
+
+### Automation Pipeline Tools
+
+| Script | Purpose | LLM Calls? | Usage |
+|---|---|---|---|
+| `scheduler.py` | Cross-platform daemon that runs the full pipeline on a schedule | No | `python tools/scheduler.py` — runs fetchers → compile → ingest → maintenance at preset times |
+| `batch_compiler.py` | Groups fetched .md files into weekly batches, deduplicating by URL | No | `python tools/batch_compiler.py [--window daily\|weekly] [--dry-run]` |
+| `batch_ingest.py` | Calls `ingest.py` for each batch, archives on success, updates state | Yes (via ingest) | `python tools/batch_ingest.py [--dry-run] [--skip-archive]` |
+| `archive_stale.py` | Moves expired source pages to `wiki/sources/archive/` based on `ttl:` or `archive_after:` frontmatter | No | `python tools/archive_stale.py [--dry-run] [--save-report]` |
+
+### Fetchers (`tools/fetchers/`)
+
+| Script | Purpose | Usage |
+|---|---|---|
+| `rss_fetcher.py` | Fetches RSS/Atom feeds → `raw-inbox/fetched/rss/` | `python tools/fetchers/rss_fetcher.py [--config config/rss_sources.yaml]` |
+| `arxiv_fetcher.py` | Queries arXiv API → `raw-inbox/fetched/arxiv/` | `python tools/fetchers/arxiv_fetcher.py [--config config/arxiv_sources.yaml]` |
+| `github_fetcher.py` | Fetches GitHub repo info/releases → `raw-inbox/fetched/github/` | `python tools/fetchers/github_fetcher.py [--config config/github_sources.yaml]` |
+
+Fetchers require: `pip install feedparser requests`.
+
+---
 
 ## Wiki Viewer (React Frontend)
 
@@ -101,7 +137,84 @@ Or use the convenience script to start both servers at once:
 python start_servers.py    # starts api_server (port 8000) + vite preview (port 3000)
 ```
 
-Tech: React 18, React Router 7, Tailwind CSS 4, Zustand (state), fuse.js (search), vis-network (graph), Shiki (syntax highlighting), react-markdown + remark-gfm.
+Tech: React 18, React Router 7, Tailwind CSS 4, Zustand (state), fuse.js (search), vis-network (graph), Shiki (syntax highlighting), react-markdown + remark-gfm, i18next (i18n with en/zh-CN).
+
+### Frontend Architecture
+
+```
+wiki-viewer/src/
+├── main.tsx            # React entry point
+├── router.tsx          # React Router route definitions (/, /browse, /page/:name, /search, /graph, /log)
+├── index.css           # Tailwind + Apple x Warm Clay design tokens
+├── components/
+│   ├── content/        # MarkdownRenderer (Shiki + remark-gfm), WikiLink ([[wikilink]] resolver)
+│   ├── graph/          # vis-network graph visualization
+│   ├── layout/         # RootLayout, Sidebar, GlassHeader (Apple glassmorphism style)
+│   ├── pages/          # HomePage, BrowsePage, PageDetailPage, SearchPage, GraphPage, LogPage, NotFoundPage
+│   └── ui/             # Shared UI primitives
+├── hooks/              # useDocumentTitle (syncs <title> to current page)
+├── i18n/               # i18next setup + locales (en.json, zh-CN.json)
+├── lib/                # frontmatter parser, wikilink resolver, fuse.js search, constants
+├── services/           # dataService.ts — API client for api_server.py
+├── stores/             # wikiStore.ts — Zustand store (pages, search, graph, selected page)
+└── types/              # TypeScript interfaces (graph types, vis-network declaration)
+```
+
+**State flow:** `dataService.ts` fetches from `api_server.py` → `wikiStore.ts` (Zustand) holds normalized page data, search results, and graph state → React components subscribe via Zustand selectors.
+
+**Routing:** `router.tsx` uses React Router BrowserRouter with hash history for static deployment compatibility. Routes: `/` (HomePage), `/browse` (BrowsePage), `/page/:name` (PageDetailPage), `/search` (SearchPage), `/graph` (GraphPage), `/log` (LogPage).
+
+---
+
+## Automation Pipeline
+
+The pipeline automatically fetches content from external sources, compiles it into batches, ingests it into the wiki, and performs periodic maintenance.
+
+```
+External Sources              Staging                      Wiki
+┌──────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│ RSS / Atom   │ →   │ raw-inbox/fetched/  │ →   │              │
+│ arXiv API    │ →   │   rss/ arxiv/       │ →   │ batch_       │
+│ GitHub API   │ →   │   github/           │ →   │ compiler.py  │
+└──────────────┘     └─────────────────────┘     │   ↓          │
+                                                 │ raw-inbox/   │
+                                                 │ batches/     │ → batch_ingest.py → wiki/
+                                                 └──────────────┘
+                                                 
+Maintenance (weekly):
+  archive_stale.py → health.py → build_graph.py
+```
+
+### Pipeline Steps
+
+1. **Fetch** — Fetchers write single-item `.md` files with frontmatter to `raw-inbox/fetched/<source>/`
+2. **Compile** — `batch_compiler.py` groups by `(source_type, week)`, deduplicates by `source_url`, writes `raw-inbox/batches/batch-<type>-<week>.md`
+3. **Ingest** — `batch_ingest.py` calls `ingest.py` for each batch, moves successful ones to `batches/archived/`
+4. **Maintain** — `archive_stale.py` archives expired sources (based on `ttl:` or `archive_after:` frontmatter), then `health.py` + `build_graph.py`
+
+### Running the Pipeline
+
+```bash
+# One-shot: run each step manually
+python tools/fetchers/rss_fetcher.py
+python tools/batch_compiler.py --dry-run    # preview first
+python tools/batch_compiler.py              # compile for real
+python tools/batch_ingest.py --dry-run      # preview first
+python tools/batch_ingest.py                # ingest for real
+
+# Or run the scheduler daemon (cross-platform, no cron needed)
+python tools/scheduler.py
+```
+
+The scheduler default schedule: RSS daily at 08:00, arXiv daily at 08:30, GitHub weekly Mon 09:00, compile+ingest Mon 09:30, maintenance Sun 22:00. Edit `scheduler.py` to adjust.
+
+### Archival
+
+Source pages can declare auto-expiry in frontmatter:
+- `ttl: 30` — expire N days after `last_updated` or `date`
+- `archive_after: 2026-06-01` — expire after a specific date
+
+Expired pages move to `wiki/sources/archive/` and are removed from `index.md`. Entity and concept pages are never archived.
 
 ---
 

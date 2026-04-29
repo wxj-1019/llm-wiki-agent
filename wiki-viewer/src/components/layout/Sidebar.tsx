@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Users, Lightbulb, Layers, GitBranch, ScrollText, Home, Compass, Upload } from 'lucide-react';
+import { FileText, Users, Lightbulb, Layers, GitBranch, ScrollText, Home, Compass, Upload, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,36 +9,19 @@ interface NavItem {
   translationKey: string;
   path: string;
   matchPath: string;
-  matchSearch?: string;
-  matchPrefixes?: string[];
 }
 
 const navItems: NavItem[] = [
   { icon: Home, translationKey: 'nav.home', path: '/', matchPath: '/' },
-  { icon: Compass, translationKey: 'nav.browse', path: '/browse', matchPath: '/browse', matchSearch: undefined },
-  { icon: FileText, translationKey: 'nav.sources', path: '/browse?t=source', matchPath: '/browse', matchSearch: 'source', matchPrefixes: ['/s/'] },
-  { icon: Users, translationKey: 'nav.entities', path: '/browse?t=entity', matchPath: '/browse', matchSearch: 'entity', matchPrefixes: ['/e/'] },
-  { icon: Lightbulb, translationKey: 'nav.concepts', path: '/browse?t=concept', matchPath: '/browse', matchSearch: 'concept', matchPrefixes: ['/c/'] },
-  { icon: Layers, translationKey: 'nav.syntheses', path: '/browse?t=synthesis', matchPath: '/browse', matchSearch: 'synthesis', matchPrefixes: ['/y/'] },
+  { icon: Compass, translationKey: 'nav.browse', path: '/browse', matchPath: '/browse' },
   { icon: GitBranch, translationKey: 'nav.graph', path: '/graph', matchPath: '/graph' },
   { icon: ScrollText, translationKey: 'nav.log', path: '/log', matchPath: '/log' },
   { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
 ];
 
-function isItemActive(item: NavItem, pathname: string, search: string): boolean {
-  if (item.matchPath === '/' && pathname === '/') return true;
-  if (item.matchPath === '/' && pathname !== '/') return false;
-
-  if (item.matchPrefixes?.some((p) => pathname.startsWith(p))) return true;
-
-  if (pathname === item.matchPath) {
-    if (item.matchSearch === undefined) return true;
-    const params = new URLSearchParams(search);
-    const t = params.get('t');
-    return t === item.matchSearch;
-  }
-
-  return false;
+function isItemActive(item: NavItem, pathname: string): boolean {
+  if (item.matchPath === '/') return pathname === '/';
+  return pathname === item.matchPath || pathname.startsWith(item.matchPath + '/');
 }
 
 export function Sidebar() {
@@ -54,42 +37,72 @@ export function Sidebar() {
     }
   };
 
+  const settingsActive = location.pathname === '/settings';
+
   const sidebarContent = (
-    <nav className="p-2 space-y-1">
-      {navItems.map((item) => {
-        const navActive = isItemActive(item, location.pathname, location.search);
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={handleNavClick}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
-              navActive
-                ? 'bg-apple-blue/10 text-apple-blue font-medium'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
-            }`}
-            title={t(item.translationKey)}
-          >
-            <item.icon size={18} />
-            {!sidebarCollapsed && (
-              <motion.span
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2 }}
-                className="text-sm whitespace-nowrap"
-              >
-                {t(item.translationKey)}
-              </motion.span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex flex-col h-full">
+      <nav className="p-2 space-y-1 flex-1">
+        {navItems.map((item) => {
+          const navActive = isItemActive(item, location.pathname);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={handleNavClick}
+              className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
+                navActive
+                  ? 'bg-apple-blue/10 text-apple-blue font-medium'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+              title={t(item.translationKey as any)}
+            >
+              <item.icon size={18} />
+              {!sidebarCollapsed && (
+                <motion.span
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm whitespace-nowrap"
+                >
+                  {t(item.translationKey as any)}
+                </motion.span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Settings at bottom */}
+      <div className="p-2 border-t border-[var(--border-default)]">
+        <Link
+          to="/settings"
+          onClick={handleNavClick}
+          className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
+            settingsActive
+              ? 'bg-apple-blue/10 text-apple-blue font-medium'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+          title={t('nav.settings')}
+        >
+          <Settings size={18} />
+          {!sidebarCollapsed && (
+            <motion.span
+              initial={{ opacity: 0, x: -5 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-sm whitespace-nowrap"
+            >
+              {t('nav.settings')}
+            </motion.span>
+          )}
+        </Link>
+      </div>
+    </div>
   );
 
   return (
     <>
-      {/* Desktop sidebar — always visible */}
+      {/* Desktop sidebar �?always visible */}
       <aside
         className="hidden md:block fixed left-0 top-14 bottom-0 z-40 bg-[var(--bg-primary)] border-r border-[var(--border-default)] transition-all duration-300 overflow-y-auto"
         style={{ width: sidebarCollapsed ? '56px' : '240px' }}
@@ -97,7 +110,7 @@ export function Sidebar() {
         {sidebarContent}
       </aside>
 
-      {/* Mobile sidebar — overlay with animation */}
+      {/* Mobile sidebar �?overlay with animation */}
       <AnimatePresence>
         {!sidebarCollapsed && (
           <>

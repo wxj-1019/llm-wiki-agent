@@ -42,7 +42,6 @@ export function SearchPage() {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
-  useWikiStore((s) => s.graphData);
 
   const results = useMemo(() => {
     if (!query.trim()) return [];
@@ -80,6 +79,7 @@ export function SearchPage() {
         {results.map((result, i) => {
           const node = result.item;
           const Icon = typeIcons[node.type] || FileText;
+
           const labelMatches = result.matches?.find((m) => m.key === 'label');
           const previewMatches = result.matches?.find((m) => m.key === 'preview');
 
@@ -102,7 +102,7 @@ export function SearchPage() {
                     <span className="font-semibold">
                       <HighlightText text={node.label} matches={labelMatches?.indices} />
                     </span>
-                    <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type))}</span>
+                    <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as any)}</span>
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
                     <HighlightText text={node.preview} matches={previewMatches?.indices} />

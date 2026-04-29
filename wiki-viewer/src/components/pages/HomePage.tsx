@@ -161,7 +161,7 @@ export function HomePage() {
                 <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
                   <stat.icon size={14} />
                 </div>
-                <span className="text-sm text-[var(--text-secondary)]">{t(stat.labelKey)}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t(stat.labelKey as any)}</span>
               </div>
               <div className="text-2xl font-semibold">{stat.count}</div>
             </div>
@@ -311,7 +311,7 @@ function TypeBadge({ type }: { type: string }) {
   };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[type] || 'bg-gray-100 text-gray-600'}`}>
-      {t(typeLabelKey(type))}
+      {t(typeLabelKey(type) as any)}
     </span>
   );
 }

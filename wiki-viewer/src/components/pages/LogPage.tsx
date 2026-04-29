@@ -104,7 +104,7 @@ export function LogPage() {
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           {Object.entries(stats).map(([op, count]) => (
             <span key={op} className={`text-xs font-medium px-2 py-1 rounded-full ${opColors[op] || 'bg-gray-100 text-gray-600'}`}>
-              {t(`log.op.${op}`)}: {count}
+              {t(`log.op.${op}` as any)}: {count}
             </span>
           ))}
           <span className="text-xs text-[var(--text-tertiary)] ml-auto">
@@ -179,7 +179,7 @@ export function LogPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{entry.title}</span>
                     <span className="text-xs text-[var(--text-tertiary)] capitalize px-2 py-0.5 rounded-full bg-[var(--bg-secondary)]">
-                      {t(`log.op.${entry.operation}`)}
+                      {t(`log.op.${entry.operation}` as any)}
                     </span>
                   </div>
                   <div className="text-xs text-[var(--text-secondary)] mt-0.5 flex items-center gap-1">

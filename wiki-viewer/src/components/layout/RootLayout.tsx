@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { GlassHeader } from './GlassHeader';
 import { Sidebar } from './Sidebar';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export function RootLayout() {
   const { t } = useTranslation();
@@ -22,13 +23,13 @@ export function RootLayout() {
 
   // Scroll to top on route change, but skip detail pages (they restore scroll position)
   useEffect(() => {
-    // Don't scroll for detail pages â€” PageDetailPage handles scroll restoration
+    // Don't scroll for detail pages â€?PageDetailPage handles scroll restoration
     if (!location.pathname.match(/^\/(s|e|c|y)\//)) {
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }
   }, [location.pathname]);
 
-  // Ctrl+K â†’ navigate to search
+  // Ctrl+K â†?navigate to search
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
@@ -56,10 +57,8 @@ export function RootLayout() {
         >
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
             {loading ? (
-              <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <Loader2 size={40} className="text-apple-blue animate-spin mb-4" />
-                <p className="text-[var(--text-secondary)] text-sm">{t('loading.graph')}</p>
-                <p className="text-[var(--text-tertiary)] text-xs mt-1">{t('loading.hint')}</p>
+              <div className="min-h-[60vh] py-8">
+                <PageSkeleton />
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center min-h-[60vh]">

@@ -33,7 +33,7 @@
     --bg-warm: #fff8f5;
     --text-primary: #1d1d1f;
     --text-secondary: #6e6e73;
-    --text-tertiary: #a1a1a6;
+    --text-tertiary: #8e8e93;
     --border-default: rgba(0, 0, 0, 0.08);
     --border-strong: rgba(0, 0, 0, 0.16);
     --warm-peach: #ffb5a7;
@@ -51,7 +51,7 @@
     --bg-warm: #1a1215;
     --text-primary: #f5f5f7;
     --text-secondary: #98989d;
-    --text-tertiary: #636366;
+    --text-tertiary: #555558;
     --border-default: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
     --warm-peach: #ff8a75;
@@ -64,6 +64,12 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-apple-blue), 0 0 0 4px var(--bg-primary);
+    border-radius: 0.25rem;
   }
 
   body {

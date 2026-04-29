@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Heart, Link2, Calendar, Tag, List } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
@@ -8,7 +8,7 @@ import i18n from '@/i18n';
 import { useWikiStore } from '@/stores/wikiStore';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import { parseFrontmatter } from '@/lib/frontmatter';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -18,8 +18,12 @@ interface Props {
 }
 
 function formatDate(dateStr: string): string {
-  const locale = i18n.language === 'zh-CN' ? zhCN : enUS;
-  return format(parseISO(dateStr), 'PPP', { locale });
+  try {
+    const locale = i18n.language === 'zh-CN' ? zhCN : enUS;
+    return format(parseISO(dateStr), 'PPP', { locale });
+  } catch {
+    return dateStr;
+  }
 }
 
 const typeColors: Record<string, string> = {
@@ -31,6 +35,7 @@ const typeColors: Record<string, string> = {
 
 export function PageDetailPage({ type }: Props) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { slug, name } = useParams();
   const param = slug || name || '';
   const graphData = useWikiStore((s) => s.graphData);
@@ -41,6 +46,14 @@ export function PageDetailPage({ type }: Props) {
   const readingProgress = useWikiStore((s) => s.readingProgress);
   const setReadingProgress = useWikiStore((s) => s.setReadingProgress);
   const progressRef = useRef(0);
+  const [favBounce, setFavBounce] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 1500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const node = useMemo(() => {
     if (!graphData) return null;
@@ -74,7 +87,8 @@ export function PageDetailPage({ type }: Props) {
     }
   }, [node]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track scroll progress
+  // Track scroll progress (debounced write to store)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!node) return;
     const handleScroll = () => {
@@ -84,11 +98,17 @@ export function PageDetailPage({ type }: Props) {
       const progress = Math.min(1, Math.max(0, scrollTop / docHeight));
       if (Math.abs(progress - progressRef.current) > 0.01) {
         progressRef.current = progress;
-        setReadingProgress(node.id, progress);
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          setReadingProgress(node.id, progress);
+        }, 500);
       }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
   }, [node, setReadingProgress]);
 
   useDocumentTitle(node?.label);
@@ -108,6 +128,20 @@ export function PageDetailPage({ type }: Props) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-default)] shadow-apple-lg text-sm text-[var(--text-primary)]"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Reading Progress */}
       {node && (
         <div className="fixed top-14 left-0 right-0 z-40 h-[2px] bg-[var(--bg-secondary)]">
@@ -120,11 +154,18 @@ export function PageDetailPage({ type }: Props) {
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm text-[var(--text-secondary)]">
+        <button
+          onClick={() => navigate(-1)}
+          className="hover:text-[var(--text-primary)] flex items-center gap-1 transition-colors"
+          title={t('detail.back')}
+        >
+          <Undo2 size={14} />
+        </button>
         <Link to="/browse" className="hover:text-[var(--text-primary)] flex items-center gap-1">
           <ArrowLeft size={14} /> {t('detail.breadcrumb.browse')}
         </Link>
         <span>/</span>
-        <span className="capitalize">{t(typeLabelKey(type))}</span>
+        <span className="capitalize">{t(typeLabelKey(type) as any)}</span>
         <span>/</span>
         <span className="text-[var(--text-primary)] font-medium">{node.label}</span>
       </div>
@@ -133,10 +174,14 @@ export function PageDetailPage({ type }: Props) {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide ${typeColors[type] || ''}`}>
-            {t(typeLabelKey(type))}
+            {t(typeLabelKey(type) as any)}
           </span>
           <button
-            onClick={() => toggleFavorite(node.id)}
+            onClick={() => {
+              toggleFavorite(node.id);
+              setFavBounce((k) => k + 1);
+              setToast(isFavorite(node.id) ? t('detail.favorite.removed') : t('detail.favorite.added'));
+            }}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
               isFavorite(node.id)
                 ? 'text-red-500 bg-red-500/10'
@@ -144,7 +189,14 @@ export function PageDetailPage({ type }: Props) {
             }`}
             title={isFavorite(node.id) ? t('detail.favorite.remove') : t('detail.favorite.add')}
           >
-            <Heart size={14} fill={isFavorite(node.id) ? 'currentColor' : 'none'} />
+            <motion.span
+              key={favBounce}
+              initial={{ scale: 0.6 }}
+              animate={{ scale: [0.6, 1.3, 1] }}
+              transition={{ duration: 0.35 }}
+            >
+              <Heart size={14} fill={isFavorite(node.id) ? 'currentColor' : 'none'} />
+            </motion.span>
             <span className="hidden sm:inline">
               {isFavorite(node.id) ? t('detail.favorite.remove') : t('detail.favorite.add')}
             </span>
@@ -166,7 +218,7 @@ export function PageDetailPage({ type }: Props) {
               {t('detail.updated', { date: formatDate(meta.last_updated) })}
             </div>
           )}
-          {meta?.tags && meta.tags.length > 0 && (
+          {Array.isArray(meta?.tags) && meta.tags.length > 0 && (
             <div className="flex items-center gap-1">
               <Tag size={14} />
               {meta.tags.map((tag: string) => (
@@ -184,7 +236,7 @@ export function PageDetailPage({ type }: Props) {
         <article id="article-content" className="prose prose-lg max-w-none flex-1 min-w-0">
           <MarkdownRenderer content={body} />
         </article>
-        <TableOfContents />
+        <TableOfContents content={body} />
       </div>
 
       {/* Backlinks */}
@@ -204,7 +256,7 @@ export function PageDetailPage({ type }: Props) {
                   className="apple-card p-3 flex items-center gap-3"
                 >
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColors[link.type] || ''}`}>
-                    {t(typeLabelKey(link.type))}
+                    {t(typeLabelKey(link.type) as any)}
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
                 </Link>
@@ -227,7 +279,7 @@ interface HeadingItem {
   level: number;
 }
 
-function TableOfContents() {
+function TableOfContents({ content }: { content: string }) {
   const { t } = useTranslation();
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
@@ -244,7 +296,7 @@ function TableOfContents() {
       }
     });
     setHeadings(items);
-  }, []);
+  }, [content]);
 
   useEffect(() => {
     if (headings.length === 0) return;

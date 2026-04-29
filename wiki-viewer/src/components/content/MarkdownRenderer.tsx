@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -12,6 +12,56 @@ interface Props {
   content: string;
 }
 
+function useThemeName() {
+  const [theme, setTheme] = useState<'github-light' | 'github-dark'>(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'github-dark' : 'github-light';
+  });
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      setTheme(isDark ? 'github-dark' : 'github-light');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
+
+function CodeBlock({ className, children, ...props }: any) {
+  const match = /language-(\w+)/.exec(className ?? '');
+  const lang = match ? match[1] : '';
+  const theme = useThemeName();
+  const [html, setHtml] = useState('');
+
+  useEffect(() => {
+    if (!lang) return;
+    const code = String(children).replace(/\n$/, '');
+    codeToHtml(code, { lang, theme }).then(setHtml);
+  }, [children, lang, theme]);
+
+  if (!lang) {
+    return (
+      <code className="bg-[var(--bg-secondary)] text-apple-purple px-1.5 py-0.5 rounded-md font-mono text-sm" {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  if (!html) {
+    return (
+      <pre className="bg-[var(--bg-secondary)] rounded-xl p-4 my-4 overflow-x-auto text-sm font-mono">
+        <code className={className} {...props}>{children}</code>
+      </pre>
+    );
+  }
+
+  return (
+    <div className="my-4 rounded-xl overflow-x-auto text-sm">
+      <div dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
+}
+
 function processWikiLinks(children: React.ReactNode): React.ReactNode {
   if (typeof children === 'string') {
     const parts = children.split(/(\[\[[^\]]+\]\])/g);
@@ -20,7 +70,7 @@ function processWikiLinks(children: React.ReactNode): React.ReactNode {
       const match = part.match(/^\[\[([^\]]+)\]\]$/);
       if (match) {
         const rawTarget = match[1];
-        // Handle piped links: [[Target|Display text]] → target=Target, display=Display text
+        // Handle piped links: [[Target|Display text]] �?target=Target, display=Display text
         const pipeIdx = rawTarget.indexOf('|');
         const target = pipeIdx >= 0 ? rawTarget.substring(0, pipeIdx) : rawTarget;
         const display = pipeIdx >= 0 ? rawTarget.substring(pipeIdx + 1) : rawTarget;
@@ -42,7 +92,7 @@ function processWikiLinks(children: React.ReactNode): React.ReactNode {
 }
 
 export function MarkdownRenderer({ content }: Props) {
-  const { body } = parseFrontmatter(content);
+  const { body } = useMemo(() => parseFrontmatter(content), [content]);
 
   return (
     <ReactMarkdown
@@ -61,18 +111,7 @@ export function MarkdownRenderer({ content }: Props) {
             {processWikiLinks(children)}
           </blockquote>
         ),
-        code: ({ className, children, ...props }) => {
-          const match = /language-(\w+)/.exec(className ?? '');
-          const code = String(children).replace(/\n$/, '');
-          if (match) {
-            return <CodeBlock code={code} language={match[1]} />;
-          }
-          return (
-            <code className="bg-[var(--bg-secondary)] text-apple-purple px-1.5 py-0.5 rounded-md font-mono text-sm" {...props}>
-              {children}
-            </code>
-          );
-        },
+        code: CodeBlock,
         table: ({ children }) => (
           <div className="overflow-x-auto my-6">
             <table className="w-full text-sm border-collapse">{children}</table>
@@ -99,39 +138,3 @@ export function MarkdownRenderer({ content }: Props) {
   );
 }
 
-/**
- * Async syntax highlighting via Shiki.
- * Renders a plain <pre><code> fallback before the highlighter finishes.
- */
-function CodeBlock({ code, language }: { code: string; language: string }) {
-  const [html, setHtml] = useState<string | null>(null);
-  const theme = document.documentElement.getAttribute('data-theme') === 'dark'
-    ? 'github-dark' : 'github-light';
-
-  useEffect(() => {
-    let cancelled = false;
-    codeToHtml(code, { lang: language, theme }).then((h) => {
-      if (!cancelled) setHtml(h);
-    }).catch(() => {
-      // Shiki may not support the language — fall back to plain <pre>
-      if (!cancelled) setHtml(null);
-    });
-    return () => { cancelled = true; };
-  }, [code, language, theme]);
-
-  if (html) {
-    return (
-      <div
-        className="my-4 [&>pre]:rounded-xl [&>pre]:!bg-[var(--bg-secondary)] [&>pre]:overflow-x-auto [&>pre]:p-4 [&>pre]:text-sm [&>pre]:font-mono"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    );
-  }
-
-  // Fallback while Shiki loads
-  return (
-    <pre className="bg-[var(--bg-secondary)] rounded-xl p-4 my-4 overflow-x-auto text-sm font-mono">
-      <code className={`language-${language}`}>{code}</code>
-    </pre>
-  );
-}

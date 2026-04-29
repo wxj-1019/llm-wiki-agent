@@ -1,0 +1,27 @@
+# GitHub repositories to track
+# Run: python tools/fetchers/github_fetcher.py --config config/github_sources.yaml
+# Optional: export GITHUB_TOKEN=ghp_xxx for higher rate limits
+
+# Specific repos you want to follow
+repos:
+  - repo: "microsoft/markitdown"
+    kinds: ["info", "releases"]
+
+  - repo: "BerriAI/litellm"
+    kinds: ["info", "releases"]
+
+  - repo: "langchain-ai/langchain"
+    kinds: ["info"]
+
+  - repo: "openai/openai-python"
+    kinds: ["releases"]
+
+# Trending / emerging repos (searches GitHub Search API)
+trending:
+  enabled: true
+  # Languages to scan. Use ["all"] for all languages, or specify a list.
+  languages: ["python", "javascript", "typescript", "rust", "go"]
+  # How many days back to look for recent activity
+  since_days: 7
+  # How many top repos per language to fetch
+  per_language: 5

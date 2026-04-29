@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -100,7 +100,7 @@ export function BrowsePage() {
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {t(tab.labelKey)}
+              {t(tab.labelKey as any)}
             </button>
           ))}
         </div>
@@ -113,39 +113,65 @@ export function BrowsePage() {
             <ArrowUpDown size={14} />
             <span className="hidden sm:inline">{t('browse.sort.label')}: {t(`browse.sort.${sortBy}`)}</span>
           </button>
-          {sortOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 py-1 glass rounded-xl shadow-apple-lg min-w-[160px] z-50">
-            {(['default', 'name', 'connected'] as const).map((key) => (
-              <button
-                key={key}
-                onClick={() => setSortBy(key)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-secondary)] transition-colors ${
-                  sortBy === key ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
-                }`}
-              >
-                {t(`browse.sort.${key}`)}
-              </button>
-            ))}
-              </div>
-            </>
-          )}
+          <AnimatePresence>
+            {sortOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed inset-0 z-40"
+                  onClick={() => setSortOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 py-1 glass rounded-xl shadow-apple-lg min-w-[160px] z-50 origin-top-right"
+                >
+              {(['default', 'name', 'connected'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-secondary)] transition-colors ${
+                    sortBy === key ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {t(`browse.sort.${key}`)}
+                </button>
+              ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((node, i) => (
-          <motion.div
-            key={node.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: i * 0.03 }}
-          >
-            <PageCard node={node} />
-          </motion.div>
-        ))}
+        {filtered.map((node, i) => {
+          const useMotion = filtered.length <= 20;
+          const card = <PageCard node={node} backlinks={getBacklinks(node.id)} />;
+          if (!useMotion) {
+            return (
+              <div key={node.id} className="transition-opacity duration-300" style={{ animationDelay: `${Math.min(i * 20, 300)}ms` }}>
+                {card}
+              </div>
+            );
+          }
+          return (
+            <motion.div
+              key={node.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.03 }}
+            >
+              {card}
+            </motion.div>
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
@@ -182,12 +208,12 @@ export function BrowsePage() {
   );
 }
 
-function PageCard({ node }: { node: { id: string; label: string; type: string; preview: string } }) {
+function PageCard({ node, backlinks }: { node: { id: string; label: string; type: string; preview: string }; backlinks: { id: string; label: string; type: string; preview: string }[] }) {
   const { t } = useTranslation();
   const Icon = typeIcons[node.type] || FileText;
   const colorClass = typeColors[node.type] || 'text-gray-600 bg-gray-100';
+
   const isFav = useWikiStore((s) => s.isFavorite(node.id));
-  const backlinks = useWikiStore((s) => s.getBacklinks(node.id));
 
   return (
     <Link
@@ -198,7 +224,7 @@ function PageCard({ node }: { node: { id: string; label: string; type: string; p
         <div className={`p-2 rounded-lg ${colorClass}`}>
           <Icon size={16} />
         </div>
-        <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type))}</span>
+        <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as any)}</span>
       </div>
       <h3 className="font-semibold text-lg mb-2 group-hover:text-apple-blue transition-colors">
         {node.label}

@@ -8,9 +8,10 @@ interface WikiLinkProps {
 }
 
 export function WikiLink({ target, children }: WikiLinkProps) {
-  const nodes = useWikiStore((s) => s.graphData?.nodes ?? []);
+  const graphData = useWikiStore((s) => s.graphData);
+  const nodes = graphData?.nodes ?? [];
 
-  // Parse piped link: [[Target|Display]] â†’ target=Target, display=Display
+  // Parse piped link: [[Target|Display]] â†?target=Target, display=Display
   const pipeIdx = target.indexOf('|');
   const actualTarget = pipeIdx >= 0 ? target.substring(0, pipeIdx) : target;
   const display = children;

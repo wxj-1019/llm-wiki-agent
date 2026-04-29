@@ -8,7 +8,7 @@ import re
 import sys
 import subprocess
 from pathlib import Path
-from fastapi import FastAPI, Query, UploadFile, File
+from fastapi import FastAPI, Query, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -296,6 +296,39 @@ async def api_ingest(payload: dict):
         raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
+@app.get("/api/config/{name}")
+def get_config(name: str):
+    safe_name = Path(name).name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid config name")
+    path = REPO / "config" / f"{safe_name}.yaml"
+    if not path.exists():
+        path = REPO / "config" / f"{safe_name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Config not found")
+    try:
+        path.resolve().relative_to((REPO / "config").resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    return {"name": safe_name, "content": path.read_text(encoding="utf-8")}
+
+
+@app.post("/api/config/{name}")
+async def save_config(name: str, request: Request):
+    safe_name = Path(name).name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid config name")
+    path = REPO / "config" / f"{safe_name}.yaml"
+    try:
+        path.resolve().relative_to((REPO / "config").resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = await request.body()
+    path.write_text(body.decode("utf-8"), encoding="utf-8")
+    return {"ok": True, "path": str(path)}
 
 
 # Serve frontend static files if dist exists

@@ -1,0 +1,20 @@
+# RSS/Atom feeds for llm-wiki-agent
+# Run: python tools/fetchers/rss_fetcher.py --config config/rss_sources.yaml
+feeds:
+  - name: "Hacker News - AI"
+    url: "https://hnrss.org/newest?q=artificial+intelligence"
+
+  - name: "Machine Learning - Reddit"
+    url: "https://www.reddit.com/r/MachineLearning/.rss"
+
+  - name: "OpenAI Blog"
+    url: "https://openai.com/blog/rss.xml"
+
+  - name: "Anthropic News"
+    url: "https://www.anthropic.com/rss.xml"
+
+  - name: "Papers With Code - Latest"
+    url: "https://paperswithcode.com/rss"
+
+  - name: "PyTorch Blog"
+    url: "https://pytorch.org/blog/atom.xml"
