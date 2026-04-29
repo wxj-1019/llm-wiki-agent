@@ -73,11 +73,14 @@ def generate_concept_map(
 
     for slug, page in concepts:
         title = page.get("title", slug).replace('"', "'")
-        buf.write(f'    {title}\n')
+        # Wrap in quotes if title contains mermaid-special chars
+        safe_title = f'"{title}"' if any(c in title for c in "()[]{}<>") else title
+        buf.write(f'    {safe_title}\n')
         for link in page.get("links", [])[:3]:
             if link in concept_slugs and link != slug:
                 link_title = pages.get(link, {}).get("title", link).replace('"', "'")
-                buf.write(f'      {link_title}\n')
+                safe_link = f'"{link_title}"' if any(c in link_title for c in "()[]{}<>") else link_title
+                buf.write(f'      {safe_link}\n')
 
     buf.write("```\n")
     return buf.getvalue()
@@ -99,7 +102,7 @@ def generate_architecture_overview(pages: dict[str, WikiPage]) -> str:
     if sources:
         buf.write(f'    subgraph Sources["Sources ({len(sources)})"]\n')
         for s in sources[:5]:
-            buf.write(f'        { _sanitize_mermaid_id(s)}["{s}"]\n')
+            buf.write(f'        {_sanitize_mermaid_id(s)}["{s}"]\n')
         if len(sources) > 5:
             buf.write(f'        ...["+{len(sources)-5} more"]\n')
         buf.write("    end\n")
