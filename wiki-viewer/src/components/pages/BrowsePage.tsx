@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
+import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -185,15 +186,12 @@ function PageCard({ node }: { node: { id: string; label: string; type: string; p
   const { t } = useTranslation();
   const Icon = typeIcons[node.type] || FileText;
   const colorClass = typeColors[node.type] || 'text-gray-600 bg-gray-100';
-  const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-  const prefix = prefixMap[node.type] || 's';
-  const slug = node.id.split('/').pop() || node.id;
   const isFav = useWikiStore((s) => s.isFavorite(node.id));
   const backlinks = useWikiStore((s) => s.getBacklinks(node.id));
 
   return (
     <Link
-      to={`/${prefix}/${slug}`}
+      to={getPagePath(node)}
       className="apple-card p-5 block group"
     >
       <div className="flex items-start justify-between mb-3">

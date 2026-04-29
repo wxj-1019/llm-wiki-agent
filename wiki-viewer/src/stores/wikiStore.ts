@@ -14,6 +14,7 @@ interface WikiState {
   favorites: string[];
   commandPaletteOpen: boolean;
   initialize: () => Promise<void>;
+  refreshGraphData: () => Promise<void>;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   toggleSidebar: () => void;
   openCommandPalette: () => void;
@@ -44,6 +45,29 @@ const persisted = (() => {
   }
 })();
 
+// ── Debounced persistence ──
+// Scroll-triggered state (readingProgress) fires ~100 times per article read.
+// We debounce localStorage writes to 1 second to avoid blocking the main thread.
+let _persistTimer: ReturnType<typeof setTimeout> | null = null;
+function schedulePersist(state: WikiState) {
+  if (_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(() => writePersist(state), 1000);
+}
+function persistNow(state: WikiState) {
+  if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+  writePersist(state);
+}
+function writePersist(state: WikiState) {
+  const data = {
+    theme: state.theme,
+    sidebarCollapsed: state.sidebarCollapsed,
+    recentPages: state.recentPages,
+    readingProgress: state.readingProgress,
+    favorites: state.favorites,
+  };
+  localStorage.setItem('wiki-viewer-storage', JSON.stringify(data));
+}
+
 export const useWikiStore = create<WikiState>((set, get) => ({
   graphData: null,
   theme: persisted.theme || 'system',
@@ -68,15 +92,26 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     }
   },
 
+  refreshGraphData: async () => {
+    set({ loading: true, error: null });
+    try {
+      const data = await fetchGraphData();
+      initSearch(data.nodes);
+      set({ graphData: data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
+    }
+  },
+
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
-    persistState(get());
+    persistNow(get());
   },
 
   toggleSidebar: () => {
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed }));
-    persistState(get());
+    persistNow(get());
   },
 
   openCommandPalette: () => set({ commandPaletteOpen: true }),
@@ -105,7 +140,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       const recentPages = [pageId, ...filtered].slice(0, 20);
       return { recentPages };
     });
-    persistState(get());
+    persistNow(get());
   },
 
   toggleFavorite: (pageId) => {
@@ -115,7 +150,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         : [...s.favorites, pageId];
       return { favorites };
     });
-    persistState(get());
+    persistNow(get());
   },
 
   isFavorite: (pageId) => get().favorites.includes(pageId),
@@ -125,19 +160,8 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       const readingProgress = { ...s.readingProgress, [pageId]: progress };
       return { readingProgress };
     });
-    persistState(get());
+    schedulePersist(get());
   },
 }));
-
-function persistState(state: WikiState) {
-  const data = {
-    theme: state.theme,
-    sidebarCollapsed: state.sidebarCollapsed,
-    recentPages: state.recentPages,
-    readingProgress: state.readingProgress,
-    favorites: state.favorites,
-  };
-  localStorage.setItem('wiki-viewer-storage', JSON.stringify(data));
-}
 
 applyTheme(persisted.theme || 'system');

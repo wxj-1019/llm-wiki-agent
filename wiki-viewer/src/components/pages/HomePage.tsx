@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
+import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function HomePage() {
@@ -336,9 +337,3 @@ function PageLink({ node, children, className }: { node: { id: string; type: str
   );
 }
 
-function getPagePath(node: { id: string; type: string }) {
-  const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-  const prefix = prefixMap[node.type] || 's';
-  const slug = node.id.split('/').pop() || node.id;
-  return `/${prefix}/${slug}`;
-}

@@ -15,10 +15,7 @@ export function WikiLink({ target, children }: WikiLinkProps) {
   const actualTarget = pipeIdx >= 0 ? target.substring(0, pipeIdx) : target;
   const display = children;
 
-  const path = resolveWikiLink(actualTarget, nodes);
-  const exists = nodes.some(
-    (n) => n.label.toLowerCase() === actualTarget.toLowerCase() || n.id.endsWith(`/${actualTarget}`)
-  );
+  const { path, exists } = resolveWikiLink(actualTarget, nodes);
 
   if (exists) {
     return (

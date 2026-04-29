@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Users, Lightbulb, Layers, GitBranch, ScrollText, Home, Compass } from 'lucide-react';
+import { FileText, Users, Lightbulb, Layers, GitBranch, ScrollText, Home, Compass, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavItem {
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<any>;
   translationKey: string;
   path: string;
   matchPath: string;
@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { icon: Layers, translationKey: 'nav.syntheses', path: '/browse?t=synthesis', matchPath: '/browse', matchSearch: 'synthesis', matchPrefixes: ['/y/'] },
   { icon: GitBranch, translationKey: 'nav.graph', path: '/graph', matchPath: '/graph' },
   { icon: ScrollText, translationKey: 'nav.log', path: '/log', matchPath: '/log' },
+  { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
 ];
 
 function isItemActive(item: NavItem, pathname: string, search: string): boolean {

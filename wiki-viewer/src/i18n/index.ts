@@ -7,11 +7,11 @@ import zhCN from './locales/zh-CN.json';
 
 type Resources = typeof en;
 
-declare module 'i18next' {
-  interface CustomTypeOptions {
-    resources: { translation: Resources };
-  }
-}
+// Intentionally skip custom type options to keep t() signatures permissive
+// (the strict literal union typing from resources causes excessive depth
+// and mis-assigns object options to defaultValue parameter position).
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface LooseResources extends Resources {}
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },

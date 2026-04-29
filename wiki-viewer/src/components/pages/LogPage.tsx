@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { ScrollText, Search, Wrench, Activity, Loader2, Copy, Check, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { getPagePath } from '@/lib/wikilink';
 import { useWikiStore } from '@/stores/wikiStore';
 
 interface LogEntry {
@@ -40,8 +41,17 @@ export function LogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes || [];
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -129,7 +139,8 @@ export function LogPage() {
                 onClick={() => {
                   navigator.clipboard.writeText('python tools/ingest.py raw/your-document.md');
                   setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
+                  if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+                  copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
                 }}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)]"
               >
@@ -149,10 +160,7 @@ export function LogPage() {
             );
             const handleClick = () => {
               if (!linkedNode) return;
-              const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-              const prefix = prefixMap[linkedNode.type] || 's';
-              const slug = linkedNode.id.split('/').pop() || linkedNode.id;
-              navigate(`/${prefix}/${slug}`);
+              navigate(getPagePath(linkedNode));
             };
 
             return (

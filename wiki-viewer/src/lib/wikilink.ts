@@ -7,14 +7,31 @@ const prefixMap: Record<string, string> = {
   synthesis: 'y',
 };
 
-export function resolveWikiLink(target: string, nodes: GraphNode[]): string {
+/**
+ * Resolve a [[wikilink]] target (label or slug) to a router path.
+ * Returns path + whether the target page exists.
+ */
+export function resolveWikiLink(
+  target: string,
+  nodes: GraphNode[]
+): { path: string; exists: boolean } {
   const node = nodes.find(
     (n) => n.label.toLowerCase() === target.toLowerCase() || n.id.endsWith(`/${target}`)
   );
-  if (!node) return `/search?q=${encodeURIComponent(target)}`;
+  if (!node) return { path: `/search?q=${encodeURIComponent(target)}`, exists: false };
 
   const prefix = prefixMap[node.type] || 's';
   const slug = node.id.split('/').pop() || target;
+  return { path: `/${prefix}/${slug}`, exists: true };
+}
+
+/**
+ * Convert a node { id, type } to its page path.
+ * Centralized to avoid duplicating prefixMap across components.
+ */
+export function getPagePath(node: { id: string; type: string }): string {
+  const prefix = prefixMap[node.type] || 's';
+  const slug = node.id.split('/').pop() || node.id;
   return `/${prefix}/${slug}`;
 }
 

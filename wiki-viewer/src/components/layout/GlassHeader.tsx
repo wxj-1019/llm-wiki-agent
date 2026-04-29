@@ -1,36 +1,44 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
+import { getPagePath } from '@/lib/wikilink';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative group">
+    <div className="relative">
       <button
         className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
         title={t('action.switchLanguage')}
+        onClick={() => setOpen(!open)}
       >
         <Globe size={18} />
       </button>
-      <div className="absolute right-0 top-full mt-2 py-1 glass rounded-xl shadow-apple-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all min-w-[140px] z-50">
-        {SUPPORTED_LANGUAGES.map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => i18n.changeLanguage(lang.code)}
-            className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
-              i18n.language === lang.code ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
-            }`}
-          >
-            {lang.label}
-            {i18n.language === lang.code && <Check size={14} />}
-          </button>
-        ))}
-      </div>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 py-1 glass rounded-xl shadow-apple-lg min-w-[140px] z-50">
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => { i18n.changeLanguage(lang.code); setOpen(false); }}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
+                  i18n.language === lang.code ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
+                }`}
+              >
+                {lang.label}
+                {i18n.language === lang.code && <Check size={14} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -44,9 +52,18 @@ export function GlassHeader() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const navigate = useNavigate();
+
+  // Debounce search input by 150ms
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(value), 150);
+  };
 
   // Close search dropdown when clicking outside
   useEffect(() => {
@@ -61,15 +78,15 @@ export function GlassHeader() {
     return () => document.removeEventListener('mousedown', handler);
   }, [searchOpen]);
 
-  const results = query ? searchNodes(query).slice(0, 6) : [];
+  const results = useMemo(
+    () => (debouncedQuery ? searchNodes(debouncedQuery).slice(0, 6) : []),
+    [debouncedQuery]
+  );
 
   const handleResultClick = (id: string) => {
     const node = graphData?.nodes.find((n) => n.id === id);
     if (!node) return;
-    const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-    const prefix = prefixMap[node.type] || 's';
-    const slug = node.id.split('/').pop() || id;
-    navigate(`/${prefix}/${slug}`);
+    navigate(getPagePath(node));
     setSearchOpen(false);
     setQuery('');
     setSelectedIdx(-1);
@@ -106,7 +123,7 @@ export function GlassHeader() {
             <input
               autoFocus
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               placeholder={t('header.searchPlaceholder')}
               className="apple-input w-full text-sm"
               onKeyDown={(e) => {

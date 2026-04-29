@@ -6,6 +6,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
+import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -79,9 +80,6 @@ export function SearchPage() {
         {results.map((result, i) => {
           const node = result.item;
           const Icon = typeIcons[node.type] || FileText;
-          const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-          const prefix = prefixMap[node.type] || 's';
-          const slug = node.id.split('/').pop() || node.id;
           const labelMatches = result.matches?.find((m) => m.key === 'label');
           const previewMatches = result.matches?.find((m) => m.key === 'preview');
 
@@ -93,7 +91,7 @@ export function SearchPage() {
               transition={{ duration: 0.2, delay: i * 0.03 }}
             >
               <Link
-                to={`/${prefix}/${slug}`}
+                to={getPagePath(node)}
                 className="apple-card p-4 flex items-start gap-4 block"
               >
                 <div className="p-2 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)]">

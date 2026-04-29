@@ -20,3 +20,89 @@ export async function fetchGraphData(): Promise<GraphData> {
   if (!res.ok) throw new Error(`Failed to load graph data: ${res.status}`);
   return res.json();
 }
+
+export interface RawFile {
+  path: string;
+  name: string;
+  size: number;
+  modified: number;
+}
+
+export interface UploadResult {
+  success: boolean;
+  path: string;
+  converted_path?: string | null;
+  size?: number;
+}
+
+export interface IngestResult {
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  returncode: number;
+}
+
+export async function fetchRawFiles(): Promise<RawFile[]> {
+  const res = await fetch('/api/raw-files');
+  if (!res.ok) throw new Error(`Failed to fetch raw files: ${res.status}`);
+  const data = await res.json();
+  return data.files || [];
+}
+
+export async function uploadFile(file: File): Promise<UploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/upload/file', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function uploadText(title: string, content: string): Promise<UploadResult> {
+  const res = await fetch('/api/upload/text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function triggerIngest(path: string): Promise<IngestResult> {
+  const res = await fetch('/api/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Ingest failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchRawFileContent(path: string): Promise<string> {
+  const res = await fetch(`/api/raw-file-content?path=${encodeURIComponent(path)}`);
+  if (!res.ok) throw new Error(`Failed to load file: ${res.status}`);
+  const data = await res.json();
+  return data.content || '';
+}
+
+export async function deleteRawFile(path: string): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/raw-files/${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Delete failed: ${res.status}`);
+  }
+  return res.json();
+}

@@ -8,6 +8,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { getPagePath } from '@/lib/wikilink';
 
 export function GraphPage() {
   const { t } = useTranslation();
@@ -107,10 +108,7 @@ export function GraphPage() {
         const nodeId = params.nodes[0];
         const node = nodes.find((n) => n.id === nodeId);
         if (!node) return;
-        const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-        const prefix = prefixMap[node.type] || 's';
-        const slug = node.id.split('/').pop() || node.id;
-        navigate(`/${prefix}/${slug}`);
+        navigate(getPagePath(node));
       }
     });
 
@@ -258,9 +256,7 @@ function NodePanel({
   const isFav = useWikiStore((s) => s.isFavorite(node.id));
   const toggleFavorite = useWikiStore((s) => s.toggleFavorite);
 
-  const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-  const prefix = prefixMap[node.type] || 's';
-  const slug = node.id.split('/').pop() || node.id;
+  const pagePath = getPagePath(node);
 
   return (
     <motion.div
@@ -285,7 +281,7 @@ function NodePanel({
       </div>
       <div className="mt-4 flex items-center gap-2">
         <Link
-          to={`/${prefix}/${slug}`}
+          to={pagePath}
           className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-apple-blue text-white text-sm font-medium hover:bg-apple-blue/90 transition-colors"
         >
           {t('graph.panel.openPage')}

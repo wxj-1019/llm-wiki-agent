@@ -6,6 +6,7 @@ import { PageDetailPage } from '@/components/pages/PageDetailPage';
 import { GraphPage } from '@/components/pages/GraphPage';
 import { SearchPage } from '@/components/pages/SearchPage';
 import { LogPage } from '@/components/pages/LogPage';
+import { UploadPage } from '@/components/pages/UploadPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
 
 function ErrorBoundary() {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: '/graph', element: <GraphPage />, errorElement: <ErrorBoundary /> },
       { path: '/search', element: <SearchPage />, errorElement: <ErrorBoundary /> },
       { path: '/log', element: <LogPage />, errorElement: <ErrorBoundary /> },
+      { path: '/upload', element: <UploadPage />, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },

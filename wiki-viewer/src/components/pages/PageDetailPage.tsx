@@ -10,6 +10,7 @@ import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import { parseFrontmatter } from '@/lib/frontmatter';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
+import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 interface Props {
@@ -196,14 +197,10 @@ export function PageDetailPage({ type }: Props) {
         </h2>
         {backlinks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {backlinks.map((link) => {
-              const prefixMap: Record<string, string> = { source: 's', entity: 'e', concept: 'c', synthesis: 'y' };
-              const prefix = prefixMap[link.type] || 's';
-              const slug = link.id.split('/').pop() || link.id;
-              return (
+            {backlinks.map((link) => (
                 <Link
                   key={link.id}
-                  to={`/${prefix}/${slug}`}
+                  to={getPagePath(link)}
                   className="apple-card p-3 flex items-center gap-3"
                 >
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColors[link.type] || ''}`}>
@@ -211,8 +208,7 @@ export function PageDetailPage({ type }: Props) {
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
                 </Link>
-              );
-            })}
+              ))}
           </div>
         ) : (
           <div className="apple-card p-6 text-center">

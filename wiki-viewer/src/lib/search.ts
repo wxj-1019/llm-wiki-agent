@@ -1,4 +1,5 @@
 import Fuse from 'fuse.js';
+import type { FuseResult } from 'fuse.js';
 import type { GraphNode } from '@/types/graph';
 
 let fuse: Fuse<GraphNode> | null = null;
@@ -16,7 +17,7 @@ export function initSearch(nodes: GraphNode[]) {
   });
 }
 
-export function searchNodes(query: string): Array<{ item: GraphNode; score?: number; matches?: Array<{ indices: Array<[number, number]>; key: string; value: string }> }> {
+export function searchNodes(query: string): FuseResult<GraphNode>[] {
   if (!fuse || !query) return [];
-  return fuse.search(query) as any;
+  return fuse.search(query);
 }

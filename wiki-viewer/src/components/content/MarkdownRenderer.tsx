@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
+import { codeToHtml } from 'shiki';
 import { WikiLink } from './WikiLink';
 import { parseFrontmatter } from '@/lib/frontmatter';
 
@@ -62,12 +63,9 @@ export function MarkdownRenderer({ content }: Props) {
         ),
         code: ({ className, children, ...props }) => {
           const match = /language-(\w+)/.exec(className ?? '');
+          const code = String(children).replace(/\n$/, '');
           if (match) {
-            return (
-              <pre className="bg-[var(--bg-secondary)] rounded-xl p-4 my-4 overflow-x-auto text-sm font-mono">
-                <code className={className} {...props}>{children}</code>
-              </pre>
-            );
+            return <CodeBlock code={code} language={match[1]} />;
           }
           return (
             <code className="bg-[var(--bg-secondary)] text-apple-purple px-1.5 py-0.5 rounded-md font-mono text-sm" {...props}>
@@ -98,5 +96,42 @@ export function MarkdownRenderer({ content }: Props) {
     >
       {body}
     </ReactMarkdown>
+  );
+}
+
+/**
+ * Async syntax highlighting via Shiki.
+ * Renders a plain <pre><code> fallback before the highlighter finishes.
+ */
+function CodeBlock({ code, language }: { code: string; language: string }) {
+  const [html, setHtml] = useState<string | null>(null);
+  const theme = document.documentElement.getAttribute('data-theme') === 'dark'
+    ? 'github-dark' : 'github-light';
+
+  useEffect(() => {
+    let cancelled = false;
+    codeToHtml(code, { lang: language, theme }).then((h) => {
+      if (!cancelled) setHtml(h);
+    }).catch(() => {
+      // Shiki may not support the language — fall back to plain <pre>
+      if (!cancelled) setHtml(null);
+    });
+    return () => { cancelled = true; };
+  }, [code, language, theme]);
+
+  if (html) {
+    return (
+      <div
+        className="my-4 [&>pre]:rounded-xl [&>pre]:!bg-[var(--bg-secondary)] [&>pre]:overflow-x-auto [&>pre]:p-4 [&>pre]:text-sm [&>pre]:font-mono"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+
+  // Fallback while Shiki loads
+  return (
+    <pre className="bg-[var(--bg-secondary)] rounded-xl p-4 my-4 overflow-x-auto text-sm font-mono">
+      <code className={`language-${language}`}>{code}</code>
+    </pre>
   );
 }
