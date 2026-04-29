@@ -6,9 +6,21 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Attention Is All You Need](sources/attention-is-all-you-need.md) — seminal paper introducing the Transformer architecture
+- [Introduction to Large Language Models](sources/intro-to-llms.md) — comprehensive overview of LLMs from tokenization to autoregressive generation
 
 ## Entities
+- [Bahdanau](entities/Bahdanau.md) — researcher; introduced attention mechanism for RNNs
+- [Google](entities/Google.md) — technology company; original inventor of the Transformer architecture
+- [Greg Brockman](entities/GregBrockman.md) — co-founder and former CTO of OpenAI
+- [Ilya Sutskever](entities/IlyaSutskever.md) — co-founder and former Chief Scientist of OpenAI
+- [OpenAI](entities/OpenAI.md) — AI research laboratory; created ChatGPT, GPT-4, DALL-E
+- [Sam Altman](entities/SamAltman.md) — CEO of OpenAI
+- [Vaswani](entities/Vaswani.md) — first author of "Attention Is All You Need"
 
 ## Concepts
+- [Attention Mechanism](concepts/AttentionMechanism.md) — neural network technique for focusing on specific parts of input
+- [Transformer](concepts/Transformer.md) — deep learning architecture based solely on attention mechanisms
 
 ## Syntheses
+- [Foundation Models Overview](syntheses/foundation-models-overview.md) — overview of large-scale AI foundation models and the Transformer era
