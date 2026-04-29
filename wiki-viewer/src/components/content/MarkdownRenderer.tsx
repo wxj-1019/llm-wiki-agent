@@ -27,6 +27,7 @@ function useThemeName() {
   return theme;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CodeBlock({ className, children, ...props }: any) {
   const match = /language-(\w+)/.exec(className ?? '');
   const lang = match ? match[1] : '';

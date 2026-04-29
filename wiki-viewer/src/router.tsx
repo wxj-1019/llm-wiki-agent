@@ -12,6 +12,7 @@ import { lazy, Suspense } from 'react';
 
 const GraphPage = lazy(() => import('@/components/pages/GraphPage').then((m) => ({ default: m.GraphPage })));
 
+// eslint-disable-next-line react-refresh/only-export-components
 function GraphPageLoader() {
   return (
     <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
@@ -23,6 +24,7 @@ function GraphPageLoader() {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function ErrorBoundary() {
   const error = useRouteError() as Error;
   console.error('Router error:', error);

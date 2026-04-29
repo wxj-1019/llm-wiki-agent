@@ -55,7 +55,7 @@ export function GlassHeader() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
 
   // Debounce search input by 150ms

@@ -13,7 +13,6 @@ export function SettingsPage() {
   const apiAvailable = useConfigStore((s) => s.apiAvailable);
   const checkApi = useConfigStore((s) => s.checkApi);
   const saveToServer = useConfigStore((s) => s.saveToServer);
-  const loadFromServer = useConfigStore((s) => s.loadFromServer);
   const updateGithub = useConfigStore((s) => s.updateGithub);
   const updateTrending = useConfigStore((s) => s.updateTrending);
   const setRssFeeds = useConfigStore((s) => s.setRssFeeds);

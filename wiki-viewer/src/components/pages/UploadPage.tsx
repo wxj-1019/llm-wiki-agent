@@ -4,7 +4,7 @@ import {
   Upload, FileText, Eye, Play, Loader2, AlertCircle, CheckCircle,
   Trash2, CheckSquare, Square, Search, FileType, FileSpreadsheet,
   FileCode, File, Filter, ArrowUpDown, X, FolderOpen, ClipboardCopy,
-  CloudUpload, Clock, HardDrive, Inbox, ArrowUp, ArrowDown,
+  CloudUpload, Clock, HardDrive, Inbox,
   FileArchive, FileImage
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,9 +112,10 @@ export function UploadPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const timers = toastTimersRef.current;
     return () => {
-      toastTimersRef.current.forEach(clearTimeout);
-      toastTimersRef.current.clear();
+      timers.forEach(clearTimeout);
+      timers.clear();
     };
   }, []);
 
@@ -159,7 +160,7 @@ export function UploadPage() {
   }, [files]);
 
   const animatedTotalFiles = useCountUp(stats.totalFiles);
-  const animatedTotalSize = useCountUp(Math.round(stats.totalSize / 1024));
+  useCountUp(Math.round(stats.totalSize / 1024));
 
   const filteredFiles = useMemo(() => {
     let result = files;

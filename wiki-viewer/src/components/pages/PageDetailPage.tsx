@@ -165,7 +165,7 @@ export function PageDetailPage({ type }: Props) {
           <ArrowLeft size={14} /> {t('detail.breadcrumb.browse')}
         </Link>
         <span>/</span>
-        <span className="capitalize">{t(typeLabelKey(type) as any)}</span>
+        <span className="capitalize">{t(typeLabelKey(type) as string)}</span>
         <span>/</span>
         <span className="text-[var(--text-primary)] font-medium">{node.label}</span>
       </div>
@@ -174,7 +174,7 @@ export function PageDetailPage({ type }: Props) {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide ${typeColors[type] || ''}`}>
-            {t(typeLabelKey(type) as any)}
+            {t(typeLabelKey(type) as string)}
           </span>
           <button
             onClick={() => {
@@ -256,7 +256,7 @@ export function PageDetailPage({ type }: Props) {
                   className="apple-card p-3 flex items-center gap-3"
                 >
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColors[link.type] || ''}`}>
-                    {t(typeLabelKey(link.type) as any)}
+                    {t(typeLabelKey(link.type) as string)}
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
                 </Link>

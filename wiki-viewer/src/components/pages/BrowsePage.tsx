@@ -38,7 +38,7 @@ export function BrowsePage() {
   }, [typeParam]);
   const [sortOpen, setSortOpen] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
-  const nodes = graphData?.nodes || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const getBacklinks = useWikiStore((s) => s.getBacklinks);
 
   const filtered = useMemo(() => {
@@ -100,7 +100,7 @@ export function BrowsePage() {
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {t(tab.labelKey as any)}
+              {t(tab.labelKey as string)}
             </button>
           ))}
         </div>
@@ -224,7 +224,7 @@ function PageCard({ node, backlinks }: { node: { id: string; label: string; type
         <div className={`p-2 rounded-lg ${colorClass}`}>
           <Icon size={16} />
         </div>
-        <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as any)}</span>
+        <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as string)}</span>
       </div>
       <h3 className="font-semibold text-lg mb-2 group-hover:text-apple-blue transition-colors">
         {node.label}

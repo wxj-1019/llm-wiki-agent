@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
@@ -16,7 +15,7 @@ const typeIcons: Record<string, React.ElementType> = {
   synthesis: Layers,
 };
 
-function HighlightText({ text, matches }: { text: string; matches?: Array<[number, number]> }) {
+function HighlightText({ text, matches }: { text: string; matches?: ReadonlyArray<[number, number]> }) {
   if (!matches || matches.length === 0) return <>{text}</>;
   const elements: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -102,7 +101,7 @@ export function SearchPage() {
                     <span className="font-semibold">
                       <HighlightText text={node.label} matches={labelMatches?.indices} />
                     </span>
-                    <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as any)}</span>
+                    <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as string)}</span>
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
                     <HighlightText text={node.preview} matches={previewMatches?.indices} />

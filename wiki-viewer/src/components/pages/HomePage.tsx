@@ -12,8 +12,6 @@ export function HomePage() {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
-  const loading = useWikiStore((s) => s.loading);
-  const error = useWikiStore((s) => s.error);
   const initialize = useWikiStore((s) => s.initialize);
   const recentPages = useWikiStore((s) => s.recentPages);
   const favorites = useWikiStore((s) => s.favorites);
@@ -34,6 +32,7 @@ export function HomePage() {
     if (nodes.length > 0) {
       setRandomNode(nodes[Math.floor(Math.random() * nodes.length)]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
 
   useDocumentTitle();
@@ -161,7 +160,7 @@ export function HomePage() {
                 <div className={`p-1.5 rounded-lg ${stat.bg} ${stat.color}`}>
                   <stat.icon size={14} />
                 </div>
-                <span className="text-sm text-[var(--text-secondary)]">{t(stat.labelKey as any)}</span>
+                <span className="text-sm text-[var(--text-secondary)]">{t(stat.labelKey as string)}</span>
               </div>
               <div className="text-2xl font-semibold">{stat.count}</div>
             </div>
@@ -311,7 +310,7 @@ function TypeBadge({ type }: { type: string }) {
   };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[type] || 'bg-gray-100 text-gray-600'}`}>
-      {t(typeLabelKey(type) as any)}
+      {t(typeLabelKey(type) as string)}
     </span>
   );
 }

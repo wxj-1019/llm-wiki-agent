@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Users, Lightbulb, Layers, GitBranch, ScrollText, Home, Compass, Upload, Settings } from 'lucide-react';
+import { GitBranch, ScrollText, Home, Compass, Upload, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavItem {
-  icon: React.ComponentType<any>;
+  icon: React.ElementType;
   translationKey: string;
   path: string;
   matchPath: string;
@@ -54,7 +54,7 @@ export function Sidebar() {
                   ? 'bg-apple-blue/10 text-apple-blue font-medium'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
               }`}
-              title={t(item.translationKey as any)}
+              title={t(item.translationKey as string)}
             >
               <item.icon size={18} />
               {!sidebarCollapsed && (
@@ -64,7 +64,7 @@ export function Sidebar() {
                   transition={{ duration: 0.2 }}
                   className="text-sm whitespace-nowrap"
                 >
-                  {t(item.translationKey as any)}
+                  {t(item.translationKey as string)}
                 </motion.span>
               )}
             </Link>

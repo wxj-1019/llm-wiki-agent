@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork } from 'vis-network/standalone';
 import type { Network } from 'vis-network';
-import { Network as NetworkIcon, Loader2, AlertTriangle, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion } from 'framer-motion';
@@ -25,7 +25,9 @@ export function GraphPage() {
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set(['source', 'entity', 'concept', 'synthesis']));
 
   // Memoize nodes/edges derived from graphData to avoid reference churn
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const nodes = graphData?.nodes || [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const edges = graphData?.edges || [];
 
   // Get rid of stale state when graphData changes (nodes may have been added/removed)
@@ -118,6 +120,7 @@ export function GraphPage() {
         networkRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphData]); // Only re-run when graphData actually changes, not on filterTypes
 
   // Handle filter changes by updating node/edge visibility without rebuilding network
@@ -133,14 +136,14 @@ export function GraphPage() {
       id: n.id,
       hidden: !nodeIds.has(n.id),
     }));
-    (networkRef.current as any).body.data.nodes.update(nodeUpdates);
+    networkRef.current.body.data.nodes.update(nodeUpdates);
 
     // Update edges: hide edges with filtered-out endpoints
     const edgeUpdates = edges.map((e) => ({
       id: e.id,
       hidden: !nodeIds.has(e.from) || !nodeIds.has(e.to),
     }));
-    (networkRef.current as any).body.data.edges.update(edgeUpdates);
+    networkRef.current.body.data.edges.update(edgeUpdates);
   }, [filterTypes, graphData, nodes, edges]);
 
   const selectedNodeData = selectedNode ? nodes.find((n) => n.id === selectedNode) : null;
@@ -226,7 +229,7 @@ export function GraphPage() {
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${tf.color}`} />
-            <span className="hidden sm:inline">{t(tf.labelKey as any)}</span>
+            <span className="hidden sm:inline">{t(tf.labelKey as string)}</span>
           </button>
         ))}
       </div>
@@ -273,7 +276,7 @@ function NodePanel({
           ✕
         </button>
       </div>
-      <span className="text-xs text-[var(--text-secondary)] capitalize">{t(typeLabelKey(node.type) as any)}</span>
+      <span className="text-xs text-[var(--text-secondary)] capitalize">{t(typeLabelKey(node.type) as string)}</span>
       <p className="text-sm text-[var(--text-secondary)] mt-3 line-clamp-4">{node.preview}</p>
       <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
         <NetworkIcon size={12} />

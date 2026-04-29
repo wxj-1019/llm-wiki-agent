@@ -47,7 +47,7 @@ export function parseFrontmatter(raw: string): { meta: PageMeta | null; body: st
     const m = line.match(KV_RE);
     if (!m) continue;
     const key = m[1];
-    let rawValue = m[2];
+    const rawValue = m[2];
 
     // Quoted scalar: "value" or 'value' — supports commas and colons inside
     const quoteMatch = rawValue.match(TRIM_QUOTES_RE);
