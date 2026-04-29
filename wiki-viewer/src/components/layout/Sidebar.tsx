@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, ScrollText, Home, Compass, Upload, Settings } from 'lucide-react';
+import { GitBranch, ScrollText, Home, Compass, Upload, Settings, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { icon: GitBranch, translationKey: 'nav.graph', path: '/graph', matchPath: '/graph' },
   { icon: ScrollText, translationKey: 'nav.log', path: '/log', matchPath: '/log' },
   { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
+  { icon: Bot, translationKey: 'nav.agentKit', path: '/agent-kit', matchPath: '/agent-kit' },
 ];
 
 function isItemActive(item: NavItem, pathname: string): boolean {

@@ -335,6 +335,149 @@ async def save_config(name: str, request: Request):
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
 
+# ── Agent Kit ──
+AGENT_KIT_DIR = REPO / "agent-kit"
+AGENT_KIT_STATE = REPO / ".cache" / "agent-kit-state.json"
+
+
+@app.get("/api/agent-kit/status")
+def agent_kit_status():
+    """Return generation status and last run info."""
+    status = {"generated": False, "last_run": None, "outputs": []}
+    if AGENT_KIT_STATE.exists():
+        try:
+            states = json.loads(AGENT_KIT_STATE.read_text(encoding="utf-8"))
+            if isinstance(states, list) and states:
+                last = states[-1]
+                status["generated"] = True
+                status["last_run"] = last.get("timestamp")
+                status["outputs"] = last.get("outputs", [])
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Also list current files on disk
+    files = []
+    if AGENT_KIT_DIR.exists():
+        for p in AGENT_KIT_DIR.rglob("*"):
+            if p.is_file():
+                files.append(p.relative_to(AGENT_KIT_DIR).as_posix())
+    status["files"] = files
+    return status
+
+
+@app.post("/api/agent-kit/generate")
+async def agent_kit_generate(payload: dict):
+    """Run export_agent_kit.py with specified options."""
+    target = payload.get("target", "all")
+    if target not in ("all", "mcp", "skill"):
+        raise HTTPException(status_code=400, detail="target must be all, mcp, or skill")
+
+    cmd = [sys.executable, str(REPO / "tools" / "export_agent_kit.py"), "--target", target]
+    if payload.get("package"):
+        cmd.append("--package")
+    if payload.get("incremental"):
+        cmd.append("--incremental")
+    if payload.get("skipDiagrams"):
+        cmd.append("--skip-diagrams")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Generation timed out after 5 minutes")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
+
+
+@app.get("/api/agent-kit/files")
+def agent_kit_files(path: str = Query("")):
+    """List files and directories under agent-kit/."""
+    base = AGENT_KIT_DIR.resolve()
+    target = (base / path).resolve() if path else base
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if target.is_file():
+        return {
+            "files": [{
+                "name": target.name,
+                "path": target.relative_to(base).as_posix(),
+                "size": target.stat().st_size,
+                "is_dir": False,
+            }]
+        }
+
+    items = []
+    for p in sorted(target.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+        items.append({
+            "name": p.name,
+            "path": p.relative_to(base).as_posix(),
+            "size": p.stat().st_size if p.is_file() else 0,
+            "is_dir": p.is_dir(),
+        })
+    return {"files": items}
+
+
+@app.get("/api/agent-kit/download")
+def agent_kit_download(path: str = Query(..., min_length=1)):
+    """Download a single file from agent-kit/."""
+    base = AGENT_KIT_DIR.resolve()
+    target = (base / path).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(target), filename=target.name)
+
+
+@app.post("/api/agent-kit/download-zip")
+async def agent_kit_download_zip(payload: dict):
+    """Download selected files as a zip archive."""
+    import zipfile
+    import io
+    import tempfile
+
+    paths = payload.get("paths", [])
+    if not paths:
+        raise HTTPException(status_code=400, detail="No paths provided")
+
+    base = AGENT_KIT_DIR.resolve()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for rel_path in paths:
+            target = (base / rel_path).resolve()
+            try:
+                target.relative_to(base)
+            except ValueError:
+                continue
+            if target.exists() and target.is_file():
+                zf.write(target, target.relative_to(base).as_posix())
+
+    buf.seek(0)
+    # Write to temp file because FileResponse needs a path
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp.write(buf.read())
+        tmp_path = tmp.name
+
+    return FileResponse(tmp_path, filename="agent-kit.zip", media_type="application/zip")
+
+
 if __name__ == "__main__":
     import uvicorn
     import argparse

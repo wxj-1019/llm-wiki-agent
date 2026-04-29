@@ -7,6 +7,7 @@ import { SearchPage } from '@/components/pages/SearchPage';
 import { LogPage } from '@/components/pages/LogPage';
 import { UploadPage } from '@/components/pages/UploadPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
+import { AgentKitPage } from '@/components/pages/AgentKitPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
 import { lazy, Suspense } from 'react';
 
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
       { path: '/log', element: <LogPage />, errorElement: <ErrorBoundary /> },
       { path: '/upload', element: <UploadPage />, errorElement: <ErrorBoundary /> },
       { path: '/settings', element: <SettingsPage />, errorElement: <ErrorBoundary /> },
+      { path: '/agent-kit', element: <AgentKitPage />, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },
