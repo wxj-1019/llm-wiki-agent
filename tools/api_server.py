@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, Query, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi import HTTPException
 
 REPO = Path(__file__).parent.parent
@@ -451,7 +451,6 @@ async def agent_kit_download_zip(payload: dict):
     """Download selected files as a zip archive."""
     import zipfile
     import io
-    import tempfile
 
     paths = payload.get("paths", [])
     if not paths:
@@ -470,12 +469,7 @@ async def agent_kit_download_zip(payload: dict):
                 zf.write(target, target.relative_to(base).as_posix())
 
     buf.seek(0)
-    # Write to temp file because FileResponse needs a path
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-        tmp.write(buf.read())
-        tmp_path = tmp.name
-
-    return FileResponse(tmp_path, filename="agent-kit.zip", media_type="application/zip")
+    return StreamingResponse(buf, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=agent-kit.zip"})
 
 
 if __name__ == "__main__":

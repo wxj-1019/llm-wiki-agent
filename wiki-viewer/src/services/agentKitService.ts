@@ -55,7 +55,12 @@ export async function fetchAgentKitFiles(path: string = ''): Promise<AgentKitFil
 
 export function downloadAgentKitFile(path: string): void {
   const url = `/api/agent-kit/download?path=${encodeURIComponent(path)}`;
-  window.open(url, '_blank');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = path.split('/').pop() || 'download';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 export async function downloadAgentKitZip(paths: string[]): Promise<void> {
