@@ -40,7 +40,7 @@ def read_file(path: Path) -> str:
 def load_refresh_cache() -> dict:
     if REFRESH_CACHE.exists():
         try:
-            return json.loads(REFRESH_CACHE.read_text())
+            return json.loads(REFRESH_CACHE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, IOError):
             return {}
     return {}
@@ -48,7 +48,7 @@ def load_refresh_cache() -> dict:
 
 def save_refresh_cache(cache: dict):
     REFRESH_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    REFRESH_CACHE.write_text(json.dumps(cache, indent=2, ensure_ascii=False))
+    REFRESH_CACHE.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def extract_source_file(content: str) -> Optional[str]:

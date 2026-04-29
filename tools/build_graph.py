@@ -129,7 +129,7 @@ def edge_id(src: str, target: str, edge_type: str) -> str:
 def load_cache() -> dict:
     if CACHE_FILE.exists():
         try:
-            return json.loads(CACHE_FILE.read_text())
+            return json.loads(CACHE_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, IOError):
             return {}
     return {}
@@ -137,7 +137,7 @@ def load_cache() -> dict:
 
 def save_cache(cache: dict):
     GRAPH_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False))
+    CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def build_nodes(pages: list[Path]) -> list[dict]:
@@ -1298,7 +1298,7 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
 
     # Save graph.json
     graph_data = {"nodes": nodes, "edges": edges, "built": today}
-    GRAPH_JSON.write_text(json.dumps(graph_data, indent=2, ensure_ascii=False))
+    GRAPH_JSON.write_text(json.dumps(graph_data, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"  saved: graph/graph.json  ({len(nodes)} nodes, {len(edges)} edges)")
 
     # Save graph.html
