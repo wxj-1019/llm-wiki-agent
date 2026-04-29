@@ -35,3 +35,7 @@ npm-debug.log*
 graph/.cache.json
 graph/.inferred_edges.jsonl
 graph/.refresh_cache.json
+
+# Auto-generated agent assets
+agent-kit/
+.cache/

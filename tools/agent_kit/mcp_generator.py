@@ -63,7 +63,9 @@ def _generate_wiki_index(pages: dict[str, WikiPage], output_dir: Path) -> None:
     for slug, info in sorted(index.get("page_index", {}).items()):
         buf.write(f'    "{_escape_py_string(slug)}": {{\n')
         buf.write(f'        "title": "{_escape_py_string(info["title"])}",\n')
-        buf.write(f'        "path": "{_escape_py_string(info["path"])}",\n')
+        # Strip leading "wiki/" so paths are relative to the wiki directory
+        wiki_rel_path = info["path"].removeprefix("wiki/")
+        buf.write(f'        "path": "{_escape_py_string(wiki_rel_path)}",\n')
         buf.write(f'        "type": "{_escape_py_string(info["type"])}",\n')
         buf.write(f'        "tags": {json.dumps(info.get("tags", []), ensure_ascii=False)},\n')
         buf.write(f'        "summary": "{_escape_py_string(info.get("summary", ""))}",\n')
@@ -269,13 +271,23 @@ def _generate_mcp_main(pages: dict[str, WikiPage], output_dir: Path) -> None:
     buf.write('    """Catalog of all pages in the wiki."""\n')
     buf.write('    return read_wiki_page("index.md")\n\n')
 
+    # Type -> URI plural mapping
+    _PLURAL = {"entity": "entities", "synthesis": "syntheses"}
+
     for slug, page in sorted(pages.items()):
-        uri = f"wiki://{page['type']}s/{slug}"
+        # Skip pages that already have hard-coded resources above
+        if slug in ("overview", "index"):
+            continue
+        type_plural = _PLURAL.get(page["type"], page["type"] + "s")
+        uri = f"wiki://{type_plural}/{slug}"
         func_name = f"resource_{slug.replace('-', '_')}"
+        # page['path'] is 'wiki/concepts/X.md' relative to repo_root;
+        # read_wiki_page expects path relative to wiki/ directory
+        wiki_rel_path = page["path"].removeprefix("wiki/")
         buf.write(f'@mcp.resource("{_escape_py_string(uri)}")\n')
         buf.write(f"def {func_name}() -> str:\n")
         buf.write(f'    """{_escape_py_string(page["title"])}"""\n')
-        buf.write(f'    return read_wiki_page("{_escape_py_string(page["path"])}")\n\n')
+        buf.write(f'    return read_wiki_page("{_escape_py_string(wiki_rel_path)}")\n\n')
 
     buf.write("# ── Tools ──\n")
     buf.write("# Annotation mapping: readOnlyHint reflects whether the tool mutates state\n")
