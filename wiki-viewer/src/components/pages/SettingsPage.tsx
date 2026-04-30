@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Settings, Code, Rss, BookOpen, Archive, Save, Download, Check, AlertTriangle } from 'lucide-react';
+import { Settings, Code, Rss, BookOpen, Archive, Save, Download, Check, AlertTriangle, Bot, Key, ExternalLink } from 'lucide-react';
 import { useConfigStore } from '@/stores/configStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
@@ -20,11 +20,31 @@ export function SettingsPage() {
   const setArchiveTtl = useConfigStore((s) => s.setArchiveTtl);
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [activeTab, setActiveTab] = useState<'github' | 'rss' | 'arxiv' | 'archive'>('github');
+  const [activeTab, setActiveTab] = useState<'github' | 'rss' | 'arxiv' | 'archive' | 'llm'>('github');
+  const [llmModel, setLlmModel] = useState('claude-3-5-sonnet-latest');
+  const [llmModelFast, setLlmModelFast] = useState('claude-3-5-haiku-latest');
+  const [llmProvider, setLlmProvider] = useState('anthropic');
+  const [llmApiKey, setLlmApiKey] = useState('');
+  const [llmKeySet, setLlmKeySet] = useState(false);
+  const [llmSaveStatus, setLlmSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     checkApi();
   }, [checkApi]);
+
+  useEffect(() => {
+    fetch('/api/llm-config')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) {
+          setLlmModel(d.model || 'claude-3-5-sonnet-latest');
+          setLlmModelFast(d.model_fast || 'claude-3-5-haiku-latest');
+          setLlmProvider(d.provider || 'anthropic');
+          setLlmKeySet(d.api_key_set || false);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     if (apiAvailable) {
@@ -47,6 +67,31 @@ export function SettingsPage() {
     a.download = 'github_sources.yaml';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSaveLLM = async () => {
+    try {
+      const res = await fetch('/api/llm-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: llmModel,
+          model_fast: llmModelFast,
+          provider: llmProvider,
+          api_key: llmApiKey,
+        }),
+      });
+      if (res.ok) {
+        setLlmSaveStatus('success');
+        setLlmApiKey('');
+        setLlmKeySet(true);
+      } else {
+        setLlmSaveStatus('error');
+      }
+    } catch {
+      setLlmSaveStatus('error');
+    }
+    setTimeout(() => setLlmSaveStatus('idle'), 2000);
   };
 
   return (
@@ -80,6 +125,7 @@ export function SettingsPage() {
           { key: 'rss' as const, icon: Rss, label: t('settings.tab.rss') },
           { key: 'arxiv' as const, icon: BookOpen, label: t('settings.tab.arxiv') },
           { key: 'archive' as const, icon: Archive, label: t('settings.tab.archive') },
+          { key: 'llm' as const, icon: Bot, label: t('settings.tab.llm') || 'LLM' },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -284,6 +330,115 @@ export function SettingsPage() {
               className="apple-input"
             />
             <p className="text-xs text-[var(--text-tertiary)] mt-2">{t('settings.archive.ttlHint')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* LLM Panel */}
+      {activeTab === 'llm' && (
+        <div className="max-w-2xl space-y-6">
+          <div className="apple-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Bot size={16} className="text-purple-500" />
+                {t('settings.llm.title') || 'LLM Provider'}
+              </h3>
+              <button
+                onClick={handleSaveLLM}
+                className={`apple-button text-sm flex items-center gap-2 ${llmSaveStatus === 'success' ? 'bg-apple-green' : ''}`}
+              >
+                {llmSaveStatus === 'success' ? <Check size={14} /> : <Save size={14} />}
+                {llmSaveStatus === 'success' ? t('settings.saved') : llmSaveStatus === 'error' ? t('settings.error') || 'Error' : t('settings.save')}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-2">{t('settings.llm.provider') || 'Provider'}</label>
+                <select
+                  value={llmProvider}
+                  onChange={(e) => {
+                    const p = e.target.value;
+                    setLlmProvider(p);
+                    if (p === 'deepseek') {
+                      setLlmModel('deepseek/deepseek-chat');
+                      setLlmModelFast('deepseek/deepseek-chat');
+                    } else if (p === 'anthropic') {
+                      setLlmModel('anthropic/claude-3-5-sonnet-latest');
+                      setLlmModelFast('anthropic/claude-3-5-haiku-latest');
+                    } else if (p === 'openai') {
+                      setLlmModel('openai/gpt-4');
+                      setLlmModelFast('openai/gpt-3.5-turbo');
+                    }
+                  }}
+                  className="apple-input"
+                >
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI (GPT)</option>
+                  <option value="deepseek">DeepSeek</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-2">{t('settings.llm.model') || 'Model'}</label>
+                <input
+                  value={llmModel}
+                  onChange={(e) => setLlmModel(e.target.value)}
+                  placeholder="provider/model-name"
+                  className="apple-input"
+                />
+                <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                  e.g. deepseek/deepseek-chat, anthropic/claude-3-5-sonnet-latest
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-2">{t('settings.llm.modelFast') || 'Fast Model'}</label>
+                <input
+                  value={llmModelFast}
+                  onChange={(e) => setLlmModelFast(e.target.value)}
+                  placeholder="provider/fast-model-name"
+                  className="apple-input"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-2 flex items-center gap-1">
+                  <Key size={12} />
+                  {t('settings.llm.apiKey') || 'API Key'}
+                  {llmKeySet && (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      {t('settings.llm.keySet') || 'Configured'}
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={llmApiKey}
+                  onChange={(e) => setLlmApiKey(e.target.value)}
+                  placeholder={llmKeySet ? '•••••••• (leave blank to keep existing)' : 'Enter your API key'}
+                  className="apple-input"
+                />
+                <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                  {t('settings.llm.keyHint') || 'Stored securely on server. Never sent to frontend after save.'}
+                </p>
+              </div>
+
+              {llmProvider === 'deepseek' && (
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 text-sm text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                  <ExternalLink size={14} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">DeepSeek</p>
+                    <p className="text-xs mt-0.5">
+                      Get your API key from{' '}
+                      <a href="https://platform.deepseek.com/" target="_blank" rel="noreferrer" className="underline hover:text-blue-800">
+                        platform.deepseek.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -23,15 +23,15 @@ The **Transformer** is a deep learning architecture introduced in the paper "[[A
 - Position-wise feed-forward networks
 
 ## Key Innovation
-The Transformer replaces recurrence with [[AttentionMechanism|self-attention]], allowing:
+The Transformer replaces recurrence with [[AttentionMechanism]] (self-attention), allowing:
 - Parallel computation across sequence positions
 - Direct modeling of long-range dependencies
 - Better gradient flow during training
 
 ## Variants
-- **Encoder-only**: [[BERT]], [[RoBERTa]], [[DistilBERT]]
-- **Decoder-only**: [[GPT]] series, [[LLaMA]], [[Claude]]
-- **Encoder-decoder**: [[T5]], [[BART]], [[UL2]]
+- **Encoder-only**: [[BERT]], RoBERTa, DistilBERT
+- **Decoder-only**: [[GPT]] series, [[LLaMA]], Claude
+- **Encoder-decoder**: [[T5]], BART, UL2
 
 ## Connections
 - [[AttentionMechanism]] — core operation

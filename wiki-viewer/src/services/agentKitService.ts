@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+
 export interface AgentKitStatus {
   generated: boolean;
   last_run: string | null;
@@ -32,13 +34,13 @@ export interface GenerateResult {
 }
 
 export async function fetchAgentKitStatus(): Promise<AgentKitStatus> {
-  const res = await fetch('/api/agent-kit/status');
+  const res = await fetchWithTimeout('/api/agent-kit/status', { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
   return res.json();
 }
 
 export async function generateAgentKit(options: GenerateOptions): Promise<GenerateResult> {
-  const res = await fetch('/api/agent-kit/generate', {
+  const res = await fetchWithTimeout('/api/agent-kit/generate', { timeoutMs: 300000, 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(options),
@@ -52,7 +54,7 @@ export async function fetchAgentKitFiles(path: string = '', recursive: boolean =
   if (path) params.set('path', path);
   if (recursive) params.set('recursive', '1');
   const query = params.toString() ? `?${params.toString()}` : '';
-  const res = await fetch(`/api/agent-kit/files${query}`);
+  const res = await fetchWithTimeout(`/api/agent-kit/files${query}`, { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to fetch files: ${res.status}`);
   return res.json();
 }
@@ -68,7 +70,7 @@ export function downloadAgentKitFile(path: string): void {
 }
 
 export async function downloadAgentKitZip(paths: string[]): Promise<void> {
-  const res = await fetch('/api/agent-kit/download-zip', {
+  const res = await fetchWithTimeout('/api/agent-kit/download-zip', { timeoutMs: 60000, 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ paths }),

@@ -13,12 +13,12 @@ last_updated: 2024-03-20
 ## Key Products
 - [[ChatGPT]] — conversational AI based on [[GPT]] architecture
 - [[GPT4]] — large multimodal language model
-- [[DALL-E]] — text-to-image generation model
+- DALL-E — text-to-image generation model
 
 ## Research Contributions
 - Pioneered the scaling of [[Transformer]]-based models through the [[GPT]] series
 - Demonstrated emergent capabilities in [[LargeLanguageModels]]
-- Developed [[RLHF]] for alignment
+- Developed RLHF for alignment
 
 ## Connections
 - [[Google]] — competitor in the LLM space

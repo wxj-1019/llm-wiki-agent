@@ -4,14 +4,23 @@ from __future__ import annotations
 """Lightweight API server for LLM Wiki Agent."""
 
 import json
+import os
 import re
 import sys
+import time
 import subprocess
 from pathlib import Path
+from collections import defaultdict
+from datetime import datetime
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 from fastapi import FastAPI, Query, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi import HTTPException
 
 REPO = Path(__file__).parent.parent
@@ -28,6 +37,43 @@ ALLOWED_EXTENSIONS = {
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024
 
 app = FastAPI(title="LLM Wiki API")
+
+# ── Request logging middleware ──
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = (time.time() - start) * 1000
+    client = request.client.host if request.client else "-"
+    print(f"[{datetime.now().isoformat(timespec='seconds')}] {client} {request.method} {request.url.path} {response.status_code} {duration:.1f}ms")
+    return response
+
+# ── Simple in-memory rate limiter ──
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_MAX = 60  # requests per window
+RATE_LIMIT_WINDOW = 60  # seconds
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    client = request.client.host if request.client else "unknown"
+    now = time.time()
+    window = _rate_limit_store[client]
+    # Prune old entries
+    _rate_limit_store[client] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
+    if len(_rate_limit_store[client]) >= RATE_LIMIT_MAX:
+        return JSONResponse(status_code=429, content={"error": "Rate limit exceeded. Please slow down."})
+    _rate_limit_store[client].append(now)
+    return await call_next(request)
+
+# ── Global exception handler ──
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"[ERROR] Unhandled exception at {request.url.path}: {exc}", file=sys.stderr)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error", "detail": str(exc) if os.getenv("DEBUG") else "Please check server logs."},
+    )
+
 # Restrict CORS to localhost for security
 app.add_middleware(
     CORSMiddleware,
@@ -114,6 +160,79 @@ def health():
         "pages": len(pages),
         "graph_ready": graph_exists,
         "wiki_dir": str(WIKI),
+    }
+
+
+@app.get("/api/config/llm")
+def get_llm_config_legacy():
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    model_fast = cfg.get("model_fast") or os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest")
+    provider = cfg.get("provider", "anthropic")
+    return {
+        "model": model,
+        "model_fast": model_fast,
+        "provider": provider,
+        "api_key_set": bool(cfg.get("api_key")),
+    }
+
+
+@app.get("/api/status")
+def get_system_status():
+    """Return comprehensive system status for the dashboard."""
+    import time
+    pages = list(WIKI.rglob("*.md"))
+    graph_exists = (GRAPH / "graph.json").exists()
+    raw_dir = REPO / "raw"
+    raw_files = [p for p in raw_dir.rglob("*") if p.is_file() and p.name != ".gitkeep"]
+    agent_kit_dir = REPO / "agent-kit"
+    agent_kit_files = [p for p in agent_kit_dir.rglob("*") if p.is_file()] if agent_kit_dir.exists() else []
+
+    # Parse last ingest from log
+    last_ingest = None
+    log_path = WIKI / "log.md"
+    if log_path.exists():
+        try:
+            log_content = log_path.read_text(encoding="utf-8")
+            for line in reversed(log_content.splitlines()):
+                if line.startswith("## [") and "ingest" in line.lower():
+                    match = re.search(r"\[(\d{4}-\d{2}-\d{2})\]", line)
+                    if match:
+                        last_ingest = match.group(1)
+                        break
+        except Exception:
+            pass
+
+    cfg = _load_llm_config()
+    return {
+        "wiki": {
+            "pages": len(pages),
+            "sources": len([p for p in pages if p.parent.name == "sources"]),
+            "entities": len([p for p in pages if p.parent.name == "entities"]),
+            "concepts": len([p for p in pages if p.parent.name == "concepts"]),
+            "syntheses": len([p for p in pages if p.parent.name == "syntheses"]),
+            "last_ingest": last_ingest,
+        },
+        "graph": {
+            "ready": graph_exists,
+            "path": str(GRAPH / "graph.json") if graph_exists else None,
+        },
+        "raw": {
+            "files": len(raw_files),
+        },
+        "agent_kit": {
+            "generated": bool(agent_kit_files),
+            "files": len(agent_kit_files),
+        },
+        "llm": {
+            "provider": cfg.get("provider", "anthropic"),
+            "model": cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest"),
+            "api_key_set": bool(cfg.get("api_key")),
+        },
+        "server": {
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "version": "1.0.0",
+        },
     }
 
 
@@ -331,10 +450,6 @@ async def save_config(name: str, request: Request):
     return {"ok": True, "path": str(path)}
 
 
-# Serve frontend static files if dist exists
-if FRONTEND_DIST.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
-
 # ── Agent Kit ──
 AGENT_KIT_DIR = REPO / "agent-kit"
 AGENT_KIT_STATE = REPO / ".cache" / "agent-kit-state.json"
@@ -491,6 +606,376 @@ async def agent_kit_download_zip(payload: dict):
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=agent-kit.zip"})
 
+
+LLM_CONFIG_PATH = REPO / "config" / "llm.yaml"
+
+
+def _load_llm_config() -> dict:
+    """Load LLM config from config/llm.yaml and apply env overrides."""
+    if not yaml or not LLM_CONFIG_PATH.exists():
+        return {}
+    try:
+        cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    # Apply to environment so all tools/scripts pick it up
+    if cfg.get("model"):
+        os.environ.setdefault("LLM_MODEL", cfg["model"])
+    if cfg.get("model_fast"):
+        os.environ.setdefault("LLM_MODEL_FAST", cfg["model_fast"])
+    # Set provider API key env var if present
+    provider = cfg.get("provider", "anthropic")
+    api_key = cfg.get("api_key", "")
+    if api_key:
+        key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
+        os.environ[key_env] = api_key
+    return cfg
+
+
+@app.post("/api/agent-kit/llm-chat")
+async def agent_kit_llm_chat(request: Request):
+    """Chat with LLM for agent-kit assistance (Skill / MCP generation, review, etc.)."""
+    try:
+        from litellm import completion
+    except ImportError:
+        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+
+    body = await request.json()
+    messages = body.get("messages", [])
+    system_prompt = body.get("system_prompt", "")
+
+    full_messages = []
+    if system_prompt:
+        full_messages.append({"role": "system", "content": system_prompt})
+    full_messages.extend(messages)
+
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096}
+    if api_key:
+        kwargs["api_key"] = api_key
+    try:
+        response = completion(**kwargs)
+        content = response.choices[0].message.content
+        return {"content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM error: {e}")
+
+
+@app.post("/api/agent-kit/llm-chat-stream")
+async def agent_kit_llm_chat_stream(request: Request):
+    """Stream LLM chat responses via SSE for agent-kit assistance."""
+    try:
+        from litellm import acompletion
+    except ImportError:
+        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+
+    body = await request.json()
+    messages = body.get("messages", [])
+    system_prompt = body.get("system_prompt", "")
+
+    full_messages = []
+    if system_prompt:
+        full_messages.append({"role": "system", "content": system_prompt})
+    full_messages.extend(messages)
+
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096, "stream": True}
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    async def event_generator():
+        try:
+            response = await acompletion(**kwargs)
+            async for chunk in response:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# ── Knowledge-based generation ──
+
+MAX_WIKI_CHARS_PER_PAGE = 3000
+MAX_SOURCES = 5
+
+
+def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
+    """Search wiki pages by keyword relevance. Supports multi-word queries."""
+    q_lower = query.strip().lower()
+    if not q_lower:
+        return []
+    # Split query into individual words (min length 2) for OR-style matching
+    q_words = [w for w in q_lower.split() if len(w) >= 2]
+    if not q_words:
+        q_words = [q_lower]
+    results = []
+    for p in WIKI.rglob("*.md"):
+        if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
+            continue
+        try:
+            content = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        text_lower = content.lower()
+        # Simple relevance: sum occurrences of each query word
+        score = 0
+        for w in q_words:
+            score += text_lower.count(w)
+        # Also check title match
+        title = p.stem.replace("-", " ").replace("_", " ").lower()
+        for w in q_words:
+            if w in title:
+                score += 20
+        if score > 0:
+            results.append({"path": str(p.relative_to(REPO)), "wiki_path": str(p.relative_to(WIKI)), "score": score, "content": content})
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:max_results]
+
+
+def _extract_relevant_snippets(content: str, query: str, max_chars: int = MAX_WIKI_CHARS_PER_PAGE) -> str:
+    """Extract most relevant parts of a wiki page for the query."""
+    # If content is short enough, return it all
+    if len(content) <= max_chars:
+        return content
+    # Otherwise try to find sections containing query keywords
+    q_words = [w for w in query.lower().split() if len(w) > 2]
+    lines = content.splitlines()
+    scored_lines = []
+    for i, line in enumerate(lines):
+        score = 0
+        line_lower = line.lower()
+        for w in q_words:
+            score += line_lower.count(w)
+        scored_lines.append((i, score))
+    scored_lines.sort(key=lambda x: x[1], reverse=True)
+    # Take top-scoring lines and surrounding context
+    top_indices = sorted({i for i, _ in scored_lines[:15]})
+    if not top_indices:
+        return content[:max_chars]
+    # Build snippet around top indices
+    snippet_lines = []
+    included = set()
+    for idx in top_indices:
+        for offset in range(-2, 3):
+            i2 = idx + offset
+            if 0 <= i2 < len(lines) and i2 not in included:
+                included.add(i2)
+                snippet_lines.append((i2, lines[i2]))
+    snippet_lines.sort(key=lambda x: x[0])
+    snippet = "\n".join(line for _, line in snippet_lines)
+    if len(snippet) > max_chars:
+        snippet = snippet[:max_chars] + "\n... [truncated]"
+    return snippet
+
+
+@app.post("/api/agent-kit/generate-from-knowledge")
+async def agent_kit_generate_from_knowledge(request: Request):
+    """Generate MCP Server or Skill code based on wiki knowledge retrieved from a user query."""
+    try:
+        from litellm import completion
+    except ImportError:
+        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+
+    body = await request.json()
+    query = body.get("query", "").strip()
+    target = body.get("target", "skill")  # "mcp" or "skill"
+    if not query:
+        raise HTTPException(status_code=400, detail="query is required")
+    if target not in ("mcp", "skill"):
+        raise HTTPException(status_code=400, detail="target must be 'mcp' or 'skill'")
+
+    # 1. Search wiki for relevant pages
+    search_results = _search_wiki(query)
+    if not search_results:
+        return {
+            "sources": [],
+            "code": "",
+            "explanation": f"No relevant wiki pages found for query: '{query}'. Try ingesting some documents first, or rephrase your query.",
+            "target": target,
+        }
+
+    # 2. Extract relevant snippets
+    sources = []
+    knowledge_chunks = []
+    for r in search_results:
+        snippet = _extract_relevant_snippets(r["content"], query)
+        sources.append({"path": r["wiki_path"], "preview": snippet[:200]})
+        knowledge_chunks.append(f"--- Source: {r['wiki_path']} ---\n{snippet}\n")
+
+    knowledge_context = "\n".join(knowledge_chunks)
+
+    # 3. Build generation prompt
+    if target == "mcp":
+        system_prompt = (
+            "You are an expert MCP (Model Context Protocol) server developer. "
+            "Given the user's request and the retrieved wiki knowledge below, "
+            "generate a complete, production-ready Python MCP server. "
+            "Use FastMCP or the stdio-based MCP SDK. Include proper typing, docstrings, and error handling. "
+            "The server should expose tools and/or resources that surface the wiki knowledge. "
+            "Return ONLY the Python code wrapped in a single markdown code block (```python ... ```), "
+            "followed by a brief explanation of the tools/resources provided."
+        )
+    else:
+        system_prompt = (
+            "You are an expert in designing LLM Skills (Kimi Skills / Agent Skills). "
+            "Given the user's request and the retrieved wiki knowledge below, "
+            "generate a complete SKILL.md file and any supporting files. "
+            "The skill should help an AI agent leverage the wiki knowledge effectively. "
+            "Include: description, usage instructions, example prompts, and workflow guidance. "
+            "Return the SKILL.md content wrapped in a markdown code block (```markdown ... ```), "
+            "followed by a brief explanation of how the skill works."
+        )
+
+    user_prompt = (
+        f"User Request: {query}\n\n"
+        f"Retrieved Wiki Knowledge:\n{knowledge_context}\n\n"
+        f"Please generate a complete {target.upper()} implementation based on the above knowledge."
+    )
+
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+    kwargs: dict = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "max_tokens": 4096,
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    try:
+        response = completion(**kwargs)
+        raw_content = response.choices[0].message.content or ""
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM error: {e}")
+
+    # Parse code block and explanation
+    code = ""
+    explanation = ""
+    # Try to extract code block
+    code_match = re.search(r"```(?:\w+)?\n(.*?)\n```", raw_content, re.DOTALL)
+    if code_match:
+        code = code_match.group(1).strip()
+        explanation = raw_content[code_match.end():].strip()
+    else:
+        code = raw_content.strip()
+
+    return {
+        "sources": sources,
+        "code": code,
+        "explanation": explanation,
+        "target": target,
+        "query": query,
+    }
+
+
+@app.get("/api/agent-kit/read-file")
+def agent_kit_read_file(path: str = Query(..., min_length=1)):
+    """Read a text file from agent-kit/."""
+    base = AGENT_KIT_DIR.resolve()
+    target = (base / path).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if not target.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+    try:
+        content = target.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File is not text-readable")
+    return {"content": content, "path": path}
+
+
+@app.post("/api/agent-kit/save-file")
+async def agent_kit_save_file(request: Request):
+    """Save a file into agent-kit/."""
+    body = await request.json()
+    path_str = body.get("path", "")
+    content = body.get("content", "")
+    if not path_str:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    base = AGENT_KIT_DIR.resolve()
+    target = (base / path_str).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    return {"success": True, "path": path_str}
+
+
+@app.get("/api/llm-config")
+def get_llm_config():
+    """Return LLM config (api_key is never exposed)."""
+    if not yaml or not LLM_CONFIG_PATH.exists():
+        return {"model": os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest"), "model_fast": os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest"), "provider": "anthropic", "api_key_set": False}
+    try:
+        cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        cfg = {}
+    provider = cfg.get("provider", "anthropic")
+    key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
+    return {
+        "model": cfg.get("model", os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")),
+        "model_fast": cfg.get("model_fast", os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest")),
+        "provider": provider,
+        "api_key_set": bool(cfg.get("api_key") or os.getenv(key_env)),
+    }
+
+
+@app.post("/api/llm-config")
+async def save_llm_config(request: Request):
+    """Save LLM config to config/llm.yaml (api_key is stored securely on server)."""
+    if not yaml:
+        raise HTTPException(status_code=500, detail="PyYAML not installed. Run: pip install pyyaml")
+    body = await request.json()
+    cfg = {
+        "model": body.get("model", "claude-3-5-sonnet-latest"),
+        "model_fast": body.get("model_fast", "claude-3-5-haiku-latest"),
+        "provider": body.get("provider", "anthropic"),
+    }
+    api_key = body.get("api_key", "")
+    # Only update api_key if a non-empty value is provided
+    if api_key:
+        cfg["api_key"] = api_key
+    else:
+        # Preserve existing api_key if not sent (client doesn't have it)
+        if LLM_CONFIG_PATH.exists():
+            try:
+                existing = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+                if existing.get("api_key"):
+                    cfg["api_key"] = existing["api_key"]
+            except Exception:
+                pass
+    LLM_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    LLM_CONFIG_PATH.write_text(yaml.safe_dump(cfg, default_flow_style=False, sort_keys=False), encoding="utf-8")
+    _load_llm_config()
+    return {"ok": True}
+
+
+# Serve frontend static files if dist exists
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
+
+# Load LLM config on startup
+_load_llm_config()
 
 if __name__ == "__main__":
     import uvicorn

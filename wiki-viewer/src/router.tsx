@@ -1,4 +1,4 @@
-import { createBrowserRouter, useRouteError } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { HomePage } from '@/components/pages/HomePage';
 import { BrowsePage } from '@/components/pages/BrowsePage';
@@ -7,8 +7,10 @@ import { SearchPage } from '@/components/pages/SearchPage';
 import { LogPage } from '@/components/pages/LogPage';
 import { UploadPage } from '@/components/pages/UploadPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
-import { AgentKitPage } from '@/components/pages/AgentKitPage';
+import { AgentKitPage } from '@/components/agent-kit/AgentKitPage';
+import { StatusPage } from '@/components/pages/StatusPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
+import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { lazy, Suspense } from 'react';
 
 const GraphPage = lazy(() => import('@/components/pages/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -21,20 +23,6 @@ function GraphPageLoader() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-apple-blue mx-auto mb-4" />
         <p className="text-sm text-[var(--text-secondary)]">Loading graph...</p>
       </div>
-    </div>
-  );
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-function ErrorBoundary() {
-  const error = useRouteError() as Error;
-  console.error('Router error:', error);
-  return (
-    <div style={{ padding: 24, fontFamily: 'monospace', background: '#fee', color: '#c00', minHeight: '100vh' }}>
-      <h1>Application Error</h1>
-      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-        {error?.stack || String(error)}
-      </pre>
     </div>
   );
 }
@@ -61,6 +49,7 @@ export const router = createBrowserRouter([
       { path: '/upload', element: <UploadPage />, errorElement: <ErrorBoundary /> },
       { path: '/settings', element: <SettingsPage />, errorElement: <ErrorBoundary /> },
       { path: '/agent-kit', element: <AgentKitPage />, errorElement: <ErrorBoundary /> },
+      { path: '/status', element: <StatusPage />, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },

@@ -27,6 +27,10 @@ from datetime import date
 
 import os
 
+# Fix Windows console encoding for Unicode output
+if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
 GRAPH_DIR = REPO_ROOT / "graph"
@@ -39,19 +43,39 @@ def read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def _load_llm_config() -> dict:
+    cfg_path = REPO_ROOT / "config" / "llm.yaml"
+    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
+    if cfg_path.exists():
+        try:
+            import yaml
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            return {**defaults, **data}
+        except Exception:
+            pass
+    return defaults
+
+
 def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
     try:
         from litellm import completion
     except ImportError:
         print("Error: litellm not installed. Run: pip install litellm")
         sys.exit(1)
-        
-    model = os.getenv(model_env, default_model)
-    response = completion(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_tokens
-    )
+
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv(model_env, default_model)
+    api_key = cfg.get("api_key", "")
+
+    kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    response = completion(**kwargs)
     return response.choices[0].message.content
 
 
@@ -62,7 +86,9 @@ def all_wiki_pages() -> list[Path]:
 
 
 def extract_wikilinks(content: str) -> list[str]:
-    return re.findall(r'\[\[([^\]]+)\]\]', content)
+    links = re.findall(r'\[\[([^\]]+)\]\]', content)
+    # Handle [[PageName|display text]] alias syntax
+    return [link.split('|')[0].strip() for link in links]
 
 
 def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:

@@ -1,4 +1,5 @@
 import type { GraphData } from '@/types/graph';
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 
 /**
  * Fetch wiki data from the API server (tools/api_server.py).
@@ -9,7 +10,7 @@ import type { GraphData } from '@/types/graph';
 export async function fetchGraphData(): Promise<GraphData> {
   // Try API server first
   try {
-    const res = await fetch('/api/graph');
+    const res = await fetchWithTimeout('/api/graph', { timeoutMs: 10000 });
     if (res.ok) return res.json();
   } catch {
     // API server not available, fall through to static file
@@ -43,7 +44,7 @@ export interface IngestResult {
 }
 
 export async function fetchRawFiles(): Promise<RawFile[]> {
-  const res = await fetch('/api/raw-files');
+  const res = await fetchWithTimeout('/api/raw-files', { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to fetch raw files: ${res.status}`);
   const data = await res.json();
   return data.files || [];
@@ -52,7 +53,7 @@ export async function fetchRawFiles(): Promise<RawFile[]> {
 export async function uploadFile(file: File): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch('/api/upload/file', {
+  const res = await fetchWithTimeout('/api/upload/file', {
     method: 'POST',
     body: formData,
   });
@@ -64,7 +65,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 }
 
 export async function uploadText(title: string, content: string): Promise<UploadResult> {
-  const res = await fetch('/api/upload/text', {
+  const res = await fetchWithTimeout('/api/upload/text', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, content }),
@@ -77,7 +78,7 @@ export async function uploadText(title: string, content: string): Promise<Upload
 }
 
 export async function triggerIngest(path: string): Promise<IngestResult> {
-  const res = await fetch('/api/ingest', {
+  const res = await fetchWithTimeout('/api/ingest', { timeoutMs: 120000, 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
@@ -90,14 +91,14 @@ export async function triggerIngest(path: string): Promise<IngestResult> {
 }
 
 export async function fetchRawFileContent(path: string): Promise<string> {
-  const res = await fetch(`/api/raw-file-content?path=${encodeURIComponent(path)}`);
+  const res = await fetchWithTimeout(`/api/raw-file-content?path=${encodeURIComponent(path)}`, { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to load file: ${res.status}`);
   const data = await res.json();
   return data.content || '';
 }
 
 export async function deleteRawFile(path: string): Promise<{ success: boolean }> {
-  const res = await fetch(`/api/raw-files/${encodeURIComponent(path)}`, {
+  const res = await fetchWithTimeout(`/api/raw-files/${encodeURIComponent(path)}`, {
     method: 'DELETE',
   });
   if (!res.ok) {

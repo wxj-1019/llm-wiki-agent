@@ -68,6 +68,19 @@ def read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def _load_llm_config() -> dict:
+    cfg_path = REPO_ROOT / "config" / "llm.yaml"
+    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
+    if cfg_path.exists():
+        try:
+            import yaml
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            return {**defaults, **data}
+        except Exception:
+            pass
+    return defaults
+
+
 def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
     try:
         from litellm import completion
@@ -76,7 +89,9 @@ def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 
         import sys
         sys.exit(1)
 
-    model = os.getenv(model_env, default_model)
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv(model_env, default_model)
+    api_key = cfg.get("api_key", "")
 
     kwargs = {
         "model": model,
@@ -85,6 +100,8 @@ def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 
 
     if max_tokens:
         kwargs["max_tokens"] = max_tokens
+    if api_key:
+        kwargs["api_key"] = api_key
 
     response = completion(**kwargs)
     return response.choices[0].message.content

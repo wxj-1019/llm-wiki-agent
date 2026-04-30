@@ -1,10 +1,11 @@
 import { Outlet } from 'react-router-dom';
-import { useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { GlassHeader } from './GlassHeader';
 import { Sidebar } from './Sidebar';
+import { CommandPalette } from './CommandPalette';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 
@@ -14,7 +15,6 @@ export function RootLayout() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -23,28 +23,16 @@ export function RootLayout() {
 
   // Scroll to top on route change, but skip detail pages (they restore scroll position)
   useEffect(() => {
-    // Don't scroll for detail pages â€?PageDetailPage handles scroll restoration
+    // Don't scroll for detail pages ï¿½?PageDetailPage handles scroll restoration
     if (!location.pathname.match(/^\/(s|e|c|y)\//)) {
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }
   }, [location.pathname]);
 
-  // Ctrl+K â†?navigate to search
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      navigate('/search');
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
       <GlassHeader />
+      <CommandPalette />
       <div className="flex flex-1 overflow-hidden pt-14">
         <Sidebar />
         {/*

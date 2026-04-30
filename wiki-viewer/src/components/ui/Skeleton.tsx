@@ -73,3 +73,21 @@ export function PageSkeleton() {
     </div>
   );
 }
+
+export function BrowseSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6">
+      <Skeleton className="w-48 h-9" />
+      <Skeleton className="w-full h-11 rounded-xl" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="w-72 h-9 rounded-xl" />
+        <Skeleton className="w-28 h-9 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}

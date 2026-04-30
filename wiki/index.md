@@ -10,6 +10,14 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Introduction to Large Language Models](sources/intro-to-llms.md) — comprehensive overview of LLMs from tokenization to autoregressive generation
 
 ## Entities
+- [LargeLanguageModels](entities/LargeLanguageModels.md) — auto-healed entity
+- [GPT4](entities/GPT4.md) — auto-healed entity
+- [ChatGPT](entities/ChatGPT.md) — auto-healed entity
+- [LLaMA](entities/LLaMA.md) — auto-healed entity
+- [T5](entities/T5.md) — auto-healed entity
+- [BERT](entities/BERT.md) — auto-healed entity
+- [GPT](entities/GPT.md) — auto-healed entity
+- [Attention Is All You Need](entities/Attention Is All You Need.md) — auto-healed entity
 - [Bahdanau](entities/Bahdanau.md) — researcher; introduced attention mechanism for RNNs
 - [Google](entities/Google.md) — technology company; original inventor of the Transformer architecture
 - [Greg Brockman](entities/GregBrockman.md) — co-founder and former CTO of OpenAI

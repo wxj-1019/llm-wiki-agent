@@ -74,22 +74,39 @@ def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
     return target
 
 
+def _load_llm_config() -> dict:
+    cfg_path = REPO_ROOT / "config" / "llm.yaml"
+    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
+    if cfg_path.exists():
+        try:
+            import yaml
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            return {**defaults, **data}
+        except Exception:
+            pass
+    return defaults
+
+
 def call_llm(prompt: str, max_tokens: int = 8192) -> str:
     try:
         from litellm import completion
     except ImportError:
         print("Error: litellm not installed. Run: pip install litellm")
         sys.exit(1)
-        
-    model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
-    
+
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}]
     }
-    
+
     if max_tokens:
         kwargs["max_tokens"] = max_tokens
+    if api_key:
+        kwargs["api_key"] = api_key
 
     response = completion(**kwargs)
     return response.choices[0].message.content

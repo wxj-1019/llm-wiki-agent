@@ -13,7 +13,7 @@ last_updated: 2024-02-10
 ## AI Research
 - Published the original [[Transformer]] architecture (2017)
 - Developed [[BERT]], a bidirectional encoder representation model
-- Created [[T5]] and [[PaLM]] language models
+- Created [[T5]] and PaLM language models
 
 ## Key Teams
 - Google Research

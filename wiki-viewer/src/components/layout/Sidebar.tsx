@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, ScrollText, Home, Compass, Upload, Settings, Bot } from 'lucide-react';
+import { GitBranch, ScrollText, Home, Compass, Upload, Settings, Bot, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -56,6 +56,8 @@ export function Sidebar() {
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
               }`}
               title={t(item.translationKey as string)}
+              aria-current={navActive ? 'page' : undefined}
+              aria-label={t(item.translationKey as string)}
             >
               <item.icon size={18} />
               {!sidebarCollapsed && (
@@ -73,8 +75,30 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Settings at bottom */}
-      <div className="p-2 border-t border-[var(--border-default)]">
+      {/* Status & Settings at bottom */}
+      <div className="p-2 border-t border-[var(--border-default)] space-y-1">
+        <Link
+          to="/status"
+          onClick={handleNavClick}
+          className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
+            location.pathname === '/status'
+              ? 'bg-apple-blue/10 text-apple-blue font-medium'
+              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+          title="Status"
+        >
+          <Activity size={18} />
+          {!sidebarCollapsed && (
+            <motion.span
+              initial={{ opacity: 0, x: -5 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-sm whitespace-nowrap"
+            >
+              Status
+            </motion.span>
+          )}
+        </Link>
         <Link
           to="/settings"
           onClick={handleNavClick}

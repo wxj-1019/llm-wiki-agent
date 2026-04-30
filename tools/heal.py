@@ -46,14 +46,34 @@ LOG_HEADER = (
 )
 
 
+def _load_llm_config() -> dict:
+    cfg_path = REPO_ROOT / "config" / "llm.yaml"
+    defaults = {"provider": "anthropic", "model": "claude-3-5-haiku-latest", "api_key": "", "api_base": ""}
+    if cfg_path.exists():
+        try:
+            import yaml
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            return {**defaults, **data}
+        except Exception:
+            pass
+    return defaults
+
+
 def call_llm(prompt: str, max_tokens: int = 1500) -> str:
-    model = os.getenv("LLM_MODEL", "claude-3-5-haiku-latest")
+    cfg = _load_llm_config()
+    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-haiku-latest")
+    api_key = cfg.get("api_key", "")
+
+    kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+
     try:
-        response = completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens
-        )
+        response = completion(**kwargs)
         return response.choices[0].message.content
     except Exception as e:
         print(f"  [ERROR] LLM call failed: {e}")

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { BrowseSkeleton } from '@/components/ui/Skeleton';
 
 const typeIcons: Record<string, React.ElementType> = {
   source: FileText,
@@ -38,6 +39,7 @@ export function BrowsePage() {
   }, [typeParam]);
   const [sortOpen, setSortOpen] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
+  const loading = useWikiStore((s) => s.loading);
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const getBacklinks = useWikiStore((s) => s.getBacklinks);
 
@@ -71,6 +73,10 @@ export function BrowsePage() {
     { key: 'concept', labelKey: 'type.concept' },
     { key: 'synthesis', labelKey: 'type.synthesis' },
   ];
+
+  if (loading) {
+    return <BrowseSkeleton />;
+  }
 
   return (
     <div>

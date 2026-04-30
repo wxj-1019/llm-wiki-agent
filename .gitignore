@@ -30,6 +30,7 @@ npm-debug.log*
 
 # Local settings
 .claude/settings.local.json
+config/llm.yaml
 
 # Graph cache files
 graph/.cache.json
@@ -39,3 +40,23 @@ graph/.refresh_cache.json
 # Auto-generated agent assets
 agent-kit/
 .cache/
+
+# Screenshots & temp files
+screenshot-*.png
+test-*.md
+test-*.txt
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Batch scripts (local dev only)
+*.bat
+
+# Raw uploads (user content)
+raw/uploads/
+
+# Playwright
+playwright-report/
+test-results/
