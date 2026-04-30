@@ -140,6 +140,7 @@
   "error.somethingWrong": "Something went wrong",
   "error.tryAgain": "An unexpected error occurred. Please try refreshing the page.",
   "error.refresh": "Refresh",
+  "error.offline": "You are offline. Some features may be unavailable.",
   "log.error.description": "Make sure the API server is running on port 8000.",
   "log.empty.copied": "Copied!",
   "detail.toc.title": "Contents",

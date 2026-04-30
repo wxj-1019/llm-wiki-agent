@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDebounce } from '@/hooks/useDebounce';
 import { BrowseSkeleton } from '@/components/ui/Skeleton';
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -31,6 +32,7 @@ export function BrowsePage() {
   useDocumentTitle(t('browse.title'));
 
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 200);
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'connected'>('default');
 
   const typeParam = searchParams.get('t');
@@ -48,8 +50,8 @@ export function BrowsePage() {
     if (filterType !== 'all') {
       result = result.filter((n) => n.type === filterType);
     }
-    if (query.trim()) {
-      const q = query.toLowerCase();
+    if (debouncedQuery.trim()) {
+      const q = debouncedQuery.toLowerCase();
       result = result.filter(
         (n) =>
           n.label.toLowerCase().includes(q) ||
@@ -64,7 +66,7 @@ export function BrowsePage() {
       result = [...result].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
     }
     return result;
-  }, [nodes, filterType, query, sortBy, getBacklinks]);
+  }, [nodes, filterType, debouncedQuery, sortBy, getBacklinks]);
 
   const tabs = [
     { key: 'all', labelKey: 'browse.filterAll' },

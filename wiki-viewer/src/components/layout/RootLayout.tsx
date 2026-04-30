@@ -6,8 +6,9 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { GlassHeader } from './GlassHeader';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, WifiOff } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 export function RootLayout() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ export function RootLayout() {
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
   const location = useLocation();
+  const isOnline = useNetworkStatus();
 
   useEffect(() => {
     initialize();
@@ -33,6 +35,12 @@ export function RootLayout() {
     <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
       <GlassHeader />
       <CommandPalette />
+      {!isOnline && (
+        <div className="fixed top-14 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/40 px-4 py-2 flex items-center justify-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+          <WifiOff size={14} />
+          <span>{t('error.offline')}</span>
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden pt-14">
         <Sidebar />
         {/*

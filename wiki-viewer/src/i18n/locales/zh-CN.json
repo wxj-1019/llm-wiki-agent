@@ -140,6 +140,7 @@
   "error.somethingWrong": "出错了",
   "error.tryAgain": "发生意外错误，请尝试刷新页面。",
   "error.refresh": "刷新",
+  "error.offline": "当前处于离线状态，部分功能可能不可用。",
   "log.error.description": "请确保 API 服务器在 8000 端口运行。",
   "log.empty.copied": "已复制！",
   "detail.toc.title": "目录",

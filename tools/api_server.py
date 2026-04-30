@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi import HTTPException
+from pydantic import BaseModel, Field
 
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
@@ -332,9 +333,9 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @app.post("/api/upload/text")
-async def upload_text(payload: dict):
-    title = payload.get("title", "").strip()
-    content = payload.get("content", "")
+async def upload_text(payload: UploadTextPayload):
+    title = payload.title.strip()
+    content = payload.content
     if not title:
         raise HTTPException(status_code=400, detail="Title is required")
 
@@ -382,8 +383,8 @@ def delete_raw_file(path: str):
 
 
 @app.post("/api/ingest")
-async def api_ingest(payload: dict):
-    path_str = payload.get("path", "")
+async def api_ingest(payload: IngestPayload):
+    path_str = payload.path
     if not path_str:
         raise HTTPException(status_code=400, detail="path is required")
 
@@ -480,18 +481,14 @@ def agent_kit_status():
 
 
 @app.post("/api/agent-kit/generate")
-async def agent_kit_generate(payload: dict):
+async def agent_kit_generate(payload: AgentKitGeneratePayload):
     """Run export_agent_kit.py with specified options."""
-    target = payload.get("target", "all")
-    if target not in ("all", "mcp", "skill"):
-        raise HTTPException(status_code=400, detail="target must be all, mcp, or skill")
-
-    cmd = [sys.executable, str(REPO / "tools" / "export_agent_kit.py"), "--target", target]
-    if payload.get("package"):
+    cmd = [sys.executable, str(REPO / "tools" / "export_agent_kit.py"), "--target", payload.target]
+    if payload.package:
         cmd.append("--package")
-    if payload.get("incremental"):
+    if payload.incremental:
         cmd.append("--incremental")
-    if payload.get("skipDiagrams"):
+    if payload.skipDiagrams:
         cmd.append("--skip-diagrams")
 
     try:
@@ -582,12 +579,12 @@ def agent_kit_download(path: str = Query(..., min_length=1)):
 
 
 @app.post("/api/agent-kit/download-zip")
-async def agent_kit_download_zip(payload: dict):
+async def agent_kit_download_zip(payload: DownloadZipPayload):
     """Download selected files as a zip archive."""
     import zipfile
     import io
 
-    paths = payload.get("paths", [])
+    paths = payload.paths
     if not paths:
         raise HTTPException(status_code=400, detail="No paths provided")
 
@@ -941,17 +938,16 @@ def get_llm_config():
 
 
 @app.post("/api/llm-config")
-async def save_llm_config(request: Request):
+async def save_llm_config(payload: LLMConfigPayload):
     """Save LLM config to config/llm.yaml (api_key is stored securely on server)."""
     if not yaml:
         raise HTTPException(status_code=500, detail="PyYAML not installed. Run: pip install pyyaml")
-    body = await request.json()
     cfg = {
-        "model": body.get("model", "claude-3-5-sonnet-latest"),
-        "model_fast": body.get("model_fast", "claude-3-5-haiku-latest"),
-        "provider": body.get("provider", "anthropic"),
+        "model": payload.model,
+        "model_fast": payload.model_fast,
+        "provider": payload.provider,
     }
-    api_key = body.get("api_key", "")
+    api_key = payload.api_key
     # Only update api_key if a non-empty value is provided
     if api_key:
         cfg["api_key"] = api_key
@@ -973,6 +969,34 @@ async def save_llm_config(request: Request):
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
+
+# ── Pydantic request models ──
+class UploadTextPayload(BaseModel):
+    title: str = Field(..., min_length=1, description="Document title")
+    content: str = Field(default="", description="Markdown or plain text content")
+
+class IngestPayload(BaseModel):
+    path: str = Field(..., min_length=1, description="Path to raw file to ingest")
+
+class AgentKitGeneratePayload(BaseModel):
+    target: str = Field(default="all", pattern="^(all|mcp|skill)$")
+    package: bool = Field(default=False)
+    incremental: bool = Field(default=False)
+    skipDiagrams: bool = Field(default=False)
+
+class DownloadZipPayload(BaseModel):
+    paths: list[str] = Field(..., min_length=1, description="List of file paths to include in ZIP")
+
+class SaveFilePayload(BaseModel):
+    path: str = Field(..., min_length=1)
+    content: str = Field(default="")
+
+class LLMConfigPayload(BaseModel):
+    model: str = Field(default="claude-3-5-sonnet-latest")
+    model_fast: str = Field(default="claude-3-5-haiku-latest")
+    provider: str = Field(default="anthropic")
+    api_key: str = Field(default="")
+
 
 # Load LLM config on startup
 _load_llm_config()

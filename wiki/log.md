@@ -8,6 +8,25 @@ Parse recent entries: `grep "^## \[" wiki/log.md | tail -10`
 
 ---
 
+## [2026-04-30] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
+## [2026-04-30] heal | Auto-healed 8 missing entity pages
+
+Generated entity pages from wiki context:
+- Attention Is All You Need
+- GPT, GPT4, ChatGPT, LLaMA, T5, BERT
+- LargeLanguageModels
+
+## [2026-04-30] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
+## [2026-04-30] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
 ## [2026-04-30] graph | Knowledge graph rebuilt
 
 21 nodes, 114 edges (114 extracted, 0 inferred).

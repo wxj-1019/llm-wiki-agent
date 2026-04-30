@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { DetailSkeleton } from '@/components/ui/Skeleton';
 
 interface Props {
   type: 'source' | 'entity' | 'concept' | 'synthesis';
@@ -113,7 +114,12 @@ export function PageDetailPage({ type }: Props) {
 
   useDocumentTitle(node?.label);
 
+  const loading = useWikiStore((s) => s.loading);
+
   if (!node) {
+    if (loading) {
+      return <DetailSkeleton />;
+    }
     return (
       <div className="empty-state-warm mt-20">
         <div className="text-4xl mb-3">📄</div>

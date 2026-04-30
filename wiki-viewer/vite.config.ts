@@ -10,6 +10,21 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split large vendor libraries into separate chunks
+          'vendor-shiki': ['shiki'],
+          'vendor-vis': ['vis-network'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-markdown': ['react-markdown', 'remark-gfm', 'rehype-raw', 'rehype-slug', 'rehype-autolink-headings'],
+          'vendor-fuse': ['fuse.js'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     port: 3000,
     proxy: {

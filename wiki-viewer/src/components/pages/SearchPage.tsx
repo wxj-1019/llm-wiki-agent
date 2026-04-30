@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const typeIcons: Record<string, React.ElementType> = {
   source: FileText,
@@ -42,10 +43,11 @@ export function SearchPage() {
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
 
+  const debouncedQuery = useDebounce(query, 200);
   const results = useMemo(() => {
-    if (!query.trim()) return [];
-    return searchNodes(query);
-  }, [query]);
+    if (!debouncedQuery.trim()) return [];
+    return searchNodes(debouncedQuery);
+  }, [debouncedQuery]);
 
   useDocumentTitle(t('search.title'));
 

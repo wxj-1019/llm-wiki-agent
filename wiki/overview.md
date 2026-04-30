@@ -16,6 +16,7 @@ The wiki contains **2 sources**, **15 entities**, **2 concepts**, and **1 synthe
 
 ### Sources
 - [[Attention Is All You Need]] — the seminal paper introducing the Transformer architecture
+- [[attention-is-all-you-need]] — the seminal paper introducing the Transformer architecture
 - [[intro-to-llms]] — a comprehensive overview of LLMs
 
 ### Key Themes
@@ -32,6 +33,9 @@ The wiki contains **2 sources**, **15 entities**, **2 concepts**, and **1 synthe
 ### Contradictions & Open Questions
 - Whether emergent abilities in LLMs are a fundamental property or a metric artifact is debated
 - The original work by [[Bahdanau]] introduced attention for RNNs; the Transformer paper demonstrated attention alone is sufficient
+
+### Knowledge Gaps
+- See also: [[foundation-models-overview]] — a synthesis of the foundation model landscape
 
 ### Knowledge Gaps
 - No sources yet on: RLHF, multimodal models, open-source LLM ecosystem

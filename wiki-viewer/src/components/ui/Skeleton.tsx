@@ -91,3 +91,26 @@ export function BrowseSkeleton() {
     </div>
   );
 }
+
+export function DetailSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6 max-w-3xl">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-8 h-8 rounded-lg" />
+        <Skeleton className="w-32 h-5" />
+      </div>
+      <Skeleton className="w-3/4 h-10" />
+      <div className="flex gap-3">
+        <Skeleton className="w-20 h-6 rounded-full" />
+        <Skeleton className="w-24 h-6 rounded-full" />
+      </div>
+      <div className="space-y-3 pt-4">
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-5/6 h-4" />
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-4/6 h-4" />
+      </div>
+    </div>
+  );
+}

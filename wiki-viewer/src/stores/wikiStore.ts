@@ -45,6 +45,29 @@ const persisted = (() => {
   }
 })();
 
+const GRAPH_CACHE_KEY = 'wiki-graph-cache';
+const GRAPH_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function loadGraphCache(): GraphData | null {
+  try {
+    const raw = localStorage.getItem(GRAPH_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed._cachedAt || 0) > GRAPH_CACHE_TTL_MS) return null;
+    return parsed.data as GraphData;
+  } catch {
+    return null;
+  }
+}
+
+function saveGraphCache(data: GraphData) {
+  try {
+    localStorage.setItem(GRAPH_CACHE_KEY, JSON.stringify({ data, _cachedAt: Date.now() }));
+  } catch {
+    // localStorage may be full — ignore
+  }
+}
+
 // ── Debounced persistence ──
 // Scroll-triggered state (readingProgress) fires ~100 times per article read.
 // We debounce localStorage writes to 1 second to avoid blocking the main thread.
@@ -82,11 +105,30 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   initialize: async () => {
     const { graphData } = get();
     if (graphData) return;
+
+    // Try loading from cache first for instant render
+    const cached = loadGraphCache();
+    if (cached) {
+      initSearch(cached.nodes);
+      set({ graphData: cached, loading: false });
+      // Silently refresh in background
+      try {
+        const data = await fetchGraphData();
+        initSearch(data.nodes);
+        set({ graphData: data, loading: false });
+        saveGraphCache(data);
+      } catch {
+        // Keep cached data on refresh failure
+      }
+      return;
+    }
+
     set({ loading: true, error: null });
     try {
       const data = await fetchGraphData();
       initSearch(data.nodes);
       set({ graphData: data, loading: false });
+      saveGraphCache(data);
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
     }
@@ -98,6 +140,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       const data = await fetchGraphData();
       initSearch(data.nodes);
       set({ graphData: data, loading: false });
+      saveGraphCache(data);
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
     }
