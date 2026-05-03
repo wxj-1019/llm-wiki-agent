@@ -2,7 +2,7 @@
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-[var(--bg-tertiary)] rounded-lg ${className}`} />
+    <div className={`animate-pulse bg-[var(--bg-tertiary)] rounded-xl ${className}`} />
   );
 }
 
@@ -10,15 +10,15 @@ export function SkeletonCard() {
   return (
     <div className="apple-card p-5">
       <div className="flex items-start justify-between mb-3">
-        <Skeleton className="w-8 h-8" />
-        <Skeleton className="w-12 h-4" />
+        <Skeleton className="w-8 h-8 rounded-xl" />
+        <Skeleton className="w-12 h-4 rounded-xl" />
       </div>
-      <Skeleton className="w-3/4 h-6 mb-2" />
-      <Skeleton className="w-full h-4 mb-1" />
-      <Skeleton className="w-5/6 h-4 mb-1" />
-      <Skeleton className="w-4/6 h-4 mb-3" />
+      <Skeleton className="w-3/4 h-6 mb-2 rounded-xl" />
+      <Skeleton className="w-full h-4 mb-1 rounded-xl" />
+      <Skeleton className="w-5/6 h-4 mb-1 rounded-xl" />
+      <Skeleton className="w-4/6 h-4 mb-3 rounded-xl" />
       <div className="flex justify-end gap-2">
-        <Skeleton className="w-8 h-3" />
+        <Skeleton className="w-8 h-3 rounded-xl" />
       </div>
     </div>
   );
@@ -28,10 +28,10 @@ export function SkeletonStat() {
   return (
     <div className="apple-card p-4">
       <div className="flex items-center gap-2 mb-2">
-        <Skeleton className="w-6 h-6" />
-        <Skeleton className="w-16 h-4" />
+        <Skeleton className="w-6 h-6 rounded-xl" />
+        <Skeleton className="w-16 h-4 rounded-xl" />
       </div>
-      <Skeleton className="w-10 h-8" />
+      <Skeleton className="w-10 h-8 rounded-xl" />
     </div>
   );
 }
@@ -39,7 +39,7 @@ export function SkeletonStat() {
 export function SkeletonSearch() {
   return (
     <div className="w-full max-w-xl">
-      <Skeleton className="w-full h-12 rounded-2xl" />
+      <Skeleton className="w-full h-12 rounded-xl" />
     </div>
   );
 }
@@ -59,7 +59,7 @@ export function PageSkeleton() {
       </div>
 
       {/* Section header */}
-      <Skeleton className="w-40 h-7" />
+      <Skeleton className="w-40 h-7 rounded-xl" />
 
       {/* Card grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -77,11 +77,11 @@ export function PageSkeleton() {
 export function BrowseSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
-      <Skeleton className="w-48 h-9" />
+      <Skeleton className="w-48 h-9 rounded-xl" />
       <Skeleton className="w-full h-11 rounded-xl" />
       <div className="flex items-center justify-between">
         <Skeleton className="w-72 h-9 rounded-xl" />
-        <Skeleton className="w-28 h-9 rounded-lg" />
+        <Skeleton className="w-28 h-9 rounded-xl" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -96,20 +96,20 @@ export function DetailSkeleton() {
   return (
     <div className="animate-pulse space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Skeleton className="w-8 h-8 rounded-lg" />
-        <Skeleton className="w-32 h-5" />
+        <Skeleton className="w-8 h-8 rounded-xl" />
+        <Skeleton className="w-32 h-5 rounded-xl" />
       </div>
-      <Skeleton className="w-3/4 h-10" />
+      <Skeleton className="w-3/4 h-10 rounded-xl" />
       <div className="flex gap-3">
-        <Skeleton className="w-20 h-6 rounded-full" />
-        <Skeleton className="w-24 h-6 rounded-full" />
+        <Skeleton className="w-20 h-6 rounded-xl" />
+        <Skeleton className="w-24 h-6 rounded-xl" />
       </div>
       <div className="space-y-3 pt-4">
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-5/6 h-4" />
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-4/6 h-4" />
+        <Skeleton className="w-full h-4 rounded-xl" />
+        <Skeleton className="w-full h-4 rounded-xl" />
+        <Skeleton className="w-5/6 h-4 rounded-xl" />
+        <Skeleton className="w-full h-4 rounded-xl" />
+        <Skeleton className="w-4/6 h-4 rounded-xl" />
       </div>
     </div>
   );

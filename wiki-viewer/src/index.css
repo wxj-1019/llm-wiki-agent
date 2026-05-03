@@ -12,13 +12,12 @@
   --color-apple-red: #ff453a;
   --color-apple-teal: #64d2ff;
   --color-apple-yellow: #ffd60a;
-  --color-warm-peach: #ffb5a7;
-  --color-warm-peach-light: #ffe8e3;
-  --color-warm-lavender: #cdb4db;
-  --color-warm-lavender-light: #ede4f3;
-  --color-warm-cream: #fefae0;
-  --color-warm-blush: #ffd6e0;
-  --color-warm-blush-light: #fff0f4;
+  --color-marshmallow-mint: #A7F3D0;
+  --color-marshmallow-blush: #FECDD3;
+  --color-marshmallow-cream: #FEF3C7;
+  --color-marshmallow-sky: #BAE6FD;
+  --color-marshmallow-lavender: #DDD6FE;
+  --color-marshmallow-peach: #FFD6C1;
   --font-family-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   --font-family-serif: 'New York', Georgia, serif;
   --font-family-rounded: 'Quicksand', 'Nunito', 'Comfortaa', sans-serif;
@@ -37,29 +36,35 @@
     --text-tertiary: #8e8e93;
     --border-default: rgba(0, 0, 0, 0.08);
     --border-strong: rgba(0, 0, 0, 0.16);
-    --warm-peach: #ffb5a7;
-    --warm-peach-light: #ffe8e3;
-    --warm-lavender: #cdb4db;
-    --warm-cream: #fefae0;
-    --warm-blush: #ffd6e0;
+    --apple-blue: #0a84ff;
+    --apple-blue-hover: #0077ed;
+    --marshmallow-mint: #A7F3D0;
+    --marshmallow-blush: #FECDD3;
+    --marshmallow-cream: #FEF3C7;
+    --marshmallow-sky: #BAE6FD;
+    --marshmallow-lavender: #DDD6FE;
+    --marshmallow-peach: #FFD6C1;
   }
 
   [data-theme='dark'] {
-    --bg-primary: #000000;
-    --bg-secondary: #1c1c1e;
-    --bg-tertiary: #2c2c2e;
-    --bg-glass: rgba(28, 28, 30, 0.72);
-    --bg-warm: #1a1215;
+    --bg-primary: #1a1a1f;
+    --bg-secondary: #2c2c30;
+    --bg-tertiary: #3a3a40;
+    --bg-glass: rgba(40, 40, 45, 0.72);
+    --bg-warm: #2a2225;
     --text-primary: #f5f5f7;
-    --text-secondary: #98989d;
-    --text-tertiary: #555558;
+    --text-secondary: #a1a1a6;
+    --text-tertiary: #636366;
     --border-default: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
-    --warm-peach: #ff8a75;
-    --warm-peach-light: #3d2520;
-    --warm-lavender: #b794c4;
-    --warm-cream: #3d3820;
-    --warm-blush: #cc8a9a;
+    --apple-blue: #2997ff;
+    --apple-blue-hover: #0a84ff;
+    --marshmallow-mint: #6EE7B7;
+    --marshmallow-blush: #FDA4AF;
+    --marshmallow-cream: #FDE68A;
+    --marshmallow-sky: #7DD3FC;
+    --marshmallow-lavender: #C4B5FD;
+    --marshmallow-peach: #FCA5A5;
   }
 
   html {
@@ -68,15 +73,19 @@
   }
 
   :focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-apple-blue), 0 0 0 4px var(--bg-primary);
-    border-radius: 0.25rem;
+    outline: 2px solid var(--apple-blue);
+    outline-offset: 2px;
   }
 
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: var(--font-family-sans);
+  }
+
+  ::selection {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--text-primary);
   }
 
   ::-webkit-scrollbar {
@@ -99,8 +108,10 @@
   .glass {
     background-color: var(--bg-glass);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border-default);
   }
+
   .apple-card {
     background-color: var(--bg-secondary);
     border-radius: 1rem;
@@ -111,6 +122,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
   }
+
   .warm-card {
     background-color: var(--bg-warm);
     border-radius: 1.5rem;
@@ -121,6 +133,7 @@
     box-shadow: 0 8px 24px rgba(255, 181, 167, 0.2);
     transform: translateY(-4px);
   }
+
   .apple-button {
     display: inline-flex;
     align-items: center;
@@ -140,6 +153,7 @@
     transform: scale(0.97);
     box-shadow: none;
   }
+
   .apple-button-warm {
     display: inline-flex;
     align-items: center;
@@ -160,6 +174,28 @@
     transform: scale(0.96);
     box-shadow: none;
   }
+
+  .apple-button-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-default);
+    transition: all 0.2s;
+  }
+  .apple-button-ghost:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+  }
+  .apple-button-ghost:active {
+    transform: scale(0.97);
+  }
+
   .apple-input {
     width: 100%;
     background-color: var(--bg-secondary);
@@ -177,6 +213,7 @@
     border-color: var(--color-apple-blue);
     box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25);
   }
+
   .ambient-blob {
     position: absolute;
     filter: blur(80px);
@@ -184,6 +221,96 @@
     pointer-events: none;
     animation: blob 10s ease-in-out infinite, float 6s ease-in-out infinite;
   }
+
+  .empty-state-warm {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border-radius: 1.5rem;
+    background-color: var(--bg-warm);
+    border: 1px solid rgba(255, 181, 167, 0.2);
+    transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+/* Markdown rendering */
+.markdown-body {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+.markdown-body p { margin: 0.75em 0; }
+.markdown-body p:first-child { margin-top: 0; }
+.markdown-body p:last-child { margin-bottom: 0; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-weight: 700;
+  margin: 1.2em 0 0.6em;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.markdown-body h1 { font-size: 1.4em; }
+.markdown-body h2 { font-size: 1.2em; }
+.markdown-body h3 { font-size: 1.05em; }
+.markdown-body ul, .markdown-body ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+.markdown-body li { margin: 0.3em 0; }
+.markdown-body code {
+  font-family: var(--font-family-mono);
+  background: var(--bg-tertiary);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+.markdown-body pre {
+  background: var(--bg-tertiary);
+  padding: 1em;
+  overflow-x: auto;
+  margin: 0.75em 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+}
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+.markdown-body blockquote {
+  border-left: 3px solid var(--color-apple-blue);
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: var(--text-secondary);
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+.markdown-body a {
+  color: var(--color-apple-blue);
+  text-decoration: none;
+}
+.markdown-body a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border-default);
+  margin: 1.2em 0;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  margin: 0.75em 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--border-default);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.markdown-body th {
+  background: var(--bg-secondary);
+  font-weight: 600;
 }
 
 @keyframes blob {
@@ -203,74 +330,6 @@
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* Markdown rendering for AI chat */
-.markdown-body {
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: var(--text-primary);
-}
-.markdown-body p { margin: 0.5em 0; }
-.markdown-body p:first-child { margin-top: 0; }
-.markdown-body p:last-child { margin-bottom: 0; }
-.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
-  font-weight: 600;
-  margin: 0.8em 0 0.4em;
-  color: var(--text-primary);
-}
-.markdown-body h1 { font-size: 1.1em; }
-.markdown-body h2 { font-size: 1em; }
-.markdown-body h3 { font-size: 0.9em; }
-.markdown-body ul, .markdown-body ol {
-  margin: 0.4em 0;
-  padding-left: 1.2em;
-}
-.markdown-body li { margin: 0.2em 0; }
-.markdown-body code {
-  font-family: var(--font-family-mono);
-  background: var(--bg-tertiary);
-  padding: 0.15em 0.4em;
-  border-radius: 0.25rem;
-  font-size: 0.85em;
-}
-.markdown-body pre {
-  background: var(--bg-tertiary);
-  padding: 0.75em;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  margin: 0.5em 0;
-}
-.markdown-body pre code {
-  background: none;
-  padding: 0;
-  font-size: 0.8em;
-}
-.markdown-body blockquote {
-  border-left: 3px solid var(--color-apple-purple);
-  padding-left: 0.75em;
-  margin: 0.5em 0;
-  color: var(--text-secondary);
-}
-.markdown-body a {
-  color: var(--color-apple-blue);
-  text-decoration: underline;
-}
-.markdown-body hr {
-  border: none;
-  border-top: 1px solid var(--border-default);
-  margin: 0.75em 0;
-}
-.markdown-body table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8em;
-  margin: 0.5em 0;
-}
-.markdown-body th, .markdown-body td {
-  border: 1px solid var(--border-default);
-  padding: 0.3em 0.5em;
-  text-align: left;
-}
-.markdown-body th {
-  background: var(--bg-tertiary);
-  font-weight: 600;
+.animate-scale-in-bounce {
+  animation: scaleInBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }

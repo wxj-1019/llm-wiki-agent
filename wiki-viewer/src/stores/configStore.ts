@@ -56,14 +56,11 @@ const DEFAULT_CONFIG: SystemConfig = {
   },
 };
 
+import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
+
 function loadFromStorage(): SystemConfig {
-  try {
-    const raw = localStorage.getItem('wiki-system-config');
-    if (raw) return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-  } catch {
-    // ignore
-  }
-  return DEFAULT_CONFIG;
+  const stored = safeGet('wiki-system-config', isObject, {});
+  return { ...DEFAULT_CONFIG, ...stored } as SystemConfig;
 }
 
 interface ConfigState {
@@ -87,13 +84,13 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setConfig: (partial) => {
     const next = { ...get().config, ...partial };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   updateGithub: (partial) => {
     const next = { ...get().config, github: { ...get().config.github, ...partial } };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   updateTrending: (partial) => {
@@ -102,25 +99,25 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       github: { ...get().config.github, trending: { ...get().config.github.trending, ...partial } },
     };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   setRssFeeds: (feeds) => {
     const next = { ...get().config, rss: { feeds } };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   setArxivQueries: (queries) => {
     const next = { ...get().config, arxiv: { queries } };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   setArchiveTtl: (days) => {
     const next = { ...get().config, archive: { default_ttl_days: days } };
     set({ config: next });
-    localStorage.setItem('wiki-system-config', JSON.stringify(next));
+    safeSet('wiki-system-config', next);
   },
 
   checkApi: async () => {

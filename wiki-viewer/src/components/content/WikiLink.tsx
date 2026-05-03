@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
 import { resolveWikiLink } from '@/lib/wikilink';
+import { useTranslation } from 'react-i18next';
 
 interface WikiLinkProps {
   target: string;
@@ -8,10 +9,11 @@ interface WikiLinkProps {
 }
 
 export function WikiLink({ target, children }: WikiLinkProps) {
+  const { t } = useTranslation();
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes ?? [];
 
-  // Parse piped link: [[Target|Display]] â†?target=Target, display=Display
+  // Parse piped link: [[Target|Display]] â†’ target=Target, display=Display
   const pipeIdx = target.indexOf('|');
   const actualTarget = pipeIdx >= 0 ? target.substring(0, pipeIdx) : target;
   const display = children;
@@ -33,8 +35,8 @@ export function WikiLink({ target, children }: WikiLinkProps) {
   return (
     <Link
       to={path}
-      className="text-apple-red/70 font-medium border-b border-dashed border-apple-red/40 hover:text-apple-red hover:border-apple-red transition-colors duration-200 cursor-pointer inline"
-      title={`Page "[${actualTarget}]" does not exist yet`}
+      className="text-red-500/70 font-medium border-b border-dashed border-apple-red/40 hover:text-red-500 hover:border-apple-red transition-colors duration-200 cursor-pointer inline"
+      title={t('wikiLink.brokenTitle', { target: actualTarget })}
     >
       {display}
     </Link>

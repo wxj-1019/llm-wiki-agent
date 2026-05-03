@@ -25,7 +25,7 @@ interface SystemStatus {
 
 export function StatusPage() {
   const { t } = useTranslation();
-  useDocumentTitle('System Status');
+  useDocumentTitle(t('status.title'));
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ export function StatusPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <RefreshCw size={24} className="animate-spin text-[var(--text-tertiary)]" />
-        <p className="text-sm text-[var(--text-tertiary)]">Loading system status...</p>
+        <p className="text-sm text-[var(--text-tertiary)]">{t('status.loading')}</p>
       </div>
     );
   }
@@ -62,50 +62,50 @@ export function StatusPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <AlertCircle size={24} className="text-red-500" />
-        <p className="text-sm text-red-500">Failed to load status: {error}</p>
-        <button onClick={fetchStatus} className="apple-button text-xs">Retry</button>
+        <p className="text-sm text-red-500">{t('status.error.title', { error })}</p>
+        <button onClick={fetchStatus} className="apple-button text-xs">{t('error.retry')}</button>
       </div>
     );
   }
 
   const statCards = [
     {
-      label: 'Wiki Pages',
+      label: t('status.stat.wikiPages'),
       value: status.wiki.pages,
       icon: Database,
       color: 'text-apple-blue',
       bg: 'bg-apple-blue/10',
     },
     {
-      label: 'Sources',
+      label: t('status.stat.sources'),
       value: status.wiki.sources,
       icon: FileText,
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-    },
-    {
-      label: 'Entities',
-      value: status.wiki.entities,
-      icon: Activity,
       color: 'text-apple-green',
       bg: 'bg-apple-green/10',
     },
     {
-      label: 'Concepts',
-      value: status.wiki.concepts,
-      icon: Zap,
+      label: t('status.stat.entities'),
+      value: status.wiki.entities,
+      icon: Activity,
       color: 'text-apple-purple',
       bg: 'bg-apple-purple/10',
     },
     {
-      label: 'Raw Files',
+      label: t('status.stat.concepts'),
+      value: status.wiki.concepts,
+      icon: Zap,
+      color: 'text-apple-orange',
+      bg: 'bg-apple-orange/10',
+    },
+    {
+      label: t('status.stat.rawFiles'),
       value: status.raw.files,
       icon: HardDrive,
       color: 'text-apple-orange',
       bg: 'bg-apple-orange/10',
     },
     {
-      label: 'Agent Kit Files',
+      label: t('status.stat.agentKitFiles'),
       value: status.agent_kit.files,
       icon: Bot,
       color: 'text-apple-pink',
@@ -118,14 +118,14 @@ export function StatusPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold flex items-center gap-3">
           <Activity size={28} className="text-apple-blue" />
-          System Status
+          {t('status.title')}
         </h1>
         <button
           onClick={fetchStatus}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] transition-colors"
+          className="apple-button-ghost flex items-center gap-2 px-3 py-2 text-sm"
         >
           <RefreshCw size={14} />
-          Refresh
+          {t('status.refresh')}
         </button>
       </div>
 
@@ -134,13 +134,13 @@ export function StatusPage() {
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="bg-[var(--bg-secondary)] rounded-2xl p-4 flex flex-col justify-between border border-[var(--border-default)] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            className="apple-card p-4 flex flex-col justify-between"
           >
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center ${card.color}`}>
+              <div className={`w-8 h-8 rounded-xl ${card.bg} flex items-center justify-center ${card.color}`}>
                 <card.icon size={16} />
               </div>
-              <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider">{card.label}</span>
+              <span className="text-xs text-[var(--text-tertiary)]">{card.label}</span>
             </div>
             <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2 tabular-nums">{card.value}</div>
           </div>
@@ -150,76 +150,76 @@ export function StatusPage() {
       {/* Status panels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* LLM Status */}
-        <div className="bg-[var(--bg-secondary)] rounded-2xl p-6 border border-[var(--border-default)]">
+        <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
               <Bot size={16} />
             </div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">LLM Configuration</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.llm.title')}</h2>
           </div>
           <div className="space-y-3">
-            <StatusRow label="Provider" value={status.llm.provider} />
-            <StatusRow label="Model" value={status.llm.model} />
+            <StatusRow label={t('status.llm.provider')} value={status.llm.provider} />
+            <StatusRow label={t('status.llm.model')} value={status.llm.model} />
             <StatusRow
-              label="API Key"
-              value={status.llm.api_key_set ? 'Configured' : 'Not set'}
+              label={t('status.llm.apiKey')}
+              value={status.llm.api_key_set ? t('status.llm.configured') : t('status.llm.notSet')}
               valueClass={status.llm.api_key_set ? 'text-emerald-500' : 'text-amber-500'}
             />
           </div>
         </div>
 
         {/* Graph Status */}
-        <div className="bg-[var(--bg-secondary)] rounded-2xl p-6 border border-[var(--border-default)]">
+        <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-500">
+            <div className="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
               <Network size={16} />
             </div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Knowledge Graph</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.graph.title')}</h2>
           </div>
           <div className="space-y-3">
             <StatusRow
-              label="Status"
-              value={status.graph.ready ? 'Ready' : 'Not built'}
+              label={t('status.graph.status')}
+              value={status.graph.ready ? t('status.graph.ready') : t('status.graph.notBuilt')}
               icon={status.graph.ready ? CheckCircle : AlertCircle}
               iconClass={status.graph.ready ? 'text-emerald-500' : 'text-amber-500'}
             />
-            <StatusRow label="Path" value={status.graph.path || '—'} />
+            <StatusRow label={t('status.graph.path')} value={status.graph.path || '—'} />
           </div>
         </div>
 
         {/* Agent Kit */}
-        <div className="bg-[var(--bg-secondary)] rounded-2xl p-6 border border-[var(--border-default)]">
+        <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-500">
+            <div className="w-8 h-8 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
               <Bot size={16} />
             </div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Agent Kit</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.agentKit.title')}</h2>
           </div>
           <div className="space-y-3">
             <StatusRow
-              label="Generated"
-              value={status.agent_kit.generated ? 'Yes' : 'No'}
+              label={t('status.agentKit.generated')}
+              value={status.agent_kit.generated ? t('status.yes') : t('status.no')}
               icon={status.agent_kit.generated ? CheckCircle : AlertCircle}
               iconClass={status.agent_kit.generated ? 'text-emerald-500' : 'text-amber-500'}
             />
-            <StatusRow label="Files" value={String(status.agent_kit.files)} />
+            <StatusRow label={t('status.agentKit.files')} value={String(status.agent_kit.files)} />
           </div>
         </div>
 
         {/* Server */}
-        <div className="bg-[var(--bg-secondary)] rounded-2xl p-6 border border-[var(--border-default)]">
+        <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
               <Server size={16} />
             </div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Server</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.server.title')}</h2>
           </div>
           <div className="space-y-3">
-            <StatusRow label="Version" value={status.server.version} />
-            <StatusRow label="Time" value={status.server.time} />
+            <StatusRow label={t('status.server.version')} value={status.server.version} />
+            <StatusRow label={t('status.server.time')} value={status.server.time} />
             <StatusRow
-              label="Last Ingest"
-              value={status.wiki.last_ingest || 'Never'}
+              label={t('status.server.lastIngest')}
+              value={status.wiki.last_ingest || t('status.never')}
               icon={Clock}
               iconClass="text-[var(--text-tertiary)]"
             />

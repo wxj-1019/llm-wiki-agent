@@ -37,35 +37,22 @@ function applyTheme(theme: 'light' | 'dark' | 'system') {
   document.documentElement.setAttribute('data-theme', effective);
 }
 
-const persisted = (() => {
-  try {
-    return JSON.parse(localStorage.getItem('wiki-viewer-storage') || '{}');
-  } catch {
-    return {};
-  }
-})();
+import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
+
+const persisted = safeGet('wiki-viewer-storage', isObject, {});
 
 const GRAPH_CACHE_KEY = 'wiki-graph-cache';
 const GRAPH_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function loadGraphCache(): GraphData | null {
-  try {
-    const raw = localStorage.getItem(GRAPH_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Date.now() - (parsed._cachedAt || 0) > GRAPH_CACHE_TTL_MS) return null;
-    return parsed.data as GraphData;
-  } catch {
-    return null;
-  }
+  const parsed = safeGet(GRAPH_CACHE_KEY, isObject, null);
+  if (!parsed) return null;
+  if (Date.now() - (parsed._cachedAt as number || 0) > GRAPH_CACHE_TTL_MS) return null;
+  return parsed.data as GraphData;
 }
 
 function saveGraphCache(data: GraphData) {
-  try {
-    localStorage.setItem(GRAPH_CACHE_KEY, JSON.stringify({ data, _cachedAt: Date.now() }));
-  } catch {
-    // localStorage may be full — ignore
-  }
+  safeSet(GRAPH_CACHE_KEY, { data, _cachedAt: Date.now() });
 }
 
 // ── Debounced persistence ──
@@ -88,18 +75,18 @@ function writePersist(state: WikiState) {
     readingProgress: state.readingProgress,
     favorites: state.favorites,
   };
-  localStorage.setItem('wiki-viewer-storage', JSON.stringify(data));
+  safeSet('wiki-viewer-storage', data);
 }
 
 export const useWikiStore = create<WikiState>((set, get) => ({
   graphData: null,
-  theme: persisted.theme || 'system',
-  sidebarCollapsed: persisted.sidebarCollapsed ?? false,
+  theme: (persisted.theme as WikiState['theme']) || 'system',
+  sidebarCollapsed: (persisted.sidebarCollapsed as boolean) ?? false,
   loading: false,
   error: null,
-  recentPages: persisted.recentPages || [],
-  readingProgress: persisted.readingProgress || {},
-  favorites: persisted.favorites || [],
+  recentPages: (persisted.recentPages as string[]) || [],
+  readingProgress: (persisted.readingProgress as Record<string, number>) || {},
+  favorites: (persisted.favorites as string[]) || [],
   commandPaletteOpen: false,
 
   initialize: async () => {
@@ -207,4 +194,4 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   },
 }));
 
-applyTheme(persisted.theme || 'system');
+applyTheme((persisted.theme as WikiState['theme']) || 'system');

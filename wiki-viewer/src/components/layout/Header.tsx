@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe, Check } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
@@ -14,21 +15,21 @@ function LanguageSwitcher() {
   return (
     <div className="relative">
       <button
-        className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
         title={t('action.switchLanguage')}
         onClick={() => setOpen(!open)}
       >
-        <Globe size={18} />
+        <Globe size={16} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 py-1 glass rounded-xl shadow-apple-lg min-w-[140px] z-50">
+          <div className="absolute right-0 top-full mt-2 py-1 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[140px] z-50 shadow-lg">
             {SUPPORTED_LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => { i18n.changeLanguage(lang.code); setOpen(false); }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
+                className={`w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
                   i18n.language === lang.code ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
                 }`}
               >
@@ -43,7 +44,7 @@ function LanguageSwitcher() {
   );
 }
 
-export function GlassHeader() {
+export function Header() {
   const { t } = useTranslation();
   const theme = useWikiStore((s) => s.theme);
   const setTheme = useWikiStore((s) => s.setTheme);
@@ -58,14 +59,12 @@ export function GlassHeader() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
 
-  // Debounce search input by 150ms
   const handleQueryChange = (value: string) => {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => setDebouncedQuery(value), 150);
   };
 
-  // Close search dropdown when clicking outside
   useEffect(() => {
     if (!searchOpen) return;
     const handler = (e: MouseEvent) => {
@@ -93,16 +92,16 @@ export function GlassHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-14 glass border-b border-[var(--border-default)] flex items-center px-4 gap-3">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 backdrop-blur-md bg-[var(--bg-primary)]/80 border-b border-[var(--border-default)] flex items-center px-4 gap-3">
       <button
         onClick={toggleSidebar}
-        className="p-2 rounded-full hover:bg-[var(--bg-secondary)] transition-colors"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
       >
-        {sidebarCollapsed ? <Menu size={18} /> : <X size={18} />}
+        {sidebarCollapsed ? <Menu size={16} /> : <X size={16} />}
       </button>
 
-      <Link to="/" className="font-semibold text-lg tracking-tight flex items-center gap-2">
-        <span className="w-7 h-7 rounded-lg bg-apple-blue flex items-center justify-center text-white text-xs font-bold">W</span>
+      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2">
+        <span className="w-6 h-6 rounded-lg bg-apple-blue flex items-center justify-center text-white text-xs font-bold">W</span>
         <span className="hidden sm:inline">{t('brand.name')}</span>
       </Link>
 
@@ -111,15 +110,15 @@ export function GlassHeader() {
       <div className="relative" ref={searchRef}>
         <button
           onClick={() => setSearchOpen(!searchOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm hover:bg-[var(--bg-tertiary)] transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)] hover:border-[var(--border-strong)] hover:shadow-sm"
         >
           <Search size={14} />
           <span className="hidden sm:inline">{t('action.search')}</span>
-          <kbd className="hidden md:inline-flex px-1.5 py-0.5 text-[10px] bg-[var(--bg-primary)] rounded border border-[var(--border-default)]">{t('shortcut.ctrlK')}</kbd>
+          <kbd className="hidden md:inline-flex px-1.5 py-0.5 rounded-md text-[10px] bg-[var(--bg-primary)] border border-[var(--border-default)]">{t('shortcut.ctrlK')}</kbd>
         </button>
 
         {searchOpen && (
-          <div className="absolute right-0 top-full mt-2 w-80 glass rounded-2xl shadow-apple-lg p-3 z-50">
+          <div className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg">
             <input
               autoFocus
               value={query}
@@ -143,12 +142,12 @@ export function GlassHeader() {
               }}
             />
             {results.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-0">
                 {results.map((r, idx) => (
                   <button
                     key={r.item.id}
                     onClick={() => handleResultClick(r.item.id)}
-                    className={`w-full text-left px-3 py-2 rounded-xl transition-colors ${
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                       idx === selectedIdx
                         ? 'bg-apple-blue/10 text-apple-blue'
                         : 'hover:bg-[var(--bg-secondary)]'
@@ -166,30 +165,32 @@ export function GlassHeader() {
 
       <Link
         to="/graph"
-        className="p-2 rounded-full hover:bg-[var(--bg-secondary)] transition-colors"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
         title={t('graph.tooltip')}
       >
-        <Network size={18} />
+        <Network size={16} />
       </Link>
+
+      <NotificationDropdown />
 
       <LanguageSwitcher />
 
-      <div className="flex items-center bg-[var(--bg-secondary)] rounded-full p-0.5">
+      <div className="flex items-center rounded-full bg-[var(--bg-secondary)] border border-[var(--border-default)] p-0.5">
         <button
           onClick={() => setTheme('light')}
-          className={`p-1.5 rounded-full transition-colors ${theme === 'light' ? 'bg-[var(--bg-primary)] shadow-sm' : ''}`}
+          className={`p-1.5 rounded-full transition-colors ${theme === 'light' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
         >
           <Sun size={14} />
         </button>
         <button
           onClick={() => setTheme('system')}
-          className={`p-1.5 rounded-full transition-colors ${theme === 'system' ? 'bg-[var(--bg-primary)] shadow-sm' : ''}`}
+          className={`p-1.5 rounded-full transition-colors ${theme === 'system' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
         >
           <Monitor size={14} />
         </button>
         <button
           onClick={() => setTheme('dark')}
-          className={`p-1.5 rounded-full transition-colors ${theme === 'dark' ? 'bg-[var(--bg-primary)] shadow-sm' : ''}`}
+          className={`p-1.5 rounded-full transition-colors ${theme === 'dark' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
         >
           <Moon size={14} />
         </button>

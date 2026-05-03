@@ -41,14 +41,14 @@ export function ErrorBoundary() {
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-default)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            className="apple-button-ghost inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             <RefreshCcw size={14} />
             {t('error.refresh')}
           </button>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-apple-blue text-white text-sm font-medium hover:bg-apple-blue/90 transition-colors"
+            className="apple-button inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium"
           >
             <Home size={14} />
             {t('action.backToHome')}

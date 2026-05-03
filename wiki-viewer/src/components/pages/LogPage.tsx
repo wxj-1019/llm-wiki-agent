@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { ScrollText, Search, Wrench, Activity, Loader2, Copy, Check, ExternalLink } from 'lucide-react';
+import { ScrollText, Search, Wrench, Activity, Loader2, Copy, Check, ExternalLink, Frown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -30,7 +30,7 @@ const opColors: Record<string, string> = {
   health: 'bg-apple-green/10 text-apple-green',
   graph: 'bg-apple-teal/10 text-apple-teal',
   heal: 'bg-apple-pink/10 text-apple-pink',
-  report: 'bg-apple-indigo/10 text-apple-indigo',
+  report: 'bg-apple-yellow/10 text-apple-yellow',
 };
 
 export function LogPage() {
@@ -62,7 +62,6 @@ export function LogPage() {
   }, [entries]);
 
   useEffect(() => {
-    // Try API server first, fall back to static path
     const fetchLog = async () => {
       setLoading(true);
       setError(null);
@@ -76,7 +75,6 @@ export function LogPage() {
           setEntries([]);
         }
       } catch {
-        // Fallback: try static file path (for production build without API server)
         try {
           const res = await fetch('/data/wiki/log.md');
           if (res.ok) {
@@ -94,12 +92,11 @@ export function LogPage() {
       }
     };
     fetchLog();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold mb-2">{t('log.title')}</h1>
+      <h1 className="text-3xl font-semibold mb-6">{t('log.title')}</h1>
 
       {!loading && !error && entries.length > 0 && (
         <div className="flex items-center gap-2 mb-6 flex-wrap">
@@ -121,16 +118,20 @@ export function LogPage() {
         </div>
       ) : error ? (
         <div className="empty-state-warm">
-          <div className="text-4xl mb-3">⚠</div>
-          <h3 className="font-rounded text-lg font-semibold mb-1">{t('log.error.title')}</h3>
+          <div className="flex justify-center mb-3">
+            <Frown size={40} className="text-apple-orange" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1">{t('log.error.title')}</h3>
           <p className="text-sm text-[var(--text-secondary)]">{error}</p>
         </div>
       ) : entries.length === 0 ? (
         <div className="empty-state-warm">
-          <div className="text-4xl mb-3">📋</div>
-          <h3 className="font-rounded text-lg font-semibold mb-1">{t('log.empty.title')}</h3>
+          <div className="flex justify-center mb-3">
+            <ScrollText size={40} className="text-apple-blue" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1">{t('log.empty.title')}</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-4">{t('log.empty.description')}</p>
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-4 inline-block">
+          <div className="bg-[var(--bg-secondary)] p-4 inline-block rounded-xl">
             <p className="text-xs text-[var(--text-tertiary)] mb-2">{t('log.empty.cta')}</p>
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <code className="text-sm font-mono text-apple-blue bg-[var(--bg-primary)] px-3 py-1.5 rounded-lg">
@@ -143,9 +144,9 @@ export function LogPage() {
                   if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
                   copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
                 }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)]"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)] rounded-xl"
               >
-                {copied ? <Check size={12} className="text-apple-green" /> : <Copy size={12} />}
+                {copied ? <Check size={12} className="text-apple-blue" /> : <Copy size={12} />}
                 {copied ? t('log.empty.copied') : t('log.empty.copy')}
               </button>
             </div>
@@ -170,7 +171,7 @@ export function LogPage() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.03 }}
-                className={`apple-card p-4 flex items-center gap-4 ${linkedNode ? 'cursor-pointer hover:bg-[var(--bg-secondary)]/50 transition-colors' : ''}`}
+                className={`apple-card p-4 flex items-center gap-4 cursor-pointer transition-colors ${linkedNode ? 'hover:bg-[var(--bg-secondary)]' : ''}`}
                 onClick={handleClick}
               >
                 <div className={`p-2 rounded-lg ${opColors[entry.operation] || 'bg-gray-100 text-gray-600'}`}>
@@ -179,7 +180,7 @@ export function LogPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{entry.title}</span>
-                    <span className="text-xs text-[var(--text-tertiary)] capitalize px-2 py-0.5 rounded-full bg-[var(--bg-secondary)]">
+                    <span className="text-xs text-[var(--text-tertiary)] capitalize px-2 py-0.5 bg-[var(--bg-secondary)] rounded-full">
                       {t(`log.op.${entry.operation}` as string)}
                     </span>
                   </div>
@@ -201,7 +202,6 @@ function parseLog(text: string): LogEntry[] {
   const lines = text.split('\n');
   const entries: LogEntry[] = [];
   for (const line of lines) {
-    // Match: ## [YYYY-MM-DD] operation | Title
     const match = line.match(/^##\s+\[(\d{4}-\d{2}-\d{2})\]\s+(\w+)\s+\|\s+(.+)$/);
     if (match) {
       entries.push({

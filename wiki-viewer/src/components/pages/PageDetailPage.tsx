@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List } from 'lucide-react';
+import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import i18n from '@/i18n';
 import { useWikiStore } from '@/stores/wikiStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import { parseFrontmatter } from '@/lib/frontmatter';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -29,9 +30,9 @@ function formatDate(dateStr: string): string {
 
 const typeColors: Record<string, string> = {
   source: 'text-apple-blue bg-apple-blue/10',
-  entity: 'text-apple-green bg-apple-green/10',
-  concept: 'text-apple-purple bg-apple-purple/10',
-  synthesis: 'text-apple-orange bg-apple-orange/10',
+  entity: 'text-apple-blue bg-apple-blue/10',
+  concept: 'text-apple-blue bg-apple-blue/10',
+  synthesis: 'text-apple-blue bg-apple-blue/10',
 };
 
 export function PageDetailPage({ type }: Props) {
@@ -48,13 +49,7 @@ export function PageDetailPage({ type }: Props) {
   const setReadingProgress = useWikiStore((s) => s.setReadingProgress);
   const progressRef = useRef(0);
   const [favBounce, setFavBounce] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 1500);
-    return () => clearTimeout(timer);
-  }, [toast]);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const node = useMemo(() => {
     if (!graphData) return null;
@@ -123,7 +118,7 @@ export function PageDetailPage({ type }: Props) {
     return (
       <div className="empty-state-warm mt-20">
         <div className="text-4xl mb-3">📄</div>
-        <h3 className="font-rounded text-lg font-semibold">{t('detail.notFound')}</h3>
+        <h3 className=" text-lg font-semibold">{t('detail.notFound')}</h3>
       </div>
     );
   }
@@ -134,20 +129,6 @@ export function PageDetailPage({ type }: Props) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-default)] shadow-apple-lg text-sm text-[var(--text-primary)]"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Reading Progress */}
       {node && (
         <div className="fixed top-14 left-0 right-0 z-40 h-[2px] bg-[var(--bg-secondary)]">
@@ -162,7 +143,7 @@ export function PageDetailPage({ type }: Props) {
       <div className="flex items-center gap-2 mb-6 text-sm text-[var(--text-secondary)]">
         <button
           onClick={() => navigate(-1)}
-          className="hover:text-[var(--text-primary)] flex items-center gap-1 transition-colors"
+          className="apple-button-ghost flex items-center gap-1"
           title={t('detail.back')}
         >
           <Undo2 size={14} />
@@ -179,18 +160,29 @@ export function PageDetailPage({ type }: Props) {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide ${typeColors[type] || ''}`}>
+          <span className={`text-xs font-semibold px-2.5 py-1 border border-[var(--border-default)] rounded-full ${typeColors[type] || ''}`}>
             {t(typeLabelKey(type) as string)}
           </span>
+          <Link
+            to={`/chat?context=${encodeURIComponent(node.id)}`}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
+            title={t('detail.askAbout')}
+          >
+            <MessageCircle size={14} />
+            <span className="hidden sm:inline">{t('detail.askAbout')}</span>
+          </Link>
           <button
             onClick={() => {
               toggleFavorite(node.id);
               setFavBounce((k) => k + 1);
-              setToast(isFavorite(node.id) ? t('detail.favorite.removed') : t('detail.favorite.added'));
+              addNotification(
+                isFavorite(node.id) ? t('detail.favorite.removed') : t('detail.favorite.added'),
+                'success'
+              );
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
               isFavorite(node.id)
-                ? 'text-red-500 bg-red-500/10'
+                ? 'text-red-500 bg-red-500/10 border-red-500/30'
                 : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
             }`}
             title={isFavorite(node.id) ? t('detail.favorite.remove') : t('detail.favorite.add')}
@@ -228,7 +220,7 @@ export function PageDetailPage({ type }: Props) {
             <div className="flex items-center gap-1">
               <Tag size={14} />
               {meta.tags.map((tag: string) => (
-                <span key={tag} className="bg-[var(--bg-secondary)] px-2 py-0.5 rounded-md text-xs">
+                <span key={tag} className="bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full text-xs">
                   {tag}
                 </span>
               ))}
@@ -261,7 +253,7 @@ export function PageDetailPage({ type }: Props) {
                   to={getPagePath(link)}
                   className="apple-card p-3 flex items-center gap-3"
                 >
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColors[link.type] || ''}`}>
+                  <span className={`text-xs font-medium px-2 py-0.5 border border-[var(--border-default)] rounded-full ${typeColors[link.type] || ''}`}>
                     {t(typeLabelKey(link.type) as string)}
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
@@ -334,18 +326,18 @@ function TableOfContents({ content }: { content: string }) {
   return (
     <aside className="hidden xl:block w-56 shrink-0">
       <div className="sticky top-24">
-        <h4 className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+        <h4 className="text-xs font-semibold text-[var(--text-tertiary)] mb-3 flex items-center gap-1.5">
           <List size={14} />
           {t('detail.toc.title')}
         </h4>
-        <nav className="space-y-1 border-l border-[var(--border-default)]">
+        <nav className="space-y-1">
           {headings.map((h) => (
             <button
               key={h.id}
               onClick={() => handleClick(h.id)}
-              className={`block w-full text-left pl-3 pr-1 py-1 text-xs transition-colors rounded-r-md ${
+              className={`block w-full text-left pl-3 pr-1 py-1 text-xs transition-colors rounded-lg ${
                 activeId === h.id
-                  ? 'text-apple-blue bg-apple-blue/5 border-l-2 border-apple-blue -ml-[2px]'
+                  ? 'text-apple-blue bg-apple-blue/10'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               } ${h.level === 3 ? 'ml-3' : ''}`}
             >

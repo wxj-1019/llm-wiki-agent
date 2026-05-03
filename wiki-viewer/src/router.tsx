@@ -7,8 +7,10 @@ import { SearchPage } from '@/components/pages/SearchPage';
 import { LogPage } from '@/components/pages/LogPage';
 import { UploadPage } from '@/components/pages/UploadPage';
 import { SettingsPage } from '@/components/pages/SettingsPage';
-import { AgentKitPage } from '@/components/agent-kit/AgentKitPage';
 import { StatusPage } from '@/components/pages/StatusPage';
+import { ChatPage } from '@/components/pages/ChatPage';
+import { MCPPage } from '@/components/pages/MCPPage';
+import { SkillsPage } from '@/components/pages/SkillsPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { lazy, Suspense } from 'react';
@@ -48,8 +50,10 @@ export const router = createBrowserRouter([
       { path: '/log', element: <LogPage />, errorElement: <ErrorBoundary /> },
       { path: '/upload', element: <UploadPage />, errorElement: <ErrorBoundary /> },
       { path: '/settings', element: <SettingsPage />, errorElement: <ErrorBoundary /> },
-      { path: '/agent-kit', element: <AgentKitPage />, errorElement: <ErrorBoundary /> },
+      { path: '/chat', element: <ChatPage />, errorElement: <ErrorBoundary /> },
       { path: '/status', element: <StatusPage />, errorElement: <ErrorBoundary /> },
+      { path: '/mcp', element: <MCPPage />, errorElement: <ErrorBoundary /> },
+      { path: '/skills', element: <SkillsPage />, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },

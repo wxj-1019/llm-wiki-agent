@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { safeGet, safeSet, isArray } from '@/lib/safeStorage';
+import { StreamDeduplicator, mergeStreamChunk } from '@/lib/streamUtils';
 import {
   chatWithLLMStream,
   readAgentKitFile,
@@ -15,12 +17,7 @@ export interface ChatMessage extends BaseChatMessage {
 export function useChat(addToast: (message: string, type: 'success' | 'error') => void, loadStatus: () => Promise<void>, loadFiles: () => Promise<void>) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem('agent-kit-chat-history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return safeGet('agent-kit-chat-history', isArray, []) as ChatMessage[];
   });
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -34,7 +31,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
   const [showSources, setShowSources] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('agent-kit-chat-history', JSON.stringify(chatMessages));
+    safeSet('agent-kit-chat-history', chatMessages);
   }, [chatMessages]);
 
   const handleStopChat = useCallback(() => {
@@ -106,6 +103,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       const assistantMsg: ChatMessage = { role: 'assistant', content: '' };
       setChatMessages((prev) => [...prev, assistantMsg]);
       const stream = chatWithLLMStream(newMessages, undefined, abort.signal);
+      const deduper = new StreamDeduplicator();
       for await (const part of stream) {
         if (part.error) {
           setChatMessages((prev) => {
@@ -117,9 +115,13 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
           return;
         }
         if (part.chunk) {
+          const result = deduper.process(part.chunk);
+          if (!result) continue;
+
           setChatMessages((prev) => {
             const copy = [...prev];
-            copy[copy.length - 1] = { role: 'assistant', content: copy[copy.length - 1].content + part.chunk };
+            const current = copy[copy.length - 1].content;
+            copy[copy.length - 1] = { role: 'assistant', content: mergeStreamChunk(current, result) };
             return copy;
           });
         }
@@ -176,6 +178,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       const messages: ChatMessage[] = [{ role: 'user', content: userPrompt }];
       const stream = chatWithLLMStream(messages, systemPrompt, abort.signal);
       let fullReply = '';
+      let lastChunk = '';
       for await (const part of stream) {
         if (part.error) {
           setChatMessages((prev) => [
@@ -186,6 +189,9 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
           return;
         }
         if (part.chunk) {
+          // Skip consecutive duplicate chunks (network/litellm may resend)
+          if (part.chunk === lastChunk) continue;
+          lastChunk = part.chunk;
           fullReply += part.chunk;
           setChatMessages((prev) => [
             prev[0],

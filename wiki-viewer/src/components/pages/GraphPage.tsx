@@ -1,13 +1,41 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+
+const APPLE_NODE_PALETTE = [
+  '#007AFF',
+  '#34C759',
+  '#AF52DE',
+  '#FF9500',
+  '#FF2D55',
+  '#5AC8FA',
+];
+const EDGE_COLOR_EXTRACTED = 'rgba(0, 122, 255, 0.25)';
+const EDGE_COLOR_INFERRED = 'rgba(120, 120, 128, 0.15)';
+const EDGE_COLOR_AMBIGUOUS = 'rgba(120, 120, 128, 0.08)';
+function getAppleNodeColor(group: number): string {
+  return APPLE_NODE_PALETTE[group % APPLE_NODE_PALETTE.length];
+}
+function getAppleEdgeColor(edgeType: string): string {
+  if (edgeType === 'EXTRACTED') return EDGE_COLOR_EXTRACTED;
+  if (edgeType === 'AMBIGUOUS') return EDGE_COLOR_AMBIGUOUS;
+  return EDGE_COLOR_INFERRED;
+}
+
+function getComputedColor(varName: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#1d1d1f';
+}
+
+const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
+
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork } from 'vis-network/standalone';
 import type { Network } from 'vis-network';
-import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { safeGet, safeSet } from '@/lib/safeStorage';
 import { getPagePath } from '@/lib/wikilink';
 
 export function GraphPage() {
@@ -23,6 +51,7 @@ export function GraphPage() {
   useDocumentTitle(t('nav.graph'));
 
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set(['source', 'entity', 'concept', 'synthesis']));
+  const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
 
   // Memoize nodes/edges derived from graphData to avoid reference churn
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,20 +77,25 @@ export function GraphPage() {
       networkRef.current = null;
     }
 
+    const fontColor = getComputedColor('--text-primary');
+
     const visNodes = nodes
       .filter((n) => filterTypes.has(n.type))
-      .map((n) => ({
-        id: n.id,
-        label: n.label,
-        color: {
-          background: n.color,
-          border: n.color,
-          highlight: { background: n.color, border: '#fff' },
-        },
-        value: n.value,
-        title: n.preview,
-        font: { color: 'var(--text-primary)', size: 12, face: '-apple-system' },
-      }));
+      .map((n) => {
+        const ic = getAppleNodeColor(n.group);
+        return {
+          id: n.id,
+          label: n.label,
+          color: {
+            background: ic,
+            border: ic,
+            highlight: { background: ic, border: '#fff' },
+          },
+          value: n.value,
+          title: n.preview,
+          font: { color: fontColor, size: 12, face: 'system-ui, -apple-system, sans-serif' },
+        };
+      });
 
     const nodeIds = new Set(visNodes.map((n) => n.id));
     const visEdges = edges
@@ -70,7 +104,7 @@ export function GraphPage() {
         id: e.id,
         from: e.from,
         to: e.to,
-        color: { color: e.color, highlight: '#fff' },
+        color: { color: getAppleEdgeColor(e.type), highlight: '#fff' },
         width: e.type === 'EXTRACTED' ? 1.5 : 0.8,
         dashes: e.type === 'AMBIGUOUS',
         arrows: 'to' as const,
@@ -170,12 +204,14 @@ export function GraphPage() {
     return (
       <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
         <div className="empty-state-warm">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h3 className="font-rounded text-xl font-semibold mb-2">{t('graph.error.title')}</h3>
+          <div className="flex justify-center mb-4">
+            <Frown size={48} className="text-apple-orange" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">{t('graph.error.title')}</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-sm">{t('graph.error.description')}</p>
           <button
             onClick={() => initialize()}
-            className="apple-button-warm"
+            className="apple-button"
           >
             <RefreshCw size={16} />
             {t('graph.error.retry')}
@@ -189,10 +225,12 @@ export function GraphPage() {
     return (
       <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
         <div className="empty-state-warm">
-          <div className="text-5xl mb-4">🕸️</div>
-          <h3 className="font-rounded text-xl font-semibold mb-2">{t('graph.empty.title')}</h3>
+          <div className="flex justify-center mb-4">
+            <NetworkIcon size={48} className="text-apple-blue" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">{t('graph.empty.title')}</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-sm">{t('graph.empty.description')}</p>
-          <Link to="/browse" className="apple-button-warm">
+          <Link to="/browse" className="apple-button">
             <BookOpen size={16} />
             {t('graph.empty.browse')}
           </Link>
@@ -210,7 +248,7 @@ export function GraphPage() {
       <GraphStats nodes={nodes} edges={edges} />
 
       {/* Controls */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-2xl px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 shadow-apple-lg">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-2xl px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-3">
         {typeFilters.map((tf) => (
           <button
             key={tf.key}
@@ -222,14 +260,14 @@ export function GraphPage() {
                 return next;
               });
             }}
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl ${
               filterTypes.has(tf.key)
                 ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                 : 'text-[var(--text-tertiary)]'
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${tf.color}`} />
-            <span className="hidden sm:inline">{t(tf.labelKey as string)}</span>
+            <span>{t(tf.labelKey as string)}</span>
           </button>
         ))}
       </div>
@@ -242,6 +280,57 @@ export function GraphPage() {
           onClose={() => setSelectedNode(null)}
         />
       )}
+
+      {/* First-visit onboarding overlay */}
+      <AnimatePresence>
+        {showOnboard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              setShowOnboard(false);
+              safeSet(GRAPH_ONBOARDED_KEY, '1');
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-[var(--bg-primary)] rounded-2xl p-6 max-w-xs mx-4 shadow-xl border border-[var(--border-default)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold mb-4 text-center">{t('graph.tour.title')}</h3>
+              <div className="space-y-3 mb-5">
+                {[
+                  { icon: MousePointer2, label: t('graph.tour.click') },
+                  { icon: ZoomIn, label: t('graph.tour.zoom') },
+                  { icon: Move, label: t('graph.tour.drag') },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+                    <div className="p-2 rounded-xl bg-apple-blue/10 text-apple-blue">
+                      <item.icon size={16} />
+                    </div>
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowOnboard(false);
+                  safeSet(GRAPH_ONBOARDED_KEY, '1');
+                }}
+                className="apple-button w-full justify-center text-sm"
+              >
+                {t('graph.tour.gotIt')}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -265,7 +354,7 @@ function NodePanel({
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="absolute top-4 right-4 w-72 max-w-[80vw] glass rounded-2xl p-4 shadow-apple-lg"
+      className="absolute top-4 right-4 w-72 max-w-[80vw] glass rounded-2xl p-4"
     >
       <div className="flex items-start justify-between mb-1">
         <h3 className="font-semibold text-lg">{node.label}</h3>
@@ -273,7 +362,7 @@ function NodePanel({
           onClick={onClose}
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1"
         >
-          ✕
+          <X size={16} />
         </button>
       </div>
       <span className="text-xs text-[var(--text-secondary)] capitalize">{t(typeLabelKey(node.type) as string)}</span>
@@ -285,17 +374,17 @@ function NodePanel({
       <div className="mt-4 flex items-center gap-2">
         <Link
           to={pagePath}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-apple-blue text-white text-sm font-medium hover:bg-apple-blue/90 transition-colors"
+          className="apple-button flex-1 justify-center text-sm"
         >
           {t('graph.panel.openPage')}
           <ArrowRight size={14} />
         </Link>
         <button
           onClick={() => toggleFavorite(node.id)}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors border ${
+          className={`apple-button-ghost flex-1 text-sm ${
             isFav
               ? 'bg-red-500/10 border-red-500/20 text-red-500'
-              : 'bg-[var(--bg-secondary)] border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              : ''
           }`}
         >
           <Heart size={14} fill={isFav ? 'currentColor' : 'none'} />
@@ -321,7 +410,7 @@ function GraphStats({
   const density = nodeCount > 1 ? (edgeCount / (nodeCount * (nodeCount - 1))).toFixed(3) : '0.000';
 
   return (
-    <div className="absolute top-4 left-4 glass rounded-2xl p-3 shadow-apple-lg z-10 w-44">
+    <div className="absolute top-4 left-4 glass rounded-2xl p-3 z-10 w-44">
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center justify-between w-full text-xs font-semibold text-[var(--text-primary)] mb-2"

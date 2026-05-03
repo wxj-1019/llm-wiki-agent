@@ -25,7 +25,7 @@ function HighlightText({ text, matches }: { text: string; matches?: ReadonlyArra
       elements.push(<span key={`t-${i}`}>{text.slice(lastIndex, start)}</span>);
     }
     elements.push(
-      <mark key={`h-${i}`} className="bg-apple-yellow/30 text-[var(--text-primary)] rounded px-0.5">
+      <mark key={`h-${i}`} className="bg-apple-blue/15 text-[var(--text-primary)] px-0.5 rounded">
         {text.slice(start, end + 1)}
       </mark>
     );
@@ -95,7 +95,7 @@ export function SearchPage() {
                 to={getPagePath(node)}
                 className="apple-card p-4 flex items-start gap-4 block"
               >
-                <div className="p-2 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
+                <div className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -117,8 +117,10 @@ export function SearchPage() {
 
       {query && results.length === 0 && (
         <div className="empty-state-warm mt-12">
-          <div className="text-4xl mb-3">🔍</div>
-          <h3 className="font-rounded text-lg font-semibold mb-1">{t('search.empty.title')}</h3>
+          <div className="flex justify-center mb-3">
+            <Search size={40} className="text-apple-blue" />
+          </div>
+          <h3 className="text-lg font-semibold mb-1">{t('search.empty.title')}</h3>
           <p className="text-sm text-[var(--text-secondary)]">{t('search.empty.description')}</p>
         </div>
       )}
