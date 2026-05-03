@@ -10,6 +10,10 @@ __pycache__/
 *$py.class
 *.so
 .venv/
+venv/
+*.egg-info/
+build/
+dist/
 
 # Playwright temp files
 .playwright-mcp/

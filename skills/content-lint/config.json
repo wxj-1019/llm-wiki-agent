@@ -1,0 +1,21 @@
+{
+  "name": "content-lint",
+  "version": "1.0.0",
+  "type": "action",
+  "triggers": ["lint", "检查"],
+  "priority": 5,
+  "model": "default",
+  "max_tokens": 4096,
+  "auto_save": false,
+  "timeout_sec": 120,
+  "parameters": {
+    "temperature": 0.1
+  },
+  "permissions": {
+    "read_wiki": true,
+    "write_wiki": false,
+    "read_raw": false,
+    "execute_commands": true,
+    "network_access": false
+  }
+}

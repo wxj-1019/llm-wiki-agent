@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "servers": [
+    {
+      "name": "wiki-search",
+      "display_name": "Wiki 知识搜索",
+      "description": "搜索 wiki 知识库中的内容",
+      "version": "1.0.0",
+      "source": "builtin",
+      "status": "stopped",
+      "port": null,
+      "pid": null,
+      "transport": "stdio",
+      "tools": [
+        "search_wiki",
+        "get_page",
+        "list_pages",
+        "get_graph"
+      ],
+      "installed_at": "2026-05-02T17:00:00",
+      "updated_at": "2026-05-02T18:04:36",
+      "health": {
+        "last_check": null,
+        "status": "unknown",
+        "error_count": 0
+      },
+      "config": {}
+    },
+    {
+      "name": "filesystem",
+      "display_name": "文件系统",
+      "description": "管理 raw/ 目录下的源文件",
+      "version": "1.0.0",
+      "source": "builtin",
+      "status": "stopped",
+      "port": null,
+      "pid": null,
+      "transport": "stdio",
+      "tools": [
+        "list_raw_files",
+        "read_raw_file"
+      ],
+      "installed_at": "2026-05-02T17:00:00",
+      "updated_at": "2026-05-02T17:00:00",
+      "health": {
+        "last_check": null,
+        "status": "unknown",
+        "error_count": 0
+      },
+      "config": {}
+    },
+    {
+      "name": "agent-tools",
+      "display_name": "Agent 操作",
+      "description": "执行 wiki 管理操作",
+      "version": "1.0.0",
+      "source": "builtin",
+      "status": "stopped",
+      "port": null,
+      "pid": null,
+      "transport": "stdio",
+      "tools": [
+        "ingest_document",
+        "build_graph",
+        "run_health_check"
+      ],
+      "installed_at": "2026-05-02T17:00:00",
+      "updated_at": "2026-05-02T17:00:00",
+      "health": {
+        "last_check": null,
+        "status": "unknown",
+        "error_count": 0
+      },
+      "config": {}
+    }
+  ]
+}

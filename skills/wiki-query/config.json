@@ -1,0 +1,25 @@
+{
+  "name": "wiki-query",
+  "version": "1.0.0",
+  "type": "rag",
+  "triggers": ["query:", "wiki:"],
+  "priority": 10,
+  "model": "default",
+  "max_tokens": 4096,
+  "context_size": 5,
+  "auto_save": true,
+  "save_path": "syntheses/",
+  "timeout_sec": 60,
+  "parameters": {
+    "temperature": 0.3,
+    "search_method": "keyword",
+    "max_context_pages": 10
+  },
+  "permissions": {
+    "read_wiki": true,
+    "write_wiki": true,
+    "read_raw": false,
+    "execute_commands": false,
+    "network_access": false
+  }
+}

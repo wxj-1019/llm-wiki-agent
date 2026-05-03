@@ -1,0 +1,21 @@
+{
+  "name": "document-ingest",
+  "version": "1.0.0",
+  "type": "action",
+  "triggers": ["ingest ", "摄入 "],
+  "priority": 20,
+  "model": "default",
+  "max_tokens": 1024,
+  "auto_save": false,
+  "timeout_sec": 300,
+  "parameters": {
+    "temperature": 0.1
+  },
+  "permissions": {
+    "read_wiki": true,
+    "write_wiki": true,
+    "read_raw": true,
+    "execute_commands": true,
+    "network_access": false
+  }
+}
