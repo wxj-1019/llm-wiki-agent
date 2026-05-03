@@ -3,6 +3,7 @@ title: "GPT4"
 type: entity
 tags: [llm, openai, large language model, gpt, transformer]
 sources: [OpenAI, industry reports, research papers]
+last_updated: 2026-04-30
 ---
 
 # GPT4

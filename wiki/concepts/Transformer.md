@@ -8,7 +8,7 @@ last_updated: 2024-03-15
 
 # Transformer
 
-The **Transformer** is a deep learning architecture introduced in the paper "[[Attention Is All You Need]]" by [[Vaswani]] et al. (2017) at [[Google]] Research.
+The **Transformer** is a deep learning architecture introduced in the paper "[[Attention Is All You Need]]" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, and Łukasz Kaiser.
 
 ## Architecture
 
@@ -37,3 +37,4 @@ The Transformer replaces recurrence with [[AttentionMechanism]] (self-attention)
 - [[AttentionMechanism]] — core operation
 - [[OpenAI]] — scaled decoder-only Transformers via [[GPT]]
 - [[Google]] — original inventors
+- [[StateSpaceModels]] — alternative architectures challenging the Transformer paradigm

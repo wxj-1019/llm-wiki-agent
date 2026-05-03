@@ -3,6 +3,7 @@ title: "ChatGPT"
 type: entity
 tags: [AI, language model, chatbot, generative AI, OpenAI, artificial intelligence]
 sources: [OpenAI official documentation, common knowledge, personal experience]
+last_updated: 2026-04-30
 ---
 
 # ChatGPT

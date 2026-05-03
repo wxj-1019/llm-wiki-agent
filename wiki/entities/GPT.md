@@ -2,7 +2,8 @@
 title: "GPT"
 type: entity
 tags: [model, architecture, openai, decoder-only]
-sources: [overview.md, intro-to-llms.md, foundation-models-overview.md]
+sources: [overview, intro-to-llms, foundation-models-overview]
+last_updated: 2026-04-30
 ---
 
 # GPT

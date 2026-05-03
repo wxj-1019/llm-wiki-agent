@@ -2,7 +2,8 @@
 title: "Attention Is All You Need"
 type: entity
 tags: [paper, nlp, transformer]
-sources: ['overview.md', 'attention-is-all-you-need.md']
+sources: ['overview', 'attention-is-all-you-need']
+last_updated: 2026-04-30
 ---
 
 # Attention Is All You Need
