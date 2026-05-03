@@ -40,6 +40,46 @@ WIKI_DIR = REPO_ROOT / "wiki"
 LOG_FILE = WIKI_DIR / "log.md"
 INDEX_FILE = WIKI_DIR / "index.md"
 OVERVIEW_FILE = WIKI_DIR / "overview.md"
+CHECKPOINT_FILE = REPO_ROOT / ".cache" / "ingest-checkpoint.json"
+
+
+# ── Shared utilities (with inline fallback) ─────────────────────────
+try:
+    from tools.shared.wiki import read_file, write_file
+except ImportError:
+    def read_file(path: Path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+
+    def write_file(path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        print(f"  wrote: {path.relative_to(REPO_ROOT)}")
+
+
+def _load_checkpoint() -> dict:
+    """Load ingest checkpoint mapping file paths to their last-known hash and status."""
+    if CHECKPOINT_FILE.exists():
+        try:
+            return json.loads(CHECKPOINT_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+
+def _save_checkpoint(checkpoint: dict) -> None:
+    """Persist the ingest checkpoint to disk."""
+    CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT_FILE.write_text(json.dumps(checkpoint, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _file_hash(path: Path) -> str:
+    """Return SHA256 hex digest of a file's bytes."""
+    h = hashlib.sha256()
+    try:
+        h.update(path.read_bytes())
+    except OSError:
+        return ""
+    return h.hexdigest()
 
 # File extensions that can be auto-converted to markdown via markitdown.
 # .md files are ingested directly without conversion.
@@ -62,54 +102,65 @@ def read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
-    """Ensure a path stays within base_dir. Raises ValueError if escaped."""
-    target = (base_dir / path_str).resolve()
-    base = base_dir.resolve()
-    # On Windows, both paths need to be resolved for proper comparison
-    try:
-        target.relative_to(base)
-    except ValueError:
-        raise ValueError(f"Path traversal blocked: {path_str!r} resolves outside {base}")
-    return target
-
-
-def _load_llm_config() -> dict:
-    cfg_path = REPO_ROOT / "config" / "llm.yaml"
-    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
-    if cfg_path.exists():
+# ── Shared path safety (with inline fallback) ──
+try:
+    from tools.shared.paths import sanitize_wiki_path
+except ImportError:
+    def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
+        if not path_str or path_str in (".", ".."):
+            raise ValueError(f"Invalid path: {path_str!r}")
+        path_str = path_str.lstrip("/\\")
+        target = (base_dir / path_str).resolve()
+        base = base_dir.resolve()
         try:
-            import yaml
-            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-            return {**defaults, **data}
-        except Exception:
-            pass
-    return defaults
+            target.relative_to(base)
+        except ValueError:
+            raise ValueError(f"Path traversal blocked: {path_str!r}")
+        return target
 
 
-def call_llm(prompt: str, max_tokens: int = 8192) -> str:
-    try:
-        from litellm import completion
-    except ImportError:
-        print("Error: litellm not installed. Run: pip install litellm")
-        sys.exit(1)
+# ── Shared LLM utilities (with inline fallback) ──
+try:
+    from tools.shared.llm import _load_llm_config, call_llm
+except ImportError:
+    def _load_llm_config() -> dict:
+        cfg_path = REPO_ROOT / "config" / "llm.yaml"
+        defaults = {"provider": "anthropic", "model": "anthropic/claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
+        if cfg_path.exists():
+            try:
+                import yaml
+                data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                return {**defaults, **data}
+            except Exception:
+                pass
+        return defaults
 
-    cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
-    api_key = cfg.get("api_key", "")
+    def call_llm(prompt: str, model_env: str = "LLM_MODEL", default_model: str = "anthropic/claude-3-5-sonnet-latest", max_tokens: int = 4096) -> str:
+        try:
+            from litellm import completion
+        except ImportError:
+            print("Error: litellm not installed. Run: pip install litellm")
+            sys.exit(1)
 
-    kwargs = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}]
-    }
+        cfg = _load_llm_config()
+        model = cfg.get("model") or os.getenv(model_env, default_model)
+        provider = cfg.get("provider", "anthropic")
+        if "/" not in model:
+            model = f"{provider}/{model}"
+        api_key = cfg.get("api_key", "")
 
-    if max_tokens:
-        kwargs["max_tokens"] = max_tokens
-    if api_key:
-        kwargs["api_key"] = api_key
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}]
+        }
 
-    response = completion(**kwargs)
-    return response.choices[0].message.content
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
+        if api_key:
+            kwargs["api_key"] = api_key
+
+        response = completion(**kwargs)
+        return response.choices[0].message.content
 
 
 def write_file(path: Path, content: str):
@@ -159,47 +210,55 @@ def update_index(new_entry: str, section: str = "Sources"):
     write_file(INDEX_FILE, content)
 
 
-LOG_HEADER = (
-    "# Wiki Log\n\n"
-    "> Append-only chronological record of all operations.\n\n"
-    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
-    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
-    "---\n"
-)
+# ── Shared log utilities (with inline fallback) ─────────────────────
+try:
+    from tools.shared.log import append_log
+except ImportError:
+    LOG_HEADER = (
+        "# Wiki Log\n\n"
+        "> Append-only chronological record of all operations.\n\n"
+        "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+        "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+        "---\n"
+    )
 
-
-def append_log(entry: str):
-    entry_text = entry.strip()
-    if not LOG_FILE.exists():
-        write_file(LOG_FILE, LOG_HEADER + "\n" + entry_text + "\n")
-        return
-    existing = read_file(LOG_FILE).strip()
-    # Keep header at top: find where the header block ends
-    if existing.startswith("# Wiki Log"):
-        # Split after the --- separator (end of header block)
-        parts = existing.split("\n---\n", 1)
-        if len(parts) == 2:
-            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+    def append_log(entry: str) -> None:
+        entry_text = entry.strip()
+        if not LOG_FILE.exists():
+            write_file(LOG_FILE, LOG_HEADER + "\n" + entry_text + "\n")
+            return
+        existing = read_file(LOG_FILE).strip()
+        if existing.startswith("# Wiki Log"):
+            parts = existing.split("\n---\n", 1)
+            if len(parts) == 2:
+                new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+            else:
+                new_content = entry_text + "\n\n" + existing
         else:
             new_content = entry_text + "\n\n" + existing
-    else:
-        new_content = entry_text + "\n\n" + existing
-    write_file(LOG_FILE, new_content)
+        write_file(LOG_FILE, new_content)
+
+
+# ── Shared wiki helpers (with inline fallback) ──────────────────────
+try:
+    from tools.shared.wiki import all_wiki_page_stems
+except ImportError:
+    def all_wiki_page_stems() -> set[str]:
+        exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
+        pages = set()
+        for p in WIKI_DIR.rglob("*.md"):
+            if p.name not in exclude:
+                pages.add(p.stem.lower())
+        return pages
 
 
 def extract_wikilinks(content: str) -> list[str]:
-    """Extract all [[WikiLink]] targets from page content."""
+    """Extract all [[WikiLink]] targets from page content.
+
+    Handles both [[PageName]] and [[PageName|display alias]] formats.
+    Returns the raw link text (including alias if present) for validation.
+    """
     return re.findall(r'\[\[([^\]]+)\]\]', content)
-
-
-def all_wiki_pages() -> set[str]:
-    """Return set of all wiki page stems (case-insensitive)."""
-    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-    pages = set()
-    for p in WIKI_DIR.rglob("*.md"):
-        if p.name not in exclude:
-            pages.add(p.stem.lower())
-    return pages
 
 
 def validate_ingest(changed_pages: list[str] | None = None) -> dict:
@@ -211,7 +270,7 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
 
     Returns dict with 'broken_links' and 'unindexed' lists.
     """
-    existing_pages = all_wiki_pages()
+    existing_pages = all_wiki_page_stems()
     index_content = read_file(INDEX_FILE).lower()
 
     # Determine which pages to scan for broken links
@@ -227,8 +286,10 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
         content = read_file(page_path)
         rel = str(page_path.relative_to(WIKI_DIR))
         for link in extract_wikilinks(content):
+            # Handle [[PageName|display alias]] format — extract page name before |
+            link_target = link.split("|")[0].strip()
             # Normalize: strip paths (both / and \), check stem only
-            link_stem = Path(link.replace("\\", "/")).stem.lower()
+            link_stem = Path(link_target.replace("\\", "/")).stem.lower()
             if link_stem not in existing_pages:
                 broken_links.append((rel, link))
 
@@ -279,7 +340,28 @@ def convert_to_md(source: Path) -> Path:
     return output
 
 
-def ingest(source_path: str, auto_convert: bool = True):
+def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None = None) -> dict:
+    """Ingest a single source document into the wiki.
+
+    Returns a result dict:
+        {
+            "success": bool,
+            "title": str | None,
+            "slug": str | None,
+            "created_pages": list[str],
+            "error": str | None,
+        }
+    """
+    result = {
+        "success": False,
+        "title": None,
+        "slug": None,
+        "created_pages": [],
+        "error": None,
+    }
+    cp = checkpoint if checkpoint is not None else {}
+
+    source = Path(source_path)
     source = Path(source_path)
     if not source.exists():
         print(f"Error: file not found: {source_path}")
@@ -299,9 +381,21 @@ def ingest(source_path: str, auto_convert: bool = True):
         converted_path = convert_to_md(source)
         source = converted_path
 
-    source_content = source.read_text(encoding="utf-8")
-    source_hash = sha256(source_content)
+    source_bytes = source.read_bytes()
+    source_hash = hashlib.sha256(source_bytes).hexdigest()
     today = date.today().isoformat()
+
+    # Incremental check: skip if hash unchanged and previously succeeded
+    cp_key = str(source.resolve())
+    prev = cp.get(cp_key)
+    if prev and prev.get("hash") == source_hash and prev.get("status") == "success":
+        print(f"  ⏭  Skipping (unchanged): {source.name}")
+        result["success"] = True
+        result["title"] = prev.get("title")
+        result["slug"] = prev.get("slug")
+        return result
+
+    source_content = source.read_text(encoding="utf-8")
 
     print(f"\nIngesting: {source.name}  (hash: {source_hash})")
 
@@ -407,32 +501,21 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
 
     validation = validate_ingest(created_pages)
 
-    print(f"\n{'='*50}")
-    print(f"  ✅ Ingested: {data['title']}")
-    print(f"{'='*50}")
-    print(f"  Created : {len(created_pages)} pages")
-    for p in created_pages:
-        print(f"           + wiki/{p}")
-    print(f"  Updated : {len(updated_pages)} pages")
-    for p in updated_pages:
-        print(f"           ~ wiki/{p}")
-    if contradictions:
-        print(f"  Warnings: {len(contradictions)} contradiction(s)")
-    if validation["broken_links"]:
-        print(f"  ⚠️  Broken links: {len(validation['broken_links'])}")
-        for page, link in validation["broken_links"][:10]:
-            print(f"           wiki/{page} → [[{link}]]")
-        if len(validation["broken_links"]) > 10:
-            print(f"           ... and {len(validation['broken_links']) - 10} more")
-    if validation["unindexed"]:
-        print(f"  ⚠️  Not in index.md: {len(validation['unindexed'])}")
-        for p in validation["unindexed"][:10]:
-            print(f"           wiki/{p}")
-        if len(validation["unindexed"]) > 10:
-            print(f"           ... and {len(validation['unindexed']) - 10} more")
-    if not validation["broken_links"] and not validation["unindexed"]:
-        print("  ✓ Validation passed — no broken links, all pages indexed")
-    print()
+
+
+    # Update checkpoint on success
+    result["success"] = True
+    result["title"] = data.get("title")
+    result["slug"] = slug
+    result["created_pages"] = created_pages
+    cp[cp_key] = {
+        "hash": source_hash,
+        "status": "success",
+        "title": data.get("title"),
+        "slug": slug,
+        "timestamp": today,
+    }
+    return result
 
 
 if __name__ == "__main__":
@@ -449,11 +532,11 @@ if __name__ == "__main__":
         else:
             print("No broken wikilinks found.")
         print()
-        pages = all_wiki_pages()
+        pages = all_wiki_page_stems()
         index_content = read_file(INDEX_FILE).lower()
         unindexed_all = []
         for p in WIKI_DIR.rglob("*.md"):
-            if p.name in ("index.md", "log.md", "lint-report.md", "overview.md"):
+            if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md", "overview.md"):
                 continue
             if p.stem.lower() not in index_content:
                 unindexed_all.append(str(p.relative_to(WIKI_DIR)))
@@ -474,9 +557,15 @@ if __name__ == "__main__":
     if not args:
         print("Usage: python tools/ingest.py <path-to-source> [path2 ...] [dir1 ...]")
         print("       python tools/ingest.py --validate-only")
-        print("       python tools/ingest.py --no-convert  # skip auto-conversion of non-.md files")
+        print("       python tools/ingest.py --no-convert   # skip auto-conversion of non-.md files")
+        print("       python tools/ingest.py --resume       # skip previously successful files")
+        print("       python tools/ingest.py --incremental  # skip unchanged files (hash-based)")
         print(f"\nSupported formats: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
         sys.exit(1)
+
+    resume = "--resume" in sys.argv
+    incremental = "--incremental" in sys.argv
+    checkpoint = _load_checkpoint()
 
     paths_to_process = []
     for arg in args:
@@ -515,8 +604,61 @@ if __name__ == "__main__":
         print(f"Supported formats: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
         sys.exit(1)
 
+    # Resume: filter out files that previously succeeded
+    if resume:
+        filtered = []
+        for p in unique_paths:
+            cp_key = str(p.resolve())
+            prev = checkpoint.get(cp_key)
+            if prev and prev.get("status") == "success":
+                print(f"  ⏭  Resume skip (previous success): {p.name}")
+                continue
+            filtered.append(p)
+        unique_paths = filtered
+        if not unique_paths:
+            print("All files were previously ingested successfully. Nothing to do.")
+            sys.exit(0)
+
     if len(unique_paths) > 1:
         print(f"Batch mode: found {len(unique_paths)} files to ingest.")
+        if resume or incremental:
+            print(f"  (resume={resume}, incremental={incremental})")
 
+    success_count = 0
+    fail_count = 0
     for p in unique_paths:
-        ingest(str(p), auto_convert=not no_convert)
+        try:
+            result = ingest(str(p), auto_convert=not no_convert, checkpoint=checkpoint)
+            if result["success"]:
+                success_count += 1
+            else:
+                fail_count += 1
+        except SystemExit:
+            # Re-raise clean exits (e.g. validation failures inside ingest)
+            fail_count += 1
+            # Don't exit the whole batch — save checkpoint and continue
+            print(f"  ❌ Failed: {p.name}")
+            checkpoint[str(p.resolve())] = {
+                "hash": _file_hash(p),
+                "status": "failed",
+                "timestamp": date.today().isoformat(),
+            }
+            _save_checkpoint(checkpoint)
+        except Exception as e:
+            fail_count += 1
+            print(f"  ❌ Unexpected error on {p.name}: {e}")
+            checkpoint[str(p.resolve())] = {
+                "hash": _file_hash(p),
+                "status": "failed",
+                "timestamp": date.today().isoformat(),
+            }
+            _save_checkpoint(checkpoint)
+
+    _save_checkpoint(checkpoint)
+
+    print(f"\n{'='*50}")
+    print(f"Batch complete: {success_count} succeeded, {fail_count} failed")
+    print(f"{'='*50}")
+    if fail_count > 0:
+        print(f"Run with --resume to retry failed files only.")
+    sys.exit(0 if fail_count == 0 else 1)

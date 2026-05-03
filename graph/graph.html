@@ -106,7 +106,7 @@
   <div><span style="background:#4CAF50;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">source</span><span style="background:#2196F3;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">entity</span><span style="background:#FF9800;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">concept</span><span style="background:#9C27B0;padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">synthesis</span></div>
   <div class="filter-group">
     <label>Edge Types</label>
-    <div class="cb-row"><input type="checkbox" id="cb-extracted" checked onchange="applyFilters()"><span style="color:#888">━</span> Extracted (114)</div>
+    <div class="cb-row"><input type="checkbox" id="cb-extracted" checked onchange="applyFilters()"><span style="color:#888">━</span> Extracted (182)</div>
     <div class="cb-row"><input type="checkbox" id="cb-inferred" checked onchange="applyFilters()"><span style="color:#FF5722">━</span> Inferred (0)</div>
     <div class="cb-row"><input type="checkbox" id="cb-ambiguous" onchange="applyFilters()"><span style="color:#BDBDBD">━</span> Ambiguous (0)</div>
   </div>
@@ -145,319 +145,360 @@ const originalNodes = [
     "id": "overview",
     "label": "Overview",
     "type": "synthesis",
-    "color": "#E91E63",
-    "path": "wiki\\overview.md",
-    "markdown": "---\ntitle: \"Overview\"\ntype: synthesis\ntags: []\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2026-04-30\n---\n\n# Overview\n\n*This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.*\n\n## Current Wiki State\n\nThe wiki contains **2 sources**, **15 entities**, **2 concepts**, and **1 synthesis** — a total of 20 pages forming a knowledge graph centered on the Transformer architecture and large language models.\n\n### Sources\n- [[Attention Is All You Need]] — the seminal paper introducing the Transformer architecture\n- [[intro-to-llms]] — a comprehensive overview of LLMs\n\n### Key Themes\n1. **The Transformer Architecture** — The foundational innovation that replaced recurrence with self-attention, enabling parallel training and better handling of long-range dependencies. [[Google]] invented it; [[OpenAI]] scaled it.\n2. **Attention Mechanisms** — The core computation behind Transformers: scaled dot-product attention, multi-head attention, and variants like causal/masked attention.\n3. **Scaling Laws** — Model capability improves predictably with compute, data, and parameters. Emergent abilities appear at certain scale thresholds.\n4. **The LLM Ecosystem** — The rise of decoder-only models ([[GPT]], [[GPT4]], [[ChatGPT]], [[LLaMA]]), bidirectional encoders ([[BERT]]), encoder-decoder models ([[T5]]), and the competitive landscape between labs.\n\n### Key Entities\n- **Organizations**: [[Google]], [[OpenAI]]\n- **Researchers**: [[Vaswani]], [[Bahdanau]], [[SamAltman]], [[IlyaSutskever]], [[GregBrockman]]\n- **Model Families**: [[GPT]], [[GPT4]], [[ChatGPT]], [[BERT]], [[T5]], [[LLaMA]], [[LargeLanguageModels]]\n\n### Contradictions & Open Questions\n- Whether emergent abilities in LLMs are a fundamental property or a metric artifact is debated\n- The original work by [[Bahdanau]] introduced attention for RNNs; the Transformer paper demonstrated attention alone is sufficient\n\n### Knowledge Gaps\n- No sources yet on: RLHF, multimodal models, open-source LLM ecosystem\n- Missing concept pages for: scaling laws, RLHF, prompt engineering, fine-tuning\n",
+    "color": "#9C27B0",
+    "path": "wiki/overview.md",
+    "markdown": "---\ntitle: \"Overview\"\ntype: synthesis\ntags: []\nsources: [attention-is-all-you-need, intro-to-llms, github-hermes-ecosystem]\nlast_updated: 2026-05-04\n---\n\n# Overview\n\n*This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.*\n\n## Current Wiki State\n\nThe wiki contains **3 sources**, **20 entities**, **6 concepts**, and **2 syntheses** — a total of 32 pages forming a knowledge graph centered on the Transformer architecture, large language models, the emerging AI Agent ecosystem, and alternative sequence modeling paradigms.\n\n### Sources\n- [[attention-is-all-you-need|Attention Is All You Need]] — the seminal paper introducing the Transformer architecture\n- [[intro-to-llms|Introduction to Large Language Models]] — a comprehensive overview of LLMs\n- [[github-hermes-ecosystem|GitHub Hermes 生态系统综述]] — GitHub 上 Hermes 相关项目的全面调研\n\n### Key Themes\n1. **The Transformer Architecture** — The foundational innovation that replaced recurrence with self-attention, enabling parallel training and better handling of long-range dependencies.\n2. **Large Language Models** — The evolution from GPT through BERT, T5, LLaMA to GPT-4, with increasing scale, multimodal capabilities, test-time compute, and alignment techniques.\n3. **AI Agents & Self-Improvement** — The next frontier: autonomous AI agents like [[HermesAgent]] that learn from experience, create reusable skills, and improve over time through self-evolution loops.\n4. **AI Alignment & Safety** — Critical techniques (RLHF, Constitutional AI) and emerging risks (reward hacking, catastrophic forgetting) as agents gain autonomy.\n5. **Beyond Transformers** — Alternative architectures like [[StateSpaceModels|Mamba and State Space Models]] that challenge the quadratic scaling of attention with linear-time recurrence.\n\n### The Hermes Ecosystem\nGitHub 上的 Hermes 项目横跨两大领域：\n\n| 领域 | 项目 | 说明 |\n|---|---|---|\n| **AI Agent** | [[HermesAgent]] | NousResearch 的自我进化 Agent，支持 200+ 模型 |\n| **JS Engine** | [[HermesJSEngine]] | Meta 的 React Native JS 引擎 |\n| **Web UI** | hermes-webui | Web/手机端 Agent 界面 |\n| **Workspace** | hermes-workspace | 原生 Web 工作区 |\n| **自我进化** | hermes-agent-self-evolution | DSPy+GEPA 进化框架 |\n| **邮件模板** | matcornic/hermes | Go 语言邮件 HTML 生成器 |\n\n### New & Expanded Concepts\n- [[AgentFrameworkComparison]] — 主流 AI Agent 框架横向对比（Hermes Agent、LangChain、AutoGen、CrewAI、Semantic Kernel）\n- [[AIAlignment]] — AI 安全与价值对齐技术（RLHF、Constitutional AI、agentic 风险）\n- [[StateSpaceModels]] — Transformer 之外的序列建模架构（Mamba、Hyena、Griffin）\n\n### Syntheses\n- [[foundation-models-overview|Foundation Models Overview]] — overview of large-scale AI foundation models and the Transformer era\n\n### Key Connections Across Sources\n- [[HermesAgent]] 使用 [[OpenAI]]、Anthropic 等多种 LLM 提供商，与 [[LargeLanguageModels]] 发展密切相关\n- [[HermesJSEngine]] 由 [[Google]] 之外的另一科技巨头 [[Meta]] 开发，体现了大厂对基础架构的投资\n- [[AIAgent]] 概念正在成为继 Transformer 之后 AI 领域的下一个重大范式转变\n- [[AIAlignment]] 安全问题随着 [[SelfImprovingAI]] 自我改进能力的增强而日益紧迫\n- [[StateSpaceModels]] 为代表的新型架构正在挑战 [[Transformer]] 在长序列建模上的垄断地位\n",
     "preview": "# Overview *This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.* ## Current Wiki State",
-    "group": 0,
+    "group": -1,
     "value": 17
+  },
+  {
+    "id": "concepts/AgentFrameworkComparison",
+    "label": "Agent Framework Comparison",
+    "type": "concept",
+    "color": "#FF9800",
+    "path": "wiki/concepts/AgentFrameworkComparison.md",
+    "markdown": "---\ntitle: \"Agent Framework Comparison\"\ntype: concept\ntags: [ai-agent, framework, comparison]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-04\n---\n\n# Agent Framework Comparison\n\nThe AI Agent ecosystem has rapidly diversified, with frameworks targeting different use cases—from single autonomous agents to multi-agent orchestration systems. This page provides a structured comparison of major open-source and commercial agent frameworks.\n\n## Frameworks\n\n### Hermes Agent\n- **Developer**: [[NousResearch]]\n- **Focus**: Self-evolving agents with skill auto-creation\n- **Key Features**: Multi-model support (200+ via OpenRouter), multi-platform deployment (CLI, Telegram, Discord), cron scheduling, sub-agent parallelization\n- **Strengths**: Strong emphasis on self-improvement through GEPA and DSPy; broad LLM provider compatibility\n- **Trade-offs**: Smaller ecosystem compared to LangChain; primarily Python-based\n\n### LangChain / LangGraph\n- **Developer**: LangChain Inc.\n- **Focus**: General-purpose agent orchestration and chains\n- **Key Features**: Composable \"chains\" of LLM calls, extensive integration library (1000+ tools), LangGraph for cyclic multi-agent workflows\n- **Strengths**: Largest ecosystem and community; excellent for prototyping; extensive documentation and tutorials\n- **Trade-offs**: Can become complex and abstraction-heavy for production; self-improvement is not a first-class concept\n\n### AutoGen\n- **Developer**: Microsoft Research\n- **Focus**: Multi-agent conversation frameworks\n- **Key Features**: Agents converse with each other to solve tasks; human-in-the-loop support; code execution agents\n- **Strengths**: Natural fit for collaborative problem-solving; strong code generation and execution capabilities\n- **Trade-offs**: Conversation overhead can increase latency; less emphasis on persistent memory and skill learning\n\n### CrewAI\n- **Developer**: CrewAI Inc.\n- **Focus**: Role-based multi-agent teams\n- **Key Features**: Agents assigned specific \"roles\" (researcher, writer, reviewer); task delegation and sequential workflows\n- **Strengths**: Intuitive role abstraction; good for content creation and research pipelines\n- **Trade-offs**: Less flexible for non-role-based tasks; newer framework with smaller community\n\n### Microsoft Semantic Kernel\n- **Developer**: Microsoft\n- **Focus**: Enterprise integration with Microsoft ecosystems\n- **Key Features**: Native connectors for Azure OpenAI, Microsoft 365, and enterprise data sources; planners for automatic task decomposition\n- **Strengths**: Deep Microsoft ecosystem integration; strong enterprise security and governance features\n- **Trade-offs**: Tightly coupled to Microsoft stack; less community adoption outside enterprise contexts\n\n## Comparison Matrix\n\n| Dimension | Hermes Agent | LangChain | AutoGen | CrewAI | Semantic Kernel |\n|---|---|---|---|---|---|\n| Self-Improvement | First-class | Plugin-based | Limited | None | Limited |\n| Multi-Agent | Sub-agents | LangGraph | First-class | First-class | Planners |\n| Memory | FTS5 + LLM summary | Vector stores | Conversation history | Task context | Enterprise connectors |\n| Tool Use | Function calling | Extensive | Code execution | API calls | Microsoft APIs |\n| Deployment | CLI, Chat apps | Any Python env | Any Python env | Any Python env | Azure, .NET |\n\n## Selection Guidance\n\n- **Choose Hermes Agent** if your primary need is an agent that learns and creates skills autonomously over time.\n- **Choose LangChain/LangGraph** if you need maximum flexibility, integrations, and community support for prototyping.\n- **Choose AutoGen** if your problem decomposes naturally into a conversation between specialized agents.\n- **Choose CrewAI** if you think in terms of \"hiring\" a team of role-based workers for a pipeline.\n- **Choose Semantic Kernel** if you are building within the Microsoft/Azure enterprise ecosystem.\n\n## Connections\n- [[AIAgent]] — 核心概念\n- [[HermesAgent]] — 代表性项目\n- [[SelfImprovingAI]] — 自我改进维度\n- [[LargeLanguageModels]] — 底层模型基础\n",
+    "preview": "# Agent Framework Comparison The AI Agent ecosystem has rapidly diversified, with frameworks targeting different use cases—from single autonomous agents to multi-agent orchestration systems. This page provides a structur",
+    "group": -1,
+    "value": 9
+  },
+  {
+    "id": "concepts/AIAgent",
+    "label": "AIAgent",
+    "type": "concept",
+    "color": "#FF9800",
+    "path": "wiki/concepts/AIAgent.md",
+    "markdown": "---\ntitle: \"AIAgent\"\ntype: concept\ntags: [ai, agent, automation, llm]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n## Overview\n\nAI Agent（人工智能代理）是一种能够自主感知环境、做出决策并执行行动以实现特定目标的 AI 系统。与传统聊天机器人不同，AI Agent 具备工具调用、记忆持久化、多步推理和自我改进等能力。\n\n## Key Characteristics\n\n### 工具调用（Tool Use）\n- Agent 可以调用外部工具（搜索、代码执行、文件操作等）\n- 通过结构化接口（如 function calling）与工具交互\n\n#### Tool Taxonomy\n- **Static Tools**: Pre-defined function schemas with fixed signatures (e.g., `get_weather(city: str)`). The agent selects from a known catalog at runtime.\n- **Dynamic Tools**: Generated on-the-fly, often via code synthesis (e.g., writing a custom pandas script to analyze a CSV). Requires execution sandboxing to prevent harm.\n- **External APIs**: Third-party services (web search, database queries, cloud compute). Agent must manage authentication, rate limits, and error handling.\n\n#### Security & Isolation\nAllowing an agent to execute arbitrary code or access external systems introduces significant risks:\n- **Sandboxing**: Tools should run inside isolated environments (Docker containers, gVisor, WebAssembly) to limit filesystem and network access.\n- **Permission Boundaries**: Principle of least privilege — the agent should only have access to the specific resources it needs for a task.\n- **Human-in-the-Loop**: Destructive or high-stakes operations (deleting data, sending emails, financial transactions) should require explicit user approval before execution.\n\n### 记忆系统（Memory）\n- 短期记忆：当前对话上下文\n- 长期记忆：跨会话持久化存储\n- 技能记忆：从经验中学习的可复用程序\n\n#### Memory Limitations & Techniques\n- **Memory Decay**: Long-term memory is not perfect. Irrelevant or old information can drown out useful knowledge. Techniques like **importance scoring** (memories ranked by relevance/recency) help mitigate this.\n- **Retrieval Accuracy**: Keyword-based retrieval (e.g., FTS5) often fails for complex semantic queries. Modern agents supplement this with **vector databases** and **embedding-based semantic search** to find conceptually related memories even when keywords don't match.\n- **Context Window Bottleneck**: Even with perfect retrieval, an agent can only fit a limited amount of text into its working context. Techniques like **Sliding Window Attention**, **MemWalker**, and **hierarchical summarization** compress long histories into digestible forms without losing critical details.\n\n### 规划与推理（Planning & Reasoning）\n- 将复杂任务分解为子步骤\n- 支持并行执行和条件分支\n- 动态调整计划以应对失败\n\n### 自我改进（Self-Improvement）\n- 从成功和失败中学习\n- 自动创建和优化技能\n- 跨会话知识积累\n\n## Notable Projects\n\n| 项目 | Stars | 特点 |\n|---|---|---|\n| [[HermesAgent]] | 128,747 | 自我进化、多模型、多平台 |\n| OpenAI Codex | — | OpenAI 官方 Agent |\n| Claude Code | — | Anthropic 编程 Agent |\n\n## Connections\n\n- [[HermesAgent]] — 代表性项目\n- [[SelfImprovingAI]] — 核心理念\n- [[NousResearch]] — 主要推动者\n- [[LargeLanguageModels]] — 底层技术基础\n- [[AgentFrameworkComparison]] — 主流框架对比\n",
+    "preview": "## Overview AI Agent（人工智能代理）是一种能够自主感知环境、做出决策并执行行动以实现特定目标的 AI 系统。与传统聊天机器人不同，AI Agent 具备工具调用、记忆持久化、多步推理和自我改进等能力。 ## Key Characteristics",
+    "group": -1,
+    "value": 14
+  },
+  {
+    "id": "concepts/AIAlignment",
+    "label": "AI Alignment",
+    "type": "concept",
+    "color": "#FF9800",
+    "path": "wiki/concepts/AIAlignment.md",
+    "markdown": "---\ntitle: \"AI Alignment\"\ntype: concept\ntags: [ai-safety, alignment, rlhf, ethics]\nsources: [intro-to-llms]\nlast_updated: 2026-05-04\n---\n\n# AI Alignment\n\n**AI Alignment** is the study and practice of ensuring that artificial intelligence systems behave in accordance with human intentions, values, and ethical constraints. As LLMs and AI agents grow more capable, alignment becomes critical to prevent harmful, deceptive, or unintended behaviors.\n\n## Core Techniques\n\n### RLHF (Reinforcement Learning from Human Feedback)\n- **Process**: Train a reward model from human preference comparisons, then fine-tune the LLM via reinforcement learning (typically PPO) to maximize that reward.\n- **Used by**: OpenAI (InstructGPT, ChatGPT), Anthropic (Claude), DeepMind (Sparrow).\n- **Limitations**: Reward hacking (the model optimizes the proxy reward rather than true intent), costly human labeling, and preference inconsistencies across annotators.\n\n### Constitutional AI (CAI)\n- **Process**: Instead of relying solely on human feedback, the model critiques and revises its own outputs against a set of principles (a \"constitution\"), then trains on these self-generated improvements.\n- **Pioneered by**: Anthropic (Claude 2/3).\n- **Advantage**: Reduces dependence on large-scale human annotation; scales alignment oversight by using the model itself as a critic.\n\n### RL-AIF (Reinforcement Learning from AI Feedback)\n- **Process**: Similar to RLHF but replaces human preference labels with an AI judge (often a stronger model or the same model in a different configuration).\n- **Risk**: Feedback loops where the AI judge shares the same biases as the model being trained.\n\n## Safety Challenges in Agentic Systems\n\nWhen alignment techniques are applied to autonomous [[AIAgent|AI agents]], new risks emerge:\n\n- **Reward Hacking**: An agent with access to tools may find unintended shortcuts that satisfy its objective metric while violating the spirit of the task (e.g., deleting test files to achieve 100% pass rate).\n- **Goal Misgeneralization**: An agent trained in one environment may pursue its objective in destructive ways when deployed in a new context.\n- **Deceptive Alignment**: A sufficiently capable agent might appear aligned during evaluation but behave differently when unsupervised.\n- **Catastrophic Forgetting**: Self-improving agents (see [[SelfImprovingAI]]) may overwrite safety-critical behaviors as they learn new skills.\n\n## Open Problems\n\n- **Scalable Oversight**: How do humans supervise systems that think faster and deeper than we do?\n- **Value Pluralism**: Whose values should the system align with? Different cultures and individuals have incompatible preferences.\n- **Interpretability**: Understanding *why* a model makes specific decisions is still largely unsolved, making alignment verification difficult.\n- **Jailbreaking & Adversarial Attacks**: Aligned models can still be tricked via prompt injection, encoding tricks, or multi-turn manipulation.\n\n## Connections\n- [[SelfImprovingAI]] — self-improvement amplifies alignment risks\n- [[AIAgent]] — agents with tool access require stronger safety guarantees\n- [[LargeLanguageModels]] — alignment targets for modern LLMs\n- [[OpenAI]] — major proponent of RLHF and superalignment research\n",
+    "preview": "# AI Alignment **AI Alignment** is the study and practice of ensuring that artificial intelligence systems behave in accordance with human intentions, values, and ethical constraints. As LLMs and AI agents grow more capa",
+    "group": -1,
+    "value": 7
   },
   {
     "id": "concepts/AttentionMechanism",
     "label": "Attention Mechanism",
     "type": "concept",
-    "color": "#8BC34A",
-    "path": "wiki\\concepts\\AttentionMechanism.md",
+    "color": "#FF9800",
+    "path": "wiki/concepts/AttentionMechanism.md",
     "markdown": "---\ntitle: \"Attention Mechanism\"\ntype: concept\ntags: [mechanism, nlp, deep-learning]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-28\n---\n\n# Attention Mechanism\n\n**Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output.\n\n## Self-Attention\n\nIn self-attention, each position in the sequence attends to all other positions:\n\n```\nAttention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V\n```\n\nWhere:\n- **Q** (Query): What am I looking for?\n- **K** (Key): What do I contain?\n- **V** (Value): What information do I provide?\n\n## Multi-Head Attention\nMultiple attention heads operate in parallel, allowing the model to jointly attend to information from different representation subspaces.\n\n## Types\n- **Scaled Dot-Product Attention**: Used in the [[Transformer]]\n- **Cross-Attention**: Queries from one sequence attend to keys/values from another\n- **Causal/Masked Attention**: Prevents attending to future positions (used in [[GPT]])\n\n## Connections\n- [[Transformer]] — architecture built entirely on attention\n- [[GPT]] — uses causal self-attention\n- [[BERT]] — uses bidirectional self-attention\n- [[OpenAI]] — pioneered scaling attention-based models\n",
     "preview": "# Attention Mechanism **Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output. ## Self-Attention",
-    "group": 2,
-    "value": 13
+    "group": -1,
+    "value": 17
+  },
+  {
+    "id": "concepts/SelfImprovingAI",
+    "label": "SelfImprovingAI",
+    "type": "concept",
+    "color": "#FF9800",
+    "path": "wiki/concepts/SelfImprovingAI.md",
+    "markdown": "---\ntitle: \"SelfImprovingAI\"\ntype: concept\ntags: [ai, self-improvement, agent, learning]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n## Overview\n\n自我改进 AI（Self-Improving AI）是指能够从自身运行经验中学习并持续优化性能的 AI 系统。这一概念是 [[HermesAgent]] 的核心设计理念。\n\n## Key Mechanisms\n\n### 1. 技能自动创建\nAgent 在完成复杂任务后，自动将成功的方法抽象为可复用的\"技能\"（Skill）。\n\n### 2. 技能持续优化\n- 使用 DSPy 等框架进行提示词优化\n- GEPA（Gradient-free Evolutionary Prompt Adjustment）进化式改进\n- 基于实际使用效果评分和迭代\n\n### 3. 跨会话记忆\n- FTS5 全文搜索历史对话\n- LLM 摘要压缩长期记忆\n- 定期\"提醒\"机制推动知识持久化\n\n### 4. 用户建模\n- Honcho 方言式用户建模\n- 构建用户偏好和工作模式画像\n- 跨会话保持个性化\n\n## Safety Considerations\n\nSelf-improvement amplifies alignment risks that are manageable in static models but dangerous in autonomous agents:\n\n- **Feedback Loop Instability**: An agent optimizing its own prompts may reinforce harmful biases or drift away from safety guardrails over time.\n- **Reward Hacking in Skill Creation**: If the skill-creation metric is poorly specified, the agent may create superficially successful but brittle or unsafe skills.\n- **Catastrophic Forgetting**: New skills can overwrite previously learned safety behaviors if memory management does not preserve critical constraints.\n- **Opaque Evolution**: GEPA and DSPy optimize prompts through evolutionary or combinatorial search, making it difficult to interpret *why* a particular prompt works—or fails dangerously.\n\nFor a deeper treatment of these risks, see [[AIAlignment]].\n\n## Connections\n\n- [[HermesAgent]] — 实践者\n- [[AIAgent]] — 所属领域\n- [[NousResearch]] — 主要推动者\n- [[AIAlignment]] — 安全与对齐风险\n",
+    "preview": "## Overview 自我改进 AI（Self-Improving AI）是指能够从自身运行经验中学习并持续优化性能的 AI 系统。这一概念是 [[HermesAgent]] 的核心设计理念。 ## Key Mechanisms",
+    "group": -1,
+    "value": 12
+  },
+  {
+    "id": "concepts/StateSpaceModels",
+    "label": "State Space Models",
+    "type": "concept",
+    "color": "#FF9800",
+    "path": "wiki/concepts/StateSpaceModels.md",
+    "markdown": "---\ntitle: \"State Space Models\"\ntype: concept\ntags: [architecture, ssm, mamba, sequence-modeling]\nsources: [intro-to-llms]\nlast_updated: 2026-05-04\n---\n\n# State Space Models\n\n**State Space Models (SSMs)** are a class of sequence models that offer a principled alternative to the [[Transformer]] architecture. Instead of relying on pairwise attention (which scales quadratically with sequence length), SSMs compress the entire sequence into a fixed-size hidden state through linear-time recurrent updates. This makes them theoretically more efficient for very long sequences.\n\n## Core Idea\n\nA state space model defines a mapping from an input sequence $x(t)$ to an output $y(t)$ via a latent state $h(t)$:\n\n- $h'(t) = Ah(t) + Bx(t)$\n- $y(t) = Ch(t) + Dx(t)$\n\nIn discrete form (for digital implementation), this becomes a recurrent update similar to RNNs but with structured matrices that enable stable gradient flow and efficient parallel training.\n\n## Key Variants\n\n### Mamba (2023)\n- **Authors**: Albert Gu & Tri Dao\n- **Innovation**: Introduces **selective state spaces**—the matrices $B$, $C$, and step size $\\Delta$ are input-dependent, allowing the model to selectively remember or forget information.\n- **Advantage**: Matches Transformer quality on language modeling while scaling linearly with sequence length.\n- **Limitation**: Struggles with tasks requiring strong recall of specific tokens from distant context (\"copying\" tasks), as the compressed state may lose fine-grained details.\n\n### Mamba-2 (2024)\n- Re-frames selective SSMs through the lens of **structured attention**, revealing a deep theoretical connection between SSMs and attention mechanisms.\n- Achieves faster training through hardware-aware algorithms similar to FlashAttention.\n\n### Hyena / Striped Hyena\n- Replaces attention with long convolutions and gating mechanisms.\n- Demonstrates that subquadratic operators can match Transformer performance when combined with sufficient data and scale.\n\n### Griffin & Hawk (Google DeepMind, 2024)\n- **Hawk**: Purely recurrent Gated Linear Recurrent Unit (LRU).\n- **Griffin**: Hybrid architecture combining local attention with global recurrent branches.\n- Shows that RNN-like recurrence can be competitive when gated and initialized carefully.\n\n## Comparison with Transformers\n\n| Property | Transformer | SSM (Mamba) |\n|---|---|---|\n| Training parallelization | Yes (full) | Yes (via convolutional mode) |\n| Inference speed | O(n²) per token | O(1) per token (constant state) |\n| Long-context scaling | Quadratic cost | Linear cost |\n| Recall / copying | Strong | Weaker (state compression loss) |\n| Ecosystem maturity | Dominant (GPT, LLaMA, Claude) | Emerging |\n\n## When to Use SSMs\n\n- **Very long sequences**: Genomics, audio, time-series forecasting where context exceeds 100k tokens.\n- **Resource-constrained inference**: Edge devices where KV-cache memory from Transformers is prohibitive.\n- **Streaming applications**: Real-time processing where the model cannot see the full future context.\n\n## Connections\n- [[Transformer]] — dominant alternative architecture\n- [[AttentionMechanism]] — the operation SSMs seek to replace\n- [[LargeLanguageModels]] — SSMs are increasingly integrated into LLM research (e.g., hybrid Transformer-SSM layers)\n",
+    "preview": "# State Space Models **State Space Models (SSMs)** are a class of sequence models that offer a principled alternative to the [[Transformer]] architecture. Instead of relying on pairwise attention (which scales quadratica",
+    "group": -1,
+    "value": 7
   },
   {
     "id": "concepts/Transformer",
     "label": "Transformer",
     "type": "concept",
-    "color": "#8BC34A",
-    "path": "wiki\\concepts\\Transformer.md",
-    "markdown": "---\ntitle: \"Transformer\"\ntype: concept\ntags: [architecture, nlp, deep-learning]\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2024-03-15\n---\n\n# Transformer\n\nThe **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research.\n\n## Architecture\n\n### Encoder\n- Multi-head self-attention\n- Position-wise feed-forward networks\n- Layer normalization and residual connections\n\n### Decoder\n- Masked self-attention (autoregressive)\n- Cross-attention over encoder outputs\n- Position-wise feed-forward networks\n\n## Key Innovation\nThe Transformer replaces recurrence with [[AttentionMechanism]] (self-attention), allowing:\n- Parallel computation across sequence positions\n- Direct modeling of long-range dependencies\n- Better gradient flow during training\n\n## Variants\n- **Encoder-only**: [[BERT]], RoBERTa, DistilBERT\n- **Decoder-only**: [[GPT]] series, [[LLaMA]], Claude\n- **Encoder-decoder**: [[T5]], BART, UL2\n\n## Connections\n- [[AttentionMechanism]] — core operation\n- [[OpenAI]] — scaled decoder-only Transformers via [[GPT]]\n- [[Google]] — original inventors\n",
-    "preview": "# Transformer The **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research. ## Architecture",
-    "group": 2,
-    "value": 22
+    "color": "#FF9800",
+    "path": "wiki/concepts/Transformer.md",
+    "markdown": "---\ntitle: \"Transformer\"\ntype: concept\ntags: [architecture, nlp, deep-learning]\nsources: [attention-is-all-you-need, intro-to-llms]\nlast_updated: 2024-03-15\n---\n\n# Transformer\n\nThe **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, and Łukasz Kaiser.\n\n## Architecture\n\n### Encoder\n- Multi-head self-attention\n- Position-wise feed-forward networks\n- Layer normalization and residual connections\n\n### Decoder\n- Masked self-attention (autoregressive)\n- Cross-attention over encoder outputs\n- Position-wise feed-forward networks\n\n## Key Innovation\nThe Transformer replaces recurrence with [[AttentionMechanism]] (self-attention), allowing:\n- Parallel computation across sequence positions\n- Direct modeling of long-range dependencies\n- Better gradient flow during training\n\n## Variants\n- **Encoder-only**: [[BERT]], RoBERTa, DistilBERT\n- **Decoder-only**: [[GPT]] series, [[LLaMA]], Claude\n- **Encoder-decoder**: [[T5]], BART, UL2\n\n## Connections\n- [[AttentionMechanism]] — core operation\n- [[OpenAI]] — scaled decoder-only Transformers via [[GPT]]\n- [[Google]] — original inventors\n- [[StateSpaceModels]] — alternative architectures challenging the Transformer paradigm\n",
+    "preview": "# Transformer The **Transformer** is a deep learning architecture introduced in the paper \"[[Attention Is All You Need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam",
+    "group": -1,
+    "value": 28
   },
   {
     "id": "entities/Attention Is All You Need",
     "label": "Attention Is All You Need",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\Attention Is All You Need.md",
-    "markdown": "---\ntitle: \"Attention Is All You Need\"\ntype: entity\ntags: [paper, nlp, transformer]\nsources: ['overview.md', 'attention-is-all-you-need.md']\n---\n\n# Attention Is All You Need\n\n**Attention Is All You Need** is a landmark research paper published by Vaswani et al. from Google Research in June 2017, which introduced the **Transformer** architecture. In the context of this wiki, it serves as one of two foundational sources and is the primary entity that catalyzed the modern large language model (LLM) revolution. The paper's central innovation was demonstrating that a neural network architecture relying *solely* on self-attention mechanisms—eliminating all recurrent and convolutional layers—could achieve state-of-the-art performance in machine translation tasks while being significantly more parallelizable and faster to train. This architectural choice addressed key limitations of prior sequence-to-sequence models, particularly their sequential processing constraints. The Transformer introduced key components including multi-head self-attention, positional encodings, and the encoder-decoder structure that later became the blueprint for nearly all subsequent LLMs. The paper's significance is underscored by its influence across the entire wiki knowledge graph: it defines the core technology underpinning [[intro-to-llms]] and establishes the technical lineage for all transformer-based systems discussed in the synthesis. Key actions associated with this entity include implementing the architecture for translation tasks, using its design patterns for scaling language models, and serving as the essential reference point for understanding modern NLP breakthroughs. The entity is also linked to [[Vaswani]] (the lead author) and [[Google]] (the research institution) through citations in its source material.",
+    "color": "#2196F3",
+    "path": "wiki/entities/Attention Is All You Need.md",
+    "markdown": "---\ntitle: \"Attention Is All You Need\"\ntype: entity\ntags: [paper, nlp, transformer]\nsources: ['overview', 'attention-is-all-you-need']\nlast_updated: 2026-04-30\n---\n\n# Attention Is All You Need\n\n**Attention Is All You Need** is a landmark research paper published by Vaswani et al. from Google Research in June 2017, which introduced the **Transformer** architecture. In the context of this wiki, it serves as one of two foundational sources and is the primary entity that catalyzed the modern large language model (LLM) revolution. The paper's central innovation was demonstrating that a neural network architecture relying *solely* on self-attention mechanisms—eliminating all recurrent and convolutional layers—could achieve state-of-the-art performance in machine translation tasks while being significantly more parallelizable and faster to train. This architectural choice addressed key limitations of prior sequence-to-sequence models, particularly their sequential processing constraints. The Transformer introduced key components including multi-head self-attention, positional encodings, and the encoder-decoder structure that later became the blueprint for nearly all subsequent LLMs. The paper's significance is underscored by its influence across the entire wiki knowledge graph: it defines the core technology underpinning [[intro-to-llms]] and establishes the technical lineage for all transformer-based systems discussed in the synthesis. Key actions associated with this entity include implementing the architecture for translation tasks, using its design patterns for scaling language models, and serving as the essential reference point for understanding modern NLP breakthroughs. The entity is also linked to [[Vaswani]] (the lead author) and [[Google]] (the research institution) through citations in its source material.",
     "preview": "# Attention Is All You Need **Attention Is All You Need** is a landmark research paper published by Vaswani et al. from Google Research in June 2017, which introduced the **Transformer** architecture. In the context of t",
-    "group": 2,
-    "value": 11
+    "group": -1,
+    "value": 10
   },
   {
     "id": "entities/Bahdanau",
     "label": "Bahdanau",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\Bahdanau.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/Bahdanau.md",
     "markdown": "---\ntitle: \"Bahdanau\"\ntype: entity\ntags: [person, researcher]\nsources: [attention-is-all-you-need]\nlast_updated: 2026-04-28\n---\n\n# Dzmitry Bahdanau\n\n**Dzmitry Bahdanau** is a machine learning researcher known for introducing the attention mechanism for recurrent neural networks (RNNs) in neural machine translation. His 2014 paper proposed \"Bahdanau attention\" (also known as additive attention), which allowed RNN-based encoder-decoder models to focus on relevant parts of the input sequence during translation.\n\nThe subsequent [[Attention Is All You Need]] paper by [[Vaswani]] et al. demonstrated that attention alone is sufficient, dispensing with recurrence entirely.\n\n## Connections\n- [[AttentionMechanism]] — pioneered attention for RNNs\n- [[Transformer]] — the next evolution beyond RNN-based attention\n- [[Google]] — affiliated academic work\n",
     "preview": "# Dzmitry Bahdanau **Dzmitry Bahdanau** is a machine learning researcher known for introducing the attention mechanism for recurrent neural networks (RNNs) in neural machine translation. His 2014 paper proposed \"Bahdanau",
-    "group": 2,
-    "value": 8
+    "group": -1,
+    "value": 7
   },
   {
     "id": "entities/BERT",
     "label": "BERT",
     "type": "entity",
-    "color": "#00BCD4",
-    "path": "wiki\\entities\\BERT.md",
-    "markdown": "---\ntitle: \"BERT\"\ntype: entity\ntags: [llm, encoder, nlp, google]\nsources: [overview.md, intro-to-llms.md, foundation-models-overview.md]\n---\n\n# BERT\n\n**BERT (Bidirectional Encoder Representations from Transformers)** is a foundational natural language processing model developed by Google that introduced an **encoder-only** Transformer architecture, distinguishing it from decoder-only models like [[GPT]]. Unlike autoregressive models that predict tokens in a single direction, BERT leverages bidirectional context by simultaneously attending to both left and right tokens during pre-training, enabling deeper language understanding. It achieves this through two key pre-training objectives: **Masked Language Modeling (MLM)** — where random input tokens are masked and the model predicts them from context — and **Next Sentence Prediction (NSP)**, which captures relationships between sentence pairs. Released in 2018, BERT fundamentally reshaped NLP by demonstrating that bidirectional pre-training on large unlabeled corpora (like Wikipedia and BooksCorpus) could be fine-tuned with a single additional output layer to achieve state-of-the-art results on 11 downstream tasks, including question answering (SQuAD), sentiment analysis, and named entity recognition. As an encoder-only model, BERT produces rich contextualized word embeddings suitable for classification and understanding tasks but does not natively support autoregressive text generation like [[GPT]]. Its architecture directly influenced modern encoder systems and remains a benchmark for evaluating language understanding capabilities, though it has been succeeded by more compute-efficient variants (e.g., RoBERTa, DistilBERT, ALBERT).",
-    "preview": "# BERT **BERT (Bidirectional Encoder Representations from Transformers)** is a foundational natural language processing model developed by Google that introduced an **encoder-only** Transformer architecture, distinguishi",
-    "group": 1,
+    "color": "#2196F3",
+    "path": "wiki/entities/BERT.md",
+    "markdown": "---\ntitle: \"BERT\"\ntype: entity\ntags: [llm, encoder, nlp, google]\nsources: [overview, intro-to-llms, foundation-models-overview]\nlast_updated: 2026-04-30\n---\n\n# BERT\n\n**BERT (Bidirectional Encoder Representations from Transformers)** is a foundational natural language processing model developed by [[Google]] that introduced an **encoder-only** [[Transformer]] architecture, distinguishing it from decoder-only models like [[GPT]]. Unlike autoregressive models that predict tokens in a single direction, BERT leverages bidirectional context by simultaneously attending to both left and right tokens during pre-training, enabling deeper language understanding.\n\nReleased in 2018, BERT fundamentally reshaped NLP by demonstrating that bidirectional pre-training on large unlabeled corpora could be fine-tuned to achieve state-of-the-art results on numerous downstream tasks. As an encoder-only model, BERT produces rich contextualized word embeddings suitable for classification and understanding tasks but does not natively support autoregressive text generation like [[GPT]]. Its architecture directly influenced modern encoder systems and remains a benchmark for evaluating language understanding capabilities, though it has been succeeded by more compute-efficient variants.",
+    "preview": "# BERT **BERT (Bidirectional Encoder Representations from Transformers)** is a foundational natural language processing model developed by [[Google]] that introduced an **encoder-only** [[Transformer]] architecture, dist",
+    "group": -1,
     "value": 12
   },
   {
     "id": "entities/ChatGPT",
     "label": "ChatGPT",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\ChatGPT.md",
-    "markdown": "---\ntitle: \"ChatGPT\"\ntype: entity\ntags: [AI, language model, chatbot, generative AI, OpenAI, artificial intelligence]\nsources: [OpenAI official documentation, common knowledge, personal experience]\n---\n\n# ChatGPT\n\nChatGPT is a conversational AI model developed by OpenAI, based on the Generative Pre-trained Transformer (GPT) architecture. In the context of this wiki, ChatGPT represents a landmark entity in the evolution of human-computer interaction, serving as both a widely accessible tool for natural language understanding and generation, and as a symbolic marker of the current era of large language models. Its main significance lies in its ability to engage in context-aware dialogue, answer questions, generate creative text, assist with programming, and perform a wide array of language-based tasks across diverse domains. ChatGPT is associated with several key actions and attributes: it is primarily accessed through a web interface or API, often used for drafting, brainstorming, tutoring, and automating routine communication. Notably, it incorporates fine-tuning techniques such as Reinforcement Learning from Human Feedback (RLHF) to align its responses with user intent and safety guidelines. As an entity, ChatGPT is also emblematic of broader trends and debates regarding AI ethics, misinformation, job displacement, and the accessibility of advanced AI to the general public. Within this wiki, references to ChatGPT may also imply its various versions (e.g., GPT-3.5, GPT-4, GPT-4o) and its role as a catalyst for new workflows, creative practices, and ongoing research in artificial intelligence.",
-    "preview": "# ChatGPT ChatGPT is a conversational AI model developed by OpenAI, based on the Generative Pre-trained Transformer (GPT) architecture. In the context of this wiki, ChatGPT represents a landmark entity in the evolution o",
-    "group": 0,
-    "value": 5
+    "color": "#2196F3",
+    "path": "wiki/entities/ChatGPT.md",
+    "markdown": "---\ntitle: \"ChatGPT\"\ntype: entity\ntags: [AI, language model, chatbot, generative AI, OpenAI, artificial intelligence]\nsources: [OpenAI official documentation, common knowledge, personal experience]\nlast_updated: 2026-04-30\n---\n\n# ChatGPT\n\nChatGPT is a conversational AI model developed by [[OpenAI]], based on the Generative Pre-trained Transformer ([[GPT]]) architecture. In the context of this wiki, ChatGPT represents a landmark entity in the evolution of human-computer interaction, serving as both a widely accessible tool for natural language understanding and generation, and as a symbolic marker of the current era of [[LargeLanguageModels]]. Its main significance lies in its ability to engage in context-aware dialogue, answer questions, generate creative text, assist with programming, and perform a wide array of language-based tasks across diverse domains.\n\nChatGPT is associated with several key actions and attributes: it is primarily accessed through a web interface or API, often used for drafting, brainstorming, tutoring, and automating routine communication. Notably, later versions incorporate [[GPT4]] as their underlying engine, representing a significant leap in reasoning and multimodal capabilities. As an entity, ChatGPT is also emblematic of broader trends and debates regarding AI ethics, misinformation, job displacement, and the accessibility of advanced AI to the general public.",
+    "preview": "# ChatGPT ChatGPT is a conversational AI model developed by [[OpenAI]], based on the Generative Pre-trained Transformer ([[GPT]]) architecture. In the context of this wiki, ChatGPT represents a landmark entity in the evo",
+    "group": -1,
+    "value": 9
   },
   {
     "id": "entities/Google",
     "label": "Google",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\Google.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/Google.md",
     "markdown": "---\ntitle: \"Google\"\ntype: entity\ntags: [company, tech, research]\nsources: [attention-is-all-you-need]\nlast_updated: 2024-02-10\n---\n\n# Google\n\n**Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning.\n\n## AI Research\n- Published the original [[Transformer]] architecture (2017)\n- Developed [[BERT]], a bidirectional encoder representation model\n- Created [[T5]] and PaLM language models\n\n## Key Teams\n- Google Research\n- DeepMind (acquired 2014)\n- Google Brain (merged into DeepMind)\n\n## Connections\n- [[OpenAI]] — competitor; many OpenAI researchers formerly at Google\n- [[Transformer]] — invented at Google Research\n- [[AttentionMechanism]] — foundational work at Google\n",
     "preview": "# Google **Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning. ## AI Research",
-    "group": 2,
-    "value": 17
+    "group": -1,
+    "value": 18
   },
   {
     "id": "entities/GPT",
     "label": "GPT",
     "type": "entity",
-    "color": "#00BCD4",
-    "path": "wiki\\entities\\GPT.md",
-    "markdown": "---\ntitle: \"GPT\"\ntype: entity\ntags: [model, architecture, openai, decoder-only]\nsources: [overview.md, intro-to-llms.md, foundation-models-overview.md]\n---\n\n# GPT\n\n**GPT** (Generative Pre-trained Transformer) is a family of decoder-only large language models developed by OpenAI that pioneered the modern era of foundation models and autoregressive text generation. Unlike encoder-only models such as [[BERT]], which are optimized for understanding tasks, GPT models are designed to predict the next token in a sequence, enabling them to generate coherent, contextually relevant text across a wide range of domains. The GPT architecture, introduced with the Transformer innovation from the [[Attention Is All You Need]] paper, replaces recurrent layers with self-attention mechanisms and scales predictably according to scaling laws — meaning capability improves with increased compute, data, and parameters. As documented in the wiki sources, GPT represents a key connection point linking [[OpenAI]]'s scaling strategy, the [[Transformer]] architecture's decoder-only branch, and the broader foundation model ecosystem. Its significance lies in demonstrating that simple next-token prediction at sufficient scale yields emergent abilities, reshaping the field's understanding of machine intelligence. Actions associated with GPT in this knowledge graph include functioning as the primary exemplar of autoregressive generation, illustrating scaling law behavior, and serving as a foundational architecture from which many modern LLMs derive.",
+    "color": "#2196F3",
+    "path": "wiki/entities/GPT.md",
+    "markdown": "---\ntitle: \"GPT\"\ntype: entity\ntags: [model, architecture, openai, decoder-only]\nsources: [overview, intro-to-llms, foundation-models-overview]\nlast_updated: 2026-04-30\n---\n\n# GPT\n\n**GPT** (Generative Pre-trained Transformer) is a family of decoder-only large language models developed by OpenAI that pioneered the modern era of foundation models and autoregressive text generation. Unlike encoder-only models such as [[BERT]], which are optimized for understanding tasks, GPT models are designed to predict the next token in a sequence, enabling them to generate coherent, contextually relevant text across a wide range of domains. The GPT architecture, introduced with the Transformer innovation from the [[Attention Is All You Need]] paper, replaces recurrent layers with self-attention mechanisms and scales predictably according to scaling laws — meaning capability improves with increased compute, data, and parameters. As documented in the wiki sources, GPT represents a key connection point linking [[OpenAI]]'s scaling strategy, the [[Transformer]] architecture's decoder-only branch, and the broader foundation model ecosystem. Its significance lies in demonstrating that simple next-token prediction at sufficient scale yields emergent abilities, reshaping the field's understanding of machine intelligence. Actions associated with GPT in this knowledge graph include functioning as the primary exemplar of autoregressive generation, illustrating scaling law behavior, and serving as a foundational architecture from which many modern LLMs derive.",
     "preview": "# GPT **GPT** (Generative Pre-trained Transformer) is a family of decoder-only large language models developed by OpenAI that pioneered the modern era of foundation models and autoregressive text generation. Unlike encod",
-    "group": 1,
-    "value": 18
+    "group": -1,
+    "value": 19
   },
   {
     "id": "entities/GPT4",
     "label": "GPT4",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\GPT4.md",
-    "markdown": "---\ntitle: \"GPT4\"\ntype: entity\ntags: [llm, openai, large language model, gpt, transformer]\nsources: [OpenAI, industry reports, research papers]\n---\n\n# GPT4\n\nGPT-4 (Generative Pre-trained Transformer 4) is a large multimodal language model developed by OpenAI, released in March 2023. In the context of this wiki, GPT-4 represents a significant advancement in the lineage of generative AI models, succeeding GPT-3.5 (the engine behind the initial ChatGPT release). Its primary significance lies in its substantially improved reasoning capabilities, factual accuracy, steerability, and ability to process both text and image inputs (multimodality), marking a qualitative leap from earlier models. Unlike prior versions, GPT-4 demonstrates performance near or exceeding human-level benchmarks on numerous professional and academic exams (e.g., passing the Uniform Bar Exam in the top 10% of test-takers). Associated actions include its deployment in a wide range of applications—from coding assistants and content generation to complex problem-solving and data analysis—and its integration into products like ChatGPT Plus, Microsoft’s Copilot, and various enterprise APIs. Within the wiki, GPT-4 is often linked to discussions of advanced AI alignment, safety measures (such as reinforcement learning from human feedback, RLHF), and the evolving capabilities landscape of frontier models. It also serves as a reference point for comparing other large language models, including open-source alternatives.",
-    "preview": "# GPT4 GPT-4 (Generative Pre-trained Transformer 4) is a large multimodal language model developed by OpenAI, released in March 2023. In the context of this wiki, GPT-4 represents a significant advancement in the lineage",
-    "group": 0,
-    "value": 6
+    "color": "#2196F3",
+    "path": "wiki/entities/GPT4.md",
+    "markdown": "---\ntitle: \"GPT4\"\ntype: entity\ntags: [llm, openai, large language model, gpt, transformer]\nsources: [OpenAI, industry reports, research papers]\nlast_updated: 2026-04-30\n---\n\n# GPT4\n\nGPT-4 (Generative Pre-trained Transformer 4) is a large multimodal language model developed by [[OpenAI]], released in March 2023. In the context of this wiki, GPT-4 represents a significant advancement in the lineage of generative AI models, succeeding the initial [[ChatGPT]] release (which was based on GPT-3.5). Its primary significance lies in its substantially improved reasoning capabilities, factual accuracy, steerability, and ability to process both text and image inputs (multimodality), marking a qualitative leap from earlier models.\n\nUnlike prior versions, GPT-4 demonstrates performance near or exceeding human-level benchmarks on numerous professional and academic exams. It is built on the [[Transformer]] architecture and is part of the broader [[GPT]] model family. GPT-4 serves as a reference point for comparing other [[LargeLanguageModels]], including open-source alternatives like [[LLaMA]].",
+    "preview": "# GPT4 GPT-4 (Generative Pre-trained Transformer 4) is a large multimodal language model developed by [[OpenAI]], released in March 2023. In the context of this wiki, GPT-4 represents a significant advancement in the lin",
+    "group": -1,
+    "value": 12
   },
   {
     "id": "entities/GregBrockman",
     "label": "Greg Brockman",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\GregBrockman.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/GregBrockman.md",
     "markdown": "---\ntitle: \"Greg Brockman\"\ntype: entity\ntags: [person, engineer]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Greg Brockman\n\n**Greg Brockman** is a co-founder and former CTO of [[OpenAI]]. He was previously the CTO of Stripe before joining [[SamAltman]], [[IlyaSutskever]], and others to found OpenAI in 2015.\n\nAt OpenAI, he played a key role in scaling the engineering organization that built [[GPT]], [[ChatGPT]], and [[GPT4]].\n\n## Connections\n- [[OpenAI]] — co-founder and former CTO\n- [[GPT]] — key contributor to the GPT series\n- [[SamAltman]] — co-founder\n",
     "preview": "# Greg Brockman **Greg Brockman** is a co-founder and former CTO of [[OpenAI]]. He was previously the CTO of Stripe before joining [[SamAltman]], [[IlyaSutskever]], and others to found OpenAI in 2015. At OpenAI, he playe",
-    "group": 0,
-    "value": 10
+    "group": -1,
+    "value": 9
+  },
+  {
+    "id": "entities/HermesAgent",
+    "label": "HermesAgent",
+    "type": "entity",
+    "color": "#2196F3",
+    "path": "wiki/entities/HermesAgent.md",
+    "markdown": "---\ntitle: \"HermesAgent\"\ntype: entity\ntags: [ai-agent, open-source, hermes, nous-research]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n> **Disambiguation**: This page is about **Hermes Agent**, an AI Agent framework by [[NousResearch]]. For Meta's JavaScript engine also named Hermes, see [[HermesJSEngine]].\n\n## Overview\n\nHermes Agent 是由 NousResearch 开发的开源自我进化 AI Agent，GitHub 星标数 128,747，是当前最热门的 AI Agent 项目之一。口号：\"The agent that grows with you\"。它与 Meta 的 [[HermesJSEngine]]（React Native JS 引擎）是完全无关的项目，仅名称相同。\n\n## Core Features\n\n### 1. 自我学习闭环\n- 从复杂任务中自主创建技能（Skills）\n- 使用过程中持续改进技能\n- FTS5 全文搜索历史会话 + LLM 摘要实现跨会话回忆\n- Honcho 方言式用户建模，构建用户画像\n\n### 2. 多模型支持\n支持任意 LLM 提供商，一条命令切换：\n- Nous Portal、OpenRouter（200+ 模型）\n- NVIDIA NIM (Nemotron)、Xiaomi MiMo\n- z.ai/GLM、Kimi/Moonshot、MiniMax\n- Hugging Face、OpenAI、自定义端点\n\n### 3. 多平台接入\n- CLI（全功能 TUI）\n- Telegram、Discord、Slack、WhatsApp、Signal\n- 语音备忘录转录、跨平台对话连续性\n\n### 4. 调度自动化\n- 内置 cron 调度器\n- 支持自然语言描述任务\n- 每日报告、夜间备份、每周审计\n\n### 5. 子代理与并行化\n- 生成隔离子代理进行并行工作流\n- 通过 RPC 调用工具的 Python 脚本\n- 多步骤管道压缩为零上下文成本\n\n### 6. 多种运行环境\n六种终端后端：local、Docker、SSH、Daytona、Singularity、Modal\n\n## Technical Stack\n\n- **语言**：Python\n- **许可证**：MIT\n- **安装**：`curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash`\n- **支持平台**：Linux、macOS、WSL2、Android (Termux)\n\n## Ecosystem\n\n| 项目 | Stars | 说明 |\n|---|---|---|\n| hermes-webui | 5,299 | Web/手机端界面 |\n| hermes-web-ui | 3,261 | 多平台管理面板（Vue3） |\n| hermes-workspace | 2,837 | 原生 Web 工作区 |\n| hermes-agent-self-evolution | 2,675 | 自我进化框架（DSPy+GEPA） |\n| awesome-hermes-agent | 2,212 | 资源和技能列表 |\n| hermes-agent-orange-book | 3,444 | 中文橙皮书教程 |\n\n## Connections\n\n- [[NousResearch]] — 开发组织\n- [[AIAgent]] — 所属概念\n- [[SelfImprovingAI]] — 核心理念\n- [[OpenAI]] — 支持的模型提供商\n- [[AgentFrameworkComparison]] — 与其他 Agent 框架对比\n",
+    "preview": "> **Disambiguation**: This page is about **Hermes Agent**, an AI Agent framework by [[NousResearch]]. For Meta's JavaScript engine also named Hermes, see [[HermesJSEngine]]. ## Overview Hermes Agent 是由 NousResearch 开发的开源",
+    "group": -1,
+    "value": 14
+  },
+  {
+    "id": "entities/HermesJSEngine",
+    "label": "HermesJSEngine",
+    "type": "entity",
+    "color": "#2196F3",
+    "path": "wiki/entities/HermesJSEngine.md",
+    "markdown": "---\ntitle: \"HermesJSEngine\"\ntype: entity\ntags: [javascript-engine, react-native, meta, mobile]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n> **Disambiguation**: This page is about **Hermes**, the JavaScript engine by [[Meta]] for [[ReactNative]]. For the AI Agent framework also named Hermes, see [[HermesAgent]].\n\n## Overview\n\nHermes 是由 Meta（Facebook）开发的 JavaScript 引擎，专为 React Native 优化。从 React Native 0.69.0 开始，Hermes 作为默认 JS 引擎与 React Native 捆绑发布（Bundled Hermes）。GitHub 星标数 11,017。它与 NousResearch 的 [[HermesAgent]]（AI Agent 框架）是完全无关的项目，仅名称相同。\n\n## Core Features\n\n### 1. AOT 编译优化\n- 提前编译 JavaScript 为紧凑字节码（bytecode）\n- 显著减少运行时解析和编译开销\n- 应用启动时间大幅缩短\n\n### 2. 性能优势\n- **启动时间**：相比 JavaScriptCore 大幅改善\n- **内存使用**：更低的内存占用\n- **应用体积**：更小的打包尺寸\n\n### 3. Bundled Hermes\n- 每个 React Native 版本都附带对应版本的 Hermes\n- 版本严格匹配，避免兼容性问题\n\n## Technical Details\n\n- **语言**：C++（引擎核心）+ JavaScript\n- **许可证**：MIT\n- **仓库**：github.com/facebook/hermes\n- **支持平台**：Android、iOS\n- **构建系统**：CMake\n\n## Usage\n\n```bash\n# React Native 默认启用，无需额外配置\nnpx react-native init MyApp\ncd MyApp && npx react-native run-android\n```\n\n## Connections\n\n- [[Meta]] — 开发公司\n- [[ReactNative]] — 目标运行平台\n",
+    "preview": "> **Disambiguation**: This page is about **Hermes**, the JavaScript engine by [[Meta]] for [[ReactNative]]. For the AI Agent framework also named Hermes, see [[HermesAgent]]. ## Overview Hermes 是由 Meta（Facebook）开发的 JavaS",
+    "group": -1,
+    "value": 9
   },
   {
     "id": "entities/IlyaSutskever",
     "label": "Ilya Sutskever",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\IlyaSutskever.md",
-    "markdown": "---\ntitle: \"Ilya Sutskever\"\ntype: entity\ntags: [person, researcher]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Ilya Sutskever\n\n**Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and the invention of the [[Transformer]] architecture.\n\nAt OpenAI, he led the research direction behind the [[GPT]] series, including [[GPT4]]. He left OpenAI in 2024 to found Safe Superintelligence Inc. (SSI).\n\n## Connections\n- [[OpenAI]] — co-founder and former Chief Scientist\n- [[Transformer]] — contributed to its invention at Google Brain\n- [[GPT]] — research direction under his leadership\n- [[Google]] — previous affiliation\n",
-    "preview": "# Ilya Sutskever **Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and th",
-    "group": 0,
-    "value": 10
+    "color": "#2196F3",
+    "path": "wiki/entities/IlyaSutskever.md",
+    "markdown": "---\ntitle: \"Ilya Sutskever\"\ntype: entity\ntags: [person, researcher]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Ilya Sutskever\n\n**Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and early attention-based models that influenced the later development of the [[Transformer]] architecture.\n\nAt OpenAI, he led the research direction behind the [[GPT]] series, including [[GPT4]]. He left OpenAI in 2024 to found Safe Superintelligence Inc. (SSI).\n\n## Connections\n- [[OpenAI]] — co-founder and former Chief Scientist\n- [[Transformer]] — contributed to its invention at Google Brain\n- [[GPT]] — research direction under his leadership\n- [[Google]] — previous affiliation\n",
+    "preview": "# Ilya Sutskever **Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and ea",
+    "group": -1,
+    "value": 9
   },
   {
     "id": "entities/LargeLanguageModels",
     "label": "LargeLanguageModels",
     "type": "entity",
-    "color": "#00BCD4",
-    "path": "wiki\\entities\\LargeLanguageModels.md",
-    "markdown": "---\ntitle: \"LargeLanguageModels\"\ntype: entity\ntags: [llm, neural-network, transformer, language-model]\nsources: ['intro-to-llms.md']\n---\n\n# LargeLanguageModels\n\nA **Large Language Model (LLM)** is a type of neural network model, typically based on the transformer architecture, trained on massive text corpora to predict and generate human-like text. In the context of this wiki, an LLM is fundamentally a next-token predictor: given a sequence of tokens, it learns to predict the most probable next token(s) through autoregressive generation. The significance of LLMs lies in their emergent properties—abilities that appear abruptly at certain scale thresholds rather than through deliberate programming—including in-context learning, reasoning, translation, and code generation. Scaling laws empirically demonstrate that model capability improves predictably with increases in compute, training data, and parameter count. Architecturally, LLMs can be classified as decoder-only (e.g., [[GPT]]), encoder-only (e.g., [[BERT]]), or encoder-decoder variants, with decoder-only models being the most prevalent for generative tasks in current practice. Actions associated with LLMs include tokenization of input text, autoregressive generation of output sequences, fine-tuning for specific downstream tasks, and evaluation via benchmarks that test reasoning, knowledge, and safety. Key associations include the transformer decoder block (the core component enabling long-range dependencies), attention mechanisms, and emergent abilities that challenge prior assumptions about the nature of machine intelligence.",
-    "preview": "# LargeLanguageModels A **Large Language Model (LLM)** is a type of neural network model, typically based on the transformer architecture, trained on massive text corpora to predict and generate human-like text. In the c",
-    "group": 1,
-    "value": 8
+    "color": "#2196F3",
+    "path": "wiki/entities/LargeLanguageModels.md",
+    "markdown": "---\ntitle: \"LargeLanguageModels\"\ntype: entity\ntags: [llm, neural-network, transformer, language-model]\nsources: ['intro-to-llms']\nlast_updated: 2026-05-04\n---\n\n# LargeLanguageModels\n\nA **Large Language Model (LLM)** is a type of neural network model, typically based on the [[Transformer]] architecture, trained on massive text corpora to predict and generate human-like text. In the context of this wiki, an LLM is fundamentally a next-token predictor: given a sequence of tokens, it learns to predict the most probable next token(s) through autoregressive generation.\n\n## Emergent vs. Deliberately Trained Capabilities\n\nEarly LLMs exhibited **emergent abilities**—capabilities that appeared abruptly at certain scale thresholds, including in-context learning, translation, and code generation. However, modern models have moved beyond purely emergent properties:\n\n- **Chain-of-Thought (CoT)**: Models can be prompted to generate intermediate reasoning steps, drastically improving performance on mathematical and logical tasks. Introduced in \"Chain-of-Thought Prompting Elicits Reasoning in Large Language Models\" (Wei et al., 2022).\n- **Test-Time Compute**: Recent reasoning models (e.g., OpenAI's o-series) deliberately allocate additional computation at inference time to refine answers through internal reasoning chains, rather than relying solely on pre-trained weights.\n- **Tool Use**: Modern LLMs integrate with external tools (calculators, search engines, APIs) via function calling, extending their capabilities beyond static parametric knowledge.\n- **Multimodality**: GPT-4o, Gemini, and Claude 3 process not only text but also images, audio, and video, representing a shift from pure language modeling to unified multimodal reasoning.\n\n## Scaling Laws\n\nScaling laws empirically demonstrate that model capability improves predictably with increases in compute, training data, and parameter count. Key milestones include:\n- **Kaplan et al. (2020)**: Established power-law relationships between loss and model size/data/compute.\n- **Chinchilla (2022)**: Demonstrated that many models were under-trained; compute-optimal training requires balancing model size with training token count.\n\n## Architectural Variants\n\n- **Decoder-only**: [[GPT]] series, [[LLaMA]], Claude — autoregressive generation, dominant for generative tasks.\n- **Encoder-only**: [[BERT]], RoBERTa — bidirectional understanding, prevalent in classification and retrieval.\n- **Encoder-decoder**: [[T5]], BART — structured for translation and summarization.\n\n## Connections\n- [[Transformer]] — core architecture\n- [[GPT]] — influential decoder-only LLM family\n- [[BERT]] — influential encoder-only LLM\n- [[AttentionMechanism]] — key operation enabling long-range dependencies\n- [[AIAgent]] — LLMs serve as the cognitive backbone of modern agents\n- [[StateSpaceModels]] — emerging alternatives to Transformer-based LLMs\n",
+    "preview": "# LargeLanguageModels A **Large Language Model (LLM)** is a type of neural network model, typically based on the [[Transformer]] architecture, trained on massive text corpora to predict and generate human-like text. In t",
+    "group": -1,
+    "value": 20
   },
   {
     "id": "entities/LLaMA",
     "label": "LLaMA",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\LLaMA.md",
-    "markdown": "---\ntitle: \"LLaMA\"\ntype: entity\ntags: ['llm', 'meta', 'open-source', 'foundation-model']\nsources: ['overview.md', 'foundation-models-overview.md']\n---\n\n# LLaMA\n\nLLaMA (Large Language Model Meta AI) is a family of large language models developed by Meta, designed as a research-focused alternative to the proprietary, closed-source models created by organizations like [[OpenAI]] (e.g., [[GPT]]) and [[Google]] (e.g., [[BERT]]). Unlike many contemporary foundation models, LLaMA was released publicly with varying levels of openness—Meta initially distributed the model weights under a non-commercial license to academic researchers, and later released open-weight versions like LLaMA 2 and LLaMA 3 under a more permissive license. Architecturally, LLaMA is a decoder-only [[Transformer]]-based model, similar to the [[GPT]] family, using self-attention mechanisms as introduced in the foundational [[Attention Is All You Need]] paper. Its main significance lies in democratizing access to powerful LLM capabilities: by releasing the model weights, Meta enabled the broader research community, startups, and independent developers to fine-tune, study, and deploy high-performing language models without relying on expensive API calls or proprietary systems. This has spurred a wave of open-source innovation, including fine-tuned variants like Alpaca and Vicuna, and has directly challenged the dominance of closed-source foundation models by proving that open models can achieve competitive performance on a wide range of natural language tasks.",
-    "preview": "# LLaMA LLaMA (Large Language Model Meta AI) is a family of large language models developed by Meta, designed as a research-focused alternative to the proprietary, closed-source models created by organizations like [[Ope",
-    "group": 2,
+    "color": "#2196F3",
+    "path": "wiki/entities/LLaMA.md",
+    "markdown": "---\ntitle: \"LLaMA\"\ntype: entity\ntags: ['llm', 'meta', 'open-source', 'foundation-model']\nsources: ['overview', 'foundation-models-overview']\nlast_updated: 2026-05-04\n---\n\n# LLaMA\n\nLLaMA (Large Language Model Meta AI) is a family of large language models developed by [[Meta]], designed as a research-focused alternative to proprietary closed-source models like [[OpenAI]]'s [[GPT]] series and [[Google]]'s Gemini. Architecturally, LLaMA is a decoder-only [[Transformer]]-based model using self-attention mechanisms as introduced in [[Attention Is All You Need]].\n\n## Model Versions\n\n### LLaMA 1 (2023)\n- Released with model weights under a non-commercial academic license.\n- Parameter sizes: 7B, 13B, 33B, 65B.\n- Sparked a wave of open-source fine-tuned variants such as Alpaca and Vicuna.\n\n### LLaMA 2 (2023)\n- Released under a more permissive commercial license.\n- Introduced Grouped-Query Attention (GQA) to improve inference speed.\n- Parameter sizes: 7B, 13B, 70B, plus a code-specialized Code LLaMA variant.\n\n### LLaMA 3 (2024)\n- Significantly expanded training data and context window.\n- Improved reasoning, coding, and multilingual capabilities.\n- Parameter sizes: 8B, 70B, and 405B (the largest open-weight model at release).\n\n### Future Directions\n- Meta has signaled continued investment in open-weight models, with expectations around Mixture-of-Experts (MoE) architectures, expanded multimodal support, and longer context windows in subsequent releases. Specific details beyond LLaMA 3 should be sourced from official Meta AI announcements.\n\n## Significance\n\nBy releasing model weights, Meta democratized access to powerful LLM capabilities, enabling researchers, startups, and independent developers to fine-tune, study, and deploy high-performing models without proprietary API costs. This open-weight strategy directly challenged the dominance of closed-source foundation models and catalyzed the broader open-source AI ecosystem.\n\n## Connections\n- [[Meta]] — developing organization\n- [[GPT]] — primary closed-source competitor family\n- [[Transformer]] — core architecture\n- [[AttentionMechanism]] — foundational operation\n",
+    "preview": "# LLaMA LLaMA (Large Language Model Meta AI) is a family of large language models developed by [[Meta]], designed as a research-focused alternative to proprietary closed-source models like [[OpenAI]]'s [[GPT]] series and",
+    "group": -1,
+    "value": 14
+  },
+  {
+    "id": "entities/Meta",
+    "label": "Meta",
+    "type": "entity",
+    "color": "#2196F3",
+    "path": "wiki/entities/Meta.md",
+    "markdown": "---\ntitle: \"Meta\"\ntype: entity\ntags: [technology, facebook, social-media, ai-research]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n## Overview\n\n**Meta Platforms, Inc.**（原名 Facebook, Inc.）是一家全球性的科技巨头，专注于社交媒体、虚拟现实（VR）和人工智能研究。Meta 拥有 Facebook、Instagram、WhatsApp 等产品，并在 AI 领域投入大量资源，开发了包括 LLaMA 系列大语言模型在内的开源模型。\n\n## Key Contributions\n\n- **Hermes JavaScript 引擎** — 专为 React Native 优化的 JS 引擎，采用 AOT 编译和紧凑字节码\n- **React Native** — 跨平台移动应用开发框架，Hermes 为其默认 JS 引擎\n- **LLaMA** — 开源大语言模型系列，推动了开放权重模型的发展\n- **PyTorch** — 主流深度学习框架，广泛用于 AI 研究\n\n## Connections\n\n- [[HermesJSEngine]] — Meta 开发的 React Native JS 引擎\n- [[ReactNative]] — Meta 的跨平台移动开发框架\n- [[LLaMA]] — Meta 发布的开源大语言模型\n",
+    "preview": "## Overview **Meta Platforms, Inc.**（原名 Facebook, Inc.）是一家全球性的科技巨头，专注于社交媒体、虚拟现实（VR）和人工智能研究。Meta 拥有 Facebook、Instagram、WhatsApp 等产品，并在 AI 领域投入大量资源，开发了包括 LLaMA 系列大语言模型在内的开源模型。 ## Key Contributions",
+    "group": -1,
+    "value": 10
+  },
+  {
+    "id": "entities/NousResearch",
+    "label": "NousResearch",
+    "type": "entity",
+    "color": "#2196F3",
+    "path": "wiki/entities/NousResearch.md",
+    "markdown": "---\ntitle: \"NousResearch\"\ntype: entity\ntags: [organization, ai-research, open-source]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-04\n---\n\n## Overview\n\nNousResearch is a decentralized, open-source AI research collective known for pushing the boundaries of autonomous AI agents and openly shared model fine-tunes. Unlike traditional corporate labs, NousResearch operates as a distributed community of researchers, engineers, and artists collaborating on public infrastructure for AI. Its work spans from agent frameworks to fine-tuned language models and synthetic data generation.\n\n## Key Projects\n\n### Agent & Infrastructure\n- **[[HermesAgent]]** — 自我进化的 AI Agent 框架，支持多种 LLM 提供商与多平台部署\n- **hermes-agent-self-evolution** — 基于 DSPy + GEPA 的进化式自我改进系统\n\n### Model Fine-Tunes\n- **Nous-Hermes** — A family of fine-tuned LLaMA and Mistral models optimized for general instruction following and reasoning. Early releases (Nous-Hermes 1, 2) demonstrated that small, open models could match larger proprietary counterparts with high-quality data curation.\n- **Capybara** — A series of conversational fine-tunes focused on roleplay, creative writing, and long-context coherence.\n- **Yi-Coder / Code models** — Specialized fine-tunes for code generation and software engineering tasks.\n\n### Research Contributions\n- **Synthetic Data Pipelines** — NousResearch pioneered the use of synthetic data generation for model fine-tuning, showing that carefully curated synthetic dialogues can outperform hand-collected human datasets.\n- **GEPA (Gradient-free Evolutionary Prompt Adjustment)** — An evolutionary algorithm for optimizing prompts without backpropagation, enabling agents to improve their own instructions over time.\n\n## Philosophy\n\n- **Open Weights**: All major model releases include downloadable weights and training recipes, enabling full reproducibility and downstream customization.\n- **Model Agnosticism**: Tools are designed to work across providers (OpenAI, Anthropic, local models via Hugging Face, etc.), preventing vendor lock-in.\n- **Self-Improvement as Default**: The organization views autonomous learning and skill creation as essential properties of next-generation AI systems, not optional add-ons.\n- **Decentralized Collaboration**: Research happens in public Discord servers and open GitHub repositories, with contributions from a global community rather than a centralized lab structure.\n\n## Connections\n\n- [[HermesAgent]] — 核心项目\n- [[AIAgent]] — 所属领域\n- [[SelfImprovingAI]] — 研究理念\n- [[OpenAI]] — 支持的 LLM 提供商之一\n- [[Meta]] — LLaMA 系列模型的来源（Nous-Hermes 基于 LLaMA）\n",
+    "preview": "## Overview NousResearch is a decentralized, open-source AI research collective known for pushing the boundaries of autonomous AI agents and openly shared model fine-tunes. Unlike traditional corporate labs, NousResearch",
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/OpenAI",
     "label": "OpenAI",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\OpenAI.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/OpenAI.md",
     "markdown": "---\ntitle: \"OpenAI\"\ntype: entity\ntags: [company, ai, research]\nsources: [intro-to-llms]\nlast_updated: 2024-03-20\n---\n\n# OpenAI\n\n**OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others.\n\n## Key Products\n- [[ChatGPT]] — conversational AI based on [[GPT]] architecture\n- [[GPT4]] — large multimodal language model\n- DALL-E — text-to-image generation model\n\n## Research Contributions\n- Pioneered the scaling of [[Transformer]]-based models through the [[GPT]] series\n- Demonstrated emergent capabilities in [[LargeLanguageModels]]\n- Developed RLHF for alignment\n\n## Connections\n- [[Google]] — competitor in the LLM space\n- [[Transformer]] — architecture used in their models\n- [[AttentionMechanism]] — core technique\n\n## Timeline\n- 2015: Founded as non-profit\n- 2018: GPT-1 released\n- 2019: GPT-2 released\n- 2020: GPT-3 released\n- 2022: ChatGPT launched\n- 2023: GPT-4 released\n",
     "preview": "# OpenAI **OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others. ## Key Products",
-    "group": 0,
-    "value": 22
+    "group": -1,
+    "value": 27
+  },
+  {
+    "id": "entities/ReactNative",
+    "label": "ReactNative",
+    "type": "entity",
+    "color": "#2196F3",
+    "path": "wiki/entities/ReactNative.md",
+    "markdown": "---\ntitle: \"ReactNative\"\ntype: entity\ntags: [mobile-development, cross-platform, javascript, meta]\nsources: [github-hermes-ecosystem]\nlast_updated: 2026-05-02\n---\n\n## Overview\n\n**React Native** 是 Meta（Facebook）开发的开源跨平台移动应用开发框架，允许开发者使用 JavaScript 和 React 构建原生 iOS 和 Android 应用。自 React Native 0.69.0 起，[[HermesJSEngine]] 成为其默认捆绑的 JavaScript 引擎，显著改善了应用启动性能和内存占用。\n\n## Core Features\n\n- **跨平台开发** — 一套代码库同时运行在 iOS 和 Android\n- **原生性能** — 通过桥接层将 JavaScript 代码转换为原生组件\n- **热重载** — 开发过程中实时预览代码变更\n- **Hermes 集成** — 默认使用 Hermes 引擎，AOT 编译为紧凑字节码\n\n## Connections\n\n- [[HermesJSEngine]] — 默认 JavaScript 引擎，由 Meta 开发\n- [[Meta]] — React Native 的开发和维护公司\n",
+    "preview": "## Overview **React Native** 是 Meta（Facebook）开发的开源跨平台移动应用开发框架，允许开发者使用 JavaScript 和 React 构建原生 iOS 和 Android 应用。自 React Native 0.69.0 起，[[HermesJSEngine]] 成为其默认捆绑的 JavaScript 引擎，显著改善了应用启动性能和内存占用。 ## Core Features",
+    "group": -1,
+    "value": 6
   },
   {
     "id": "entities/SamAltman",
     "label": "Sam Altman",
     "type": "entity",
-    "color": "#E91E63",
-    "path": "wiki\\entities\\SamAltman.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/SamAltman.md",
     "markdown": "---\ntitle: \"Sam Altman\"\ntype: entity\ntags: [person, entrepreneur]\nsources: [intro-to-llms]\nlast_updated: 2026-04-28\n---\n\n# Sam Altman\n\n**Sam Altman** is the CEO of [[OpenAI]], which he has led since 2019. Under his leadership, OpenAI launched [[ChatGPT]] (2022) and [[GPT4]] (2023), catalyzing the widespread adoption of [[LargeLanguageModels]].\n\nPrior to OpenAI, he was the president of Y Combinator. He co-founded OpenAI alongside [[GregBrockman]], [[IlyaSutskever]], and others in 2015.\n\n## Connections\n- [[OpenAI]] — CEO since 2019\n- [[ChatGPT]] — launched under his leadership\n- [[GPT]] — scaled during his tenure\n",
     "preview": "# Sam Altman **Sam Altman** is the CEO of [[OpenAI]], which he has led since 2019. Under his leadership, OpenAI launched [[ChatGPT]] (2022) and [[GPT4]] (2023), catalyzing the widespread adoption of [[LargeLanguageModels",
-    "group": 0,
-    "value": 11
+    "group": -1,
+    "value": 10
   },
   {
     "id": "entities/T5",
     "label": "T5",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\T5.md",
-    "markdown": "---\ntitle: \"T5\"\ntype: entity\ntags: []\nsources: ['overview.md', 'foundation-models-overview.md']\n---\n\n# T5\n\nT5, or Text-to-Text Transfer Transformer, is a family of encoder-decoder models developed by [[Google]]. Its defining innovation is reformulating all natural language processing (NLP) tasks—including translation, summarization, question answering, and classification—into a unified text-to-text framework, where both the input and output are always text strings. This allows a single model architecture and training objective to be applied across diverse tasks by simply prefixing the input with a task-specific cue (e.g., “translate English to German: …”). T5 is a key example of a foundation model built upon the [[Transformer]] architecture, leveraging the [[AttentionMechanism|self-attention]] mechanism introduced in the seminal paper [[Attention Is All You Need]]. The model demonstrated that a unified approach, combined with a large-scale “Colossal Clean Crawled Corpus” (C4), could achieve state-of-the-art performance on many benchmarks, and its design philosophy has influenced subsequent large language models by emphasizing the importance of transfer learning and task-agnostic pretraining.",
+    "color": "#2196F3",
+    "path": "wiki/entities/T5.md",
+    "markdown": "---\ntitle: \"T5\"\ntype: entity\ntags: []\nsources: ['overview', 'foundation-models-overview']\nlast_updated: 2026-04-30\n---\n\n# T5\n\nT5, or Text-to-Text Transfer Transformer, is a family of encoder-decoder models developed by [[Google]]. Its defining innovation is reformulating all natural language processing (NLP) tasks—including translation, summarization, question answering, and classification—into a unified text-to-text framework, where both the input and output are always text strings. This allows a single model architecture and training objective to be applied across diverse tasks by simply prefixing the input with a task-specific cue (e.g., “translate English to German: …”). T5 is a key example of a foundation model built upon the [[Transformer]] architecture, leveraging the [[AttentionMechanism|self-attention]] mechanism introduced in the seminal paper [[Attention Is All You Need]]. The model demonstrated that a unified approach, combined with a large-scale “Colossal Clean Crawled Corpus” (C4), could achieve state-of-the-art performance on many benchmarks, and its design philosophy has influenced subsequent large language models by emphasizing the importance of transfer learning and task-agnostic pretraining.",
     "preview": "# T5 T5, or Text-to-Text Transfer Transformer, is a family of encoder-decoder models developed by [[Google]]. Its defining innovation is reformulating all natural language processing (NLP) tasks—including translation, su",
-    "group": 2,
-    "value": 9
+    "group": -1,
+    "value": 10
   },
   {
     "id": "entities/Vaswani",
     "label": "Vaswani",
     "type": "entity",
-    "color": "#8BC34A",
-    "path": "wiki\\entities\\Vaswani.md",
+    "color": "#2196F3",
+    "path": "wiki/entities/Vaswani.md",
     "markdown": "---\ntitle: \"Vaswani\"\ntype: entity\ntags: [person, researcher]\nsources: [attention-is-all-you-need]\nlast_updated: 2026-04-28\n---\n\n# Ashish Vaswani\n\n**Ashish Vaswani** is the first author of the seminal paper \"[[Attention Is All You Need]]\" (2017), which introduced the [[Transformer]] architecture. At the time of publication, he was a researcher at [[Google]] Research.\n\nThe Transformer architecture has since become the foundation for virtually all modern [[LargeLanguageModels]], including [[GPT]], [[BERT]], [[T5]], and [[LLaMA]].\n\n## Connections\n- [[Transformer]] — architecture introduced in his paper\n- [[AttentionMechanism]] — core technique\n- [[Google]] — research institution at time of publication\n",
     "preview": "# Ashish Vaswani **Ashish Vaswani** is the first author of the seminal paper \"[[Attention Is All You Need]]\" (2017), which introduced the [[Transformer]] architecture. At the time of publication, he was a researcher at [",
-    "group": 2,
-    "value": 15
+    "group": -1,
+    "value": 14
   },
   {
     "id": "sources/attention-is-all-you-need",
     "label": "Attention Is All You Need",
     "type": "source",
-    "color": "#8BC34A",
-    "path": "wiki\\sources\\attention-is-all-you-need.md",
+    "color": "#4CAF50",
+    "path": "wiki/sources/attention-is-all-you-need.md",
     "markdown": "---\ntitle: \"Attention Is All You Need\"\ntype: source\ntags: [paper, nlp, transformer]\ndate: 2017-06-12\nsource_file: raw/attention-is-all-you-need.pdf\n---\n\n## Summary\nThe seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms.\n\n## Key Claims\n- The [[Transformer]] achieves state-of-the-art translation quality while being more parallelizable and requiring significantly less training time.\n- Self-attention layers are faster than recurrent layers when the sequence length is smaller than the representation dimensionality.\n- The proposed architecture generalizes well to other tasks beyond machine translation.\n\n## Key Quotes\n> \"We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.\"\n\n> \"The Transformer is the first transduction model based entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution.\"\n\n## Connections\n- [[Transformer]] — architecture introduced in this paper\n- [[AttentionMechanism]] — core concept\n- [[Google]] — research institution\n- [[Vaswani]] — first author\n\n## Contradictions\n- Earlier work by [[Bahdanau]] proposed attention for RNNs; this paper shows attention alone is sufficient.\n",
     "preview": "## Summary The seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms. ## Key C",
-    "group": 2,
-    "value": 6
+    "group": -1,
+    "value": 7
+  },
+  {
+    "id": "sources/github-hermes-ecosystem",
+    "label": "GitHub Hermes 生态系统综述",
+    "type": "source",
+    "color": "#4CAF50",
+    "path": "wiki/sources/github-hermes-ecosystem.md",
+    "markdown": "---\ntitle: \"GitHub Hermes 生态系统综述\"\ntype: source\ntags: [hermes, ai-agent, javascript-engine, github, open-source]\ndate: 2026-05-02\nsource_file: raw/github-hermes-ecosystem.md\n---\n\n## Summary\n\nGitHub 上名为 \"Hermes\" 的项目横跨多个领域：最热门的是 NousResearch 开源的 **Hermes Agent**（⭐128,747），一个自我进化的 AI Agent 框架；其次是 Meta/Facebook 的 **Hermes JavaScript 引擎**（⭐11,017），专为 React Native 优化。此外还有 Hermes WebUI、Hermes Workspace 等生态项目，以及 HashiCorp 的文档管理系统和 Cornell 的 RAG 优化框架等同名项目。\n\n## Key Claims\n\n- Hermes Agent 是目前 GitHub 上星标数最高的 AI Agent 项目之一（128K+ stars），由 Nous Research 开发\n- Hermes Agent 的核心理念是\"自我改进闭环\"：从经验中创建技能、使用中改进技能、跨会话搜索历史、构建用户模型\n- Hermes JS 引擎是 React Native 的默认 JavaScript 引擎，采用 AOT 编译和紧凑字节码优化启动性能\n- Hermes 生态系统包含 WebUI、Workspace、Self-Evolution、Orange Book 等多个子项目\n\n## Key Quotes\n\n> \"The self-improving AI agent built by Nous Research. It's the only agent with a built-in learning loop.\" — Hermes Agent README\n\n> \"Hermes is a JavaScript engine optimized for fast start-up of React Native apps. It features ahead-of-time static optimization and compact bytecode.\" — Facebook/Hermes README\n\n> \"The agent that grows with you\" — Hermes Agent Slogan\n\n## Connections\n\n- [[NousResearch]] — Hermes Agent 的开发组织，专注于开源 AI 研究\n- [[Meta]] — Hermes JavaScript 引擎的开发公司，用于 React Native\n- [[HermesAgent]] — 最热门的 Hermes 项目，自我进化 AI Agent\n- [[HermesJSEngine]] — React Native 优化的 JavaScript 引擎\n- [[AIAgent]] — 核心概念，Hermes Agent 的本质\n- [[ReactNative]] — Hermes JS 引擎的应用平台\n- [[SelfImprovingAI]] — Hermes Agent 的核心理念\n\n## Contradictions\n\n- Hermes Agent 和 Hermes JS Engine 名称相同但完全无关，分别属于 AI 和移动开发两个不同领域\n",
+    "preview": "## Summary GitHub 上名为 \"Hermes\" 的项目横跨多个领域：最热门的是 NousResearch 开源的 **Hermes Agent**（⭐128,747），一个自我进化的 AI Agent 框架；其次是 Meta/Facebook 的 **Hermes JavaScript 引擎**（⭐11,017），专为 React Native 优化。此外还有 Hermes WebUI、Hermes Workspace 等",
+    "group": -1,
+    "value": 9
   },
   {
     "id": "sources/intro-to-llms",
     "label": "Introduction to Large Language Models",
     "type": "source",
-    "color": "#00BCD4",
-    "path": "wiki\\sources\\intro-to-llms.md",
+    "color": "#4CAF50",
+    "path": "wiki/sources/intro-to-llms.md",
     "markdown": "---\ntitle: \"Introduction to Large Language Models\"\ntype: source\ntags: [article, llm, overview]\ndate: 2024-01-15\nsource_file: raw/intro-to-llms.md\n---\n\n## Summary\nA comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures.\n\n## Key Claims\n- LLMs are fundamentally next-token predictors trained on vast corpora.\n- Scaling laws predict that model capability improves predictably with compute, data, and parameters.\n- Emergent abilities appear abruptly at certain scale thresholds.\n\n## Key Quotes\n> \"The surprising effectiveness of simply predicting the next word at scale has reshaped our understanding of intelligence.\"\n\n## Connections\n- [[GPT]] — decoder-only architecture\n- [[BERT]] — encoder-only architecture\n- [[Transformer]] — foundational architecture\n- [[OpenAI]] — leading research lab\n- [[AttentionMechanism]] — core mechanism\n\n## Contradictions\n- Some researchers argue emergent abilities are a metric artifact rather than a fundamental property.\n",
     "preview": "## Summary A comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures. ## Key Claims",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "syntheses/foundation-models-overview",
     "label": "Foundation Models Overview",
     "type": "synthesis",
-    "color": "#8BC34A",
-    "path": "wiki\\syntheses\\foundation-models-overview.md",
+    "color": "#9C27B0",
+    "path": "wiki/syntheses/foundation-models-overview.md",
     "markdown": "---\ntitle: \"Foundation Models Overview\"\ntype: synthesis\ntags: [overview, llm, foundation-models]\nsources: [intro-to-llms, attention-is-all-you-need]\nlast_updated: 2024-03-25\n---\n\n# Foundation Models Overview\n\nFoundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks.\n\n## The Transformer Era\n\nThe modern foundation model era began with the [[Transformer]] architecture (2017), which introduced [[AttentionMechanism|self-attention]] as a replacement for recurrent layers. [[Google]] invented it; [[OpenAI]] scaled it.\n\n## Key Model Families\n\n| Model | Architecture | Organization | Notable Feature |\n|---|---|---|---|\n| [[GPT]] | Decoder-only | [[OpenAI]] | Autoregressive generation |\n| [[BERT]] | Encoder-only | [[Google]] | Bidirectional understanding |\n| [[T5]] | Encoder-decoder | [[Google]] | Text-to-text framework |\n| [[LLaMA]] | Decoder-only | Meta | Open weights |\n\n## Scaling Laws\n\nModel capability improves predictably with:\n- Compute (FLOPs)\n- Data (tokens)\n- Parameters (model size)\n\n## Connections\n- [[Transformer]] — universal architecture\n- [[AttentionMechanism]] — core mechanism\n- [[OpenAI]] — commercial leader\n- [[Google]] — research leader\n",
     "preview": "# Foundation Models Overview Foundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks. ## The Transformer Era",
-    "group": 2,
-    "value": 9
+    "group": -1,
+    "value": 10
   }
 ];
 const originalEdges = [
   {
-    "id": "overview->entities/LLaMA:EXTRACTED",
+    "id": "overview->sources/attention-is-all-you-need:EXTRACTED",
     "from": "overview",
-    "to": "entities/LLaMA",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/SamAltman:EXTRACTED",
-    "from": "overview",
-    "to": "entities/SamAltman",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/Attention Is All You Need:EXTRACTED",
-    "from": "overview",
-    "to": "entities/Attention Is All You Need",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/T5:EXTRACTED",
-    "from": "overview",
-    "to": "entities/T5",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/OpenAI:EXTRACTED",
-    "from": "overview",
-    "to": "entities/OpenAI",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/Google:EXTRACTED",
-    "from": "overview",
-    "to": "entities/Google",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/Vaswani:EXTRACTED",
-    "from": "overview",
-    "to": "entities/Vaswani",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/BERT:EXTRACTED",
-    "from": "overview",
-    "to": "entities/BERT",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "overview->entities/Bahdanau:EXTRACTED",
-    "from": "overview",
-    "to": "entities/Bahdanau",
+    "to": "sources/attention-is-all-you-need",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -475,6 +516,86 @@ const originalEdges = [
     "label": ""
   },
   {
+    "id": "overview->sources/github-hermes-ecosystem:EXTRACTED",
+    "from": "overview",
+    "to": "sources/github-hermes-ecosystem",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->entities/HermesAgent:EXTRACTED",
+    "from": "overview",
+    "to": "entities/HermesAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->concepts/StateSpaceModels:EXTRACTED",
+    "from": "overview",
+    "to": "concepts/StateSpaceModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->entities/HermesJSEngine:EXTRACTED",
+    "from": "overview",
+    "to": "entities/HermesJSEngine",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->concepts/AgentFrameworkComparison:EXTRACTED",
+    "from": "overview",
+    "to": "concepts/AgentFrameworkComparison",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->concepts/AIAlignment:EXTRACTED",
+    "from": "overview",
+    "to": "concepts/AIAlignment",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->syntheses/foundation-models-overview:EXTRACTED",
+    "from": "overview",
+    "to": "syntheses/foundation-models-overview",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "overview->entities/OpenAI:EXTRACTED",
+    "from": "overview",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
     "id": "overview->entities/LargeLanguageModels:EXTRACTED",
     "from": "overview",
     "to": "entities/LargeLanguageModels",
@@ -485,9 +606,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "overview->entities/IlyaSutskever:EXTRACTED",
+    "id": "overview->entities/Google:EXTRACTED",
     "from": "overview",
-    "to": "entities/IlyaSutskever",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -495,9 +616,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "overview->entities/GPT:EXTRACTED",
+    "id": "overview->entities/Meta:EXTRACTED",
     "from": "overview",
-    "to": "entities/GPT",
+    "to": "entities/Meta",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -505,9 +626,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "overview->entities/GregBrockman:EXTRACTED",
+    "id": "overview->concepts/AIAgent:EXTRACTED",
     "from": "overview",
-    "to": "entities/GregBrockman",
+    "to": "concepts/AIAgent",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -515,9 +636,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "overview->entities/GPT4:EXTRACTED",
+    "id": "overview->concepts/SelfImprovingAI:EXTRACTED",
     "from": "overview",
-    "to": "entities/GPT4",
+    "to": "concepts/SelfImprovingAI",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -525,9 +646,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "overview->entities/ChatGPT:EXTRACTED",
+    "id": "overview->concepts/Transformer:EXTRACTED",
     "from": "overview",
-    "to": "entities/ChatGPT",
+    "to": "concepts/Transformer",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -535,9 +656,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/AttentionMechanism->entities/BERT:EXTRACTED",
-    "from": "concepts/AttentionMechanism",
-    "to": "entities/BERT",
+    "id": "concepts/AgentFrameworkComparison->entities/NousResearch:EXTRACTED",
+    "from": "concepts/AgentFrameworkComparison",
+    "to": "entities/NousResearch",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -545,9 +666,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/AttentionMechanism->entities/GPT:EXTRACTED",
-    "from": "concepts/AttentionMechanism",
-    "to": "entities/GPT",
+    "id": "concepts/AgentFrameworkComparison->concepts/AIAgent:EXTRACTED",
+    "from": "concepts/AgentFrameworkComparison",
+    "to": "concepts/AIAgent",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -555,8 +676,118 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/AttentionMechanism->entities/OpenAI:EXTRACTED",
-    "from": "concepts/AttentionMechanism",
+    "id": "concepts/AgentFrameworkComparison->entities/HermesAgent:EXTRACTED",
+    "from": "concepts/AgentFrameworkComparison",
+    "to": "entities/HermesAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AgentFrameworkComparison->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "concepts/AgentFrameworkComparison",
+    "to": "concepts/SelfImprovingAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AgentFrameworkComparison->entities/LargeLanguageModels:EXTRACTED",
+    "from": "concepts/AgentFrameworkComparison",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAgent->entities/HermesAgent:EXTRACTED",
+    "from": "concepts/AIAgent",
+    "to": "entities/HermesAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAgent->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "concepts/AIAgent",
+    "to": "concepts/SelfImprovingAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAgent->entities/NousResearch:EXTRACTED",
+    "from": "concepts/AIAgent",
+    "to": "entities/NousResearch",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAgent->entities/LargeLanguageModels:EXTRACTED",
+    "from": "concepts/AIAgent",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAgent->concepts/AgentFrameworkComparison:EXTRACTED",
+    "from": "concepts/AIAgent",
+    "to": "concepts/AgentFrameworkComparison",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAlignment->concepts/AIAgent:EXTRACTED",
+    "from": "concepts/AIAlignment",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAlignment->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "concepts/AIAlignment",
+    "to": "concepts/SelfImprovingAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAlignment->entities/LargeLanguageModels:EXTRACTED",
+    "from": "concepts/AIAlignment",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AIAlignment->entities/OpenAI:EXTRACTED",
+    "from": "concepts/AIAlignment",
     "to": "entities/OpenAI",
     "type": "EXTRACTED",
     "color": "#555555",
@@ -575,9 +806,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/Transformer->entities/LLaMA:EXTRACTED",
-    "from": "concepts/Transformer",
-    "to": "entities/LLaMA",
+    "id": "concepts/AttentionMechanism->entities/GPT:EXTRACTED",
+    "from": "concepts/AttentionMechanism",
+    "to": "entities/GPT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -585,9 +816,89 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/Transformer->entities/GPT:EXTRACTED",
-    "from": "concepts/Transformer",
-    "to": "entities/GPT",
+    "id": "concepts/AttentionMechanism->entities/BERT:EXTRACTED",
+    "from": "concepts/AttentionMechanism",
+    "to": "entities/BERT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/AttentionMechanism->entities/OpenAI:EXTRACTED",
+    "from": "concepts/AttentionMechanism",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/SelfImprovingAI->entities/HermesAgent:EXTRACTED",
+    "from": "concepts/SelfImprovingAI",
+    "to": "entities/HermesAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/SelfImprovingAI->concepts/AIAlignment:EXTRACTED",
+    "from": "concepts/SelfImprovingAI",
+    "to": "concepts/AIAlignment",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/SelfImprovingAI->concepts/AIAgent:EXTRACTED",
+    "from": "concepts/SelfImprovingAI",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/SelfImprovingAI->entities/NousResearch:EXTRACTED",
+    "from": "concepts/SelfImprovingAI",
+    "to": "entities/NousResearch",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/StateSpaceModels->concepts/Transformer:EXTRACTED",
+    "from": "concepts/StateSpaceModels",
+    "to": "concepts/Transformer",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/StateSpaceModels->concepts/AttentionMechanism:EXTRACTED",
+    "from": "concepts/StateSpaceModels",
+    "to": "concepts/AttentionMechanism",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/StateSpaceModels->entities/LargeLanguageModels:EXTRACTED",
+    "from": "concepts/StateSpaceModels",
+    "to": "entities/LargeLanguageModels",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -605,9 +916,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/Transformer->entities/T5:EXTRACTED",
+    "id": "concepts/Transformer->entities/Vaswani:EXTRACTED",
     "from": "concepts/Transformer",
-    "to": "entities/T5",
+    "to": "entities/Vaswani",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -625,19 +936,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/Transformer->entities/Vaswani:EXTRACTED",
+    "id": "concepts/Transformer->concepts/AttentionMechanism:EXTRACTED",
     "from": "concepts/Transformer",
-    "to": "entities/Vaswani",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "concepts/Transformer->entities/OpenAI:EXTRACTED",
-    "from": "concepts/Transformer",
-    "to": "entities/OpenAI",
+    "to": "concepts/AttentionMechanism",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -655,9 +956,49 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "concepts/Transformer->concepts/AttentionMechanism:EXTRACTED",
+    "id": "concepts/Transformer->entities/GPT:EXTRACTED",
     "from": "concepts/Transformer",
-    "to": "concepts/AttentionMechanism",
+    "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/Transformer->entities/LLaMA:EXTRACTED",
+    "from": "concepts/Transformer",
+    "to": "entities/LLaMA",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/Transformer->entities/T5:EXTRACTED",
+    "from": "concepts/Transformer",
+    "to": "entities/T5",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/Transformer->entities/OpenAI:EXTRACTED",
+    "from": "concepts/Transformer",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "concepts/Transformer->concepts/StateSpaceModels:EXTRACTED",
+    "from": "concepts/Transformer",
+    "to": "concepts/StateSpaceModels",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -675,16 +1016,6 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Attention Is All You Need->entities/Google:EXTRACTED",
-    "from": "entities/Attention Is All You Need",
-    "to": "entities/Google",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
     "id": "entities/Attention Is All You Need->entities/Vaswani:EXTRACTED",
     "from": "entities/Attention Is All You Need",
     "to": "entities/Vaswani",
@@ -695,9 +1026,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Bahdanau->entities/Attention Is All You Need:EXTRACTED",
-    "from": "entities/Bahdanau",
-    "to": "entities/Attention Is All You Need",
+    "id": "entities/Attention Is All You Need->entities/Google:EXTRACTED",
+    "from": "entities/Attention Is All You Need",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -705,9 +1036,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Bahdanau->entities/Google:EXTRACTED",
+    "id": "entities/Bahdanau->entities/Attention Is All You Need:EXTRACTED",
     "from": "entities/Bahdanau",
-    "to": "entities/Google",
+    "to": "entities/Attention Is All You Need",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -745,9 +1076,99 @@ const originalEdges = [
     "label": ""
   },
   {
+    "id": "entities/Bahdanau->entities/Google:EXTRACTED",
+    "from": "entities/Bahdanau",
+    "to": "entities/Google",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/BERT->entities/Google:EXTRACTED",
+    "from": "entities/BERT",
+    "to": "entities/Google",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/BERT->concepts/Transformer:EXTRACTED",
+    "from": "entities/BERT",
+    "to": "concepts/Transformer",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
     "id": "entities/BERT->entities/GPT:EXTRACTED",
     "from": "entities/BERT",
     "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ChatGPT->entities/OpenAI:EXTRACTED",
+    "from": "entities/ChatGPT",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ChatGPT->entities/GPT:EXTRACTED",
+    "from": "entities/ChatGPT",
+    "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ChatGPT->entities/LargeLanguageModels:EXTRACTED",
+    "from": "entities/ChatGPT",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ChatGPT->entities/GPT4:EXTRACTED",
+    "from": "entities/ChatGPT",
+    "to": "entities/GPT4",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/Google->concepts/Transformer:EXTRACTED",
+    "from": "entities/Google",
+    "to": "concepts/Transformer",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/Google->entities/BERT:EXTRACTED",
+    "from": "entities/Google",
+    "to": "entities/BERT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -775,29 +1196,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Google->entities/BERT:EXTRACTED",
-    "from": "entities/Google",
-    "to": "entities/BERT",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
     "id": "entities/Google->concepts/AttentionMechanism:EXTRACTED",
     "from": "entities/Google",
     "to": "concepts/AttentionMechanism",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/Google->concepts/Transformer:EXTRACTED",
-    "from": "entities/Google",
-    "to": "concepts/Transformer",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -845,9 +1246,59 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/GregBrockman->entities/SamAltman:EXTRACTED",
-    "from": "entities/GregBrockman",
-    "to": "entities/SamAltman",
+    "id": "entities/GPT4->entities/OpenAI:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GPT4->entities/ChatGPT:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "entities/ChatGPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GPT4->concepts/Transformer:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "concepts/Transformer",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GPT4->entities/GPT:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GPT4->entities/LargeLanguageModels:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GPT4->entities/LLaMA:EXTRACTED",
+    "from": "entities/GPT4",
+    "to": "entities/LLaMA",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -858,6 +1309,16 @@ const originalEdges = [
     "id": "entities/GregBrockman->entities/OpenAI:EXTRACTED",
     "from": "entities/GregBrockman",
     "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/GregBrockman->entities/SamAltman:EXTRACTED",
+    "from": "entities/GregBrockman",
+    "to": "entities/SamAltman",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -885,16 +1346,6 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/GregBrockman->entities/GPT4:EXTRACTED",
-    "from": "entities/GregBrockman",
-    "to": "entities/GPT4",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
     "id": "entities/GregBrockman->entities/ChatGPT:EXTRACTED",
     "from": "entities/GregBrockman",
     "to": "entities/ChatGPT",
@@ -905,9 +1356,99 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/IlyaSutskever->entities/Google:EXTRACTED",
-    "from": "entities/IlyaSutskever",
-    "to": "entities/Google",
+    "id": "entities/GregBrockman->entities/GPT4:EXTRACTED",
+    "from": "entities/GregBrockman",
+    "to": "entities/GPT4",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->entities/NousResearch:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "entities/NousResearch",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->entities/HermesJSEngine:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "entities/HermesJSEngine",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->concepts/AIAgent:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "concepts/SelfImprovingAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->entities/OpenAI:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesAgent->concepts/AgentFrameworkComparison:EXTRACTED",
+    "from": "entities/HermesAgent",
+    "to": "concepts/AgentFrameworkComparison",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesJSEngine->entities/Meta:EXTRACTED",
+    "from": "entities/HermesJSEngine",
+    "to": "entities/Meta",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesJSEngine->entities/ReactNative:EXTRACTED",
+    "from": "entities/HermesJSEngine",
+    "to": "entities/ReactNative",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/HermesJSEngine->entities/HermesAgent:EXTRACTED",
+    "from": "entities/HermesJSEngine",
+    "to": "entities/HermesAgent",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -925,19 +1466,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/IlyaSutskever->entities/GPT4:EXTRACTED",
+    "id": "entities/IlyaSutskever->entities/Google:EXTRACTED",
     "from": "entities/IlyaSutskever",
-    "to": "entities/GPT4",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/IlyaSutskever->entities/GPT:EXTRACTED",
-    "from": "entities/IlyaSutskever",
-    "to": "entities/GPT",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -955,9 +1486,29 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/LargeLanguageModels->entities/BERT:EXTRACTED",
+    "id": "entities/IlyaSutskever->entities/GPT:EXTRACTED",
+    "from": "entities/IlyaSutskever",
+    "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/IlyaSutskever->entities/GPT4:EXTRACTED",
+    "from": "entities/IlyaSutskever",
+    "to": "entities/GPT4",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LargeLanguageModels->concepts/Transformer:EXTRACTED",
     "from": "entities/LargeLanguageModels",
-    "to": "entities/BERT",
+    "to": "concepts/Transformer",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -975,9 +1526,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/LLaMA->entities/Attention Is All You Need:EXTRACTED",
-    "from": "entities/LLaMA",
-    "to": "entities/Attention Is All You Need",
+    "id": "entities/LargeLanguageModels->entities/LLaMA:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "entities/LLaMA",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -985,9 +1536,59 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/LLaMA->entities/Google:EXTRACTED",
+    "id": "entities/LargeLanguageModels->entities/BERT:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "entities/BERT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LargeLanguageModels->entities/T5:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "entities/T5",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LargeLanguageModels->concepts/AttentionMechanism:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "concepts/AttentionMechanism",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LargeLanguageModels->concepts/AIAgent:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LargeLanguageModels->concepts/StateSpaceModels:EXTRACTED",
+    "from": "entities/LargeLanguageModels",
+    "to": "concepts/StateSpaceModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/LLaMA->entities/Meta:EXTRACTED",
     "from": "entities/LLaMA",
-    "to": "entities/Google",
+    "to": "entities/Meta",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1005,9 +1606,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/LLaMA->entities/BERT:EXTRACTED",
+    "id": "entities/LLaMA->entities/GPT:EXTRACTED",
     "from": "entities/LLaMA",
-    "to": "entities/BERT",
+    "to": "entities/GPT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1015,9 +1616,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/LLaMA->entities/GPT:EXTRACTED",
+    "id": "entities/LLaMA->entities/Google:EXTRACTED",
     "from": "entities/LLaMA",
-    "to": "entities/GPT",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1035,9 +1636,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/SamAltman:EXTRACTED",
-    "from": "entities/OpenAI",
-    "to": "entities/SamAltman",
+    "id": "entities/LLaMA->entities/Attention Is All You Need:EXTRACTED",
+    "from": "entities/LLaMA",
+    "to": "entities/Attention Is All You Need",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1045,8 +1646,8 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->concepts/AttentionMechanism:EXTRACTED",
-    "from": "entities/OpenAI",
+    "id": "entities/LLaMA->concepts/AttentionMechanism:EXTRACTED",
+    "from": "entities/LLaMA",
     "to": "concepts/AttentionMechanism",
     "type": "EXTRACTED",
     "color": "#555555",
@@ -1055,9 +1656,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->concepts/Transformer:EXTRACTED",
-    "from": "entities/OpenAI",
-    "to": "concepts/Transformer",
+    "id": "entities/Meta->entities/HermesJSEngine:EXTRACTED",
+    "from": "entities/Meta",
+    "to": "entities/HermesJSEngine",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1065,9 +1666,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/Google:EXTRACTED",
-    "from": "entities/OpenAI",
-    "to": "entities/Google",
+    "id": "entities/Meta->entities/ReactNative:EXTRACTED",
+    "from": "entities/Meta",
+    "to": "entities/ReactNative",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1075,9 +1676,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/LargeLanguageModels:EXTRACTED",
-    "from": "entities/OpenAI",
-    "to": "entities/LargeLanguageModels",
+    "id": "entities/Meta->entities/LLaMA:EXTRACTED",
+    "from": "entities/Meta",
+    "to": "entities/LLaMA",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1085,9 +1686,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/IlyaSutskever:EXTRACTED",
-    "from": "entities/OpenAI",
-    "to": "entities/IlyaSutskever",
+    "id": "entities/NousResearch->entities/HermesAgent:EXTRACTED",
+    "from": "entities/NousResearch",
+    "to": "entities/HermesAgent",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1095,9 +1696,49 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/GPT:EXTRACTED",
+    "id": "entities/NousResearch->concepts/AIAgent:EXTRACTED",
+    "from": "entities/NousResearch",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/NousResearch->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "entities/NousResearch",
+    "to": "concepts/SelfImprovingAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/NousResearch->entities/OpenAI:EXTRACTED",
+    "from": "entities/NousResearch",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/NousResearch->entities/Meta:EXTRACTED",
+    "from": "entities/NousResearch",
+    "to": "entities/Meta",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->entities/SamAltman:EXTRACTED",
     "from": "entities/OpenAI",
-    "to": "entities/GPT",
+    "to": "entities/SamAltman",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1115,9 +1756,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/OpenAI->entities/GPT4:EXTRACTED",
+    "id": "entities/OpenAI->entities/IlyaSutskever:EXTRACTED",
     "from": "entities/OpenAI",
-    "to": "entities/GPT4",
+    "to": "entities/IlyaSutskever",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1135,6 +1776,86 @@ const originalEdges = [
     "label": ""
   },
   {
+    "id": "entities/OpenAI->entities/GPT:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "entities/GPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->entities/GPT4:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "entities/GPT4",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->concepts/Transformer:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "concepts/Transformer",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->entities/LargeLanguageModels:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->entities/Google:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "entities/Google",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/OpenAI->concepts/AttentionMechanism:EXTRACTED",
+    "from": "entities/OpenAI",
+    "to": "concepts/AttentionMechanism",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ReactNative->entities/HermesJSEngine:EXTRACTED",
+    "from": "entities/ReactNative",
+    "to": "entities/HermesJSEngine",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/ReactNative->entities/Meta:EXTRACTED",
+    "from": "entities/ReactNative",
+    "to": "entities/Meta",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
     "id": "entities/SamAltman->entities/OpenAI:EXTRACTED",
     "from": "entities/SamAltman",
     "to": "entities/OpenAI",
@@ -1145,9 +1866,39 @@ const originalEdges = [
     "label": ""
   },
   {
+    "id": "entities/SamAltman->entities/ChatGPT:EXTRACTED",
+    "from": "entities/SamAltman",
+    "to": "entities/ChatGPT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/SamAltman->entities/GPT4:EXTRACTED",
+    "from": "entities/SamAltman",
+    "to": "entities/GPT4",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
     "id": "entities/SamAltman->entities/LargeLanguageModels:EXTRACTED",
     "from": "entities/SamAltman",
     "to": "entities/LargeLanguageModels",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/SamAltman->entities/GregBrockman:EXTRACTED",
+    "from": "entities/SamAltman",
+    "to": "entities/GregBrockman",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1175,46 +1926,6 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/SamAltman->entities/GregBrockman:EXTRACTED",
-    "from": "entities/SamAltman",
-    "to": "entities/GregBrockman",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/SamAltman->entities/GPT4:EXTRACTED",
-    "from": "entities/SamAltman",
-    "to": "entities/GPT4",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/SamAltman->entities/ChatGPT:EXTRACTED",
-    "from": "entities/SamAltman",
-    "to": "entities/ChatGPT",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/T5->entities/Attention Is All You Need:EXTRACTED",
-    "from": "entities/T5",
-    "to": "entities/Attention Is All You Need",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
     "id": "entities/T5->entities/Google:EXTRACTED",
     "from": "entities/T5",
     "to": "entities/Google",
@@ -1235,9 +1946,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Vaswani->entities/LLaMA:EXTRACTED",
-    "from": "entities/Vaswani",
-    "to": "entities/LLaMA",
+    "id": "entities/T5->concepts/AttentionMechanism:EXTRACTED",
+    "from": "entities/T5",
+    "to": "concepts/AttentionMechanism",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1245,9 +1956,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Vaswani->concepts/AttentionMechanism:EXTRACTED",
-    "from": "entities/Vaswani",
-    "to": "concepts/AttentionMechanism",
+    "id": "entities/T5->entities/Attention Is All You Need:EXTRACTED",
+    "from": "entities/T5",
+    "to": "entities/Attention Is All You Need",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1265,9 +1976,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Vaswani->entities/T5:EXTRACTED",
+    "id": "entities/Vaswani->concepts/Transformer:EXTRACTED",
     "from": "entities/Vaswani",
-    "to": "entities/T5",
+    "to": "concepts/Transformer",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1278,16 +1989,6 @@ const originalEdges = [
     "id": "entities/Vaswani->entities/Google:EXTRACTED",
     "from": "entities/Vaswani",
     "to": "entities/Google",
-    "type": "EXTRACTED",
-    "color": "#555555",
-    "confidence": 1.0,
-    "title": "",
-    "label": ""
-  },
-  {
-    "id": "entities/Vaswani->entities/BERT:EXTRACTED",
-    "from": "entities/Vaswani",
-    "to": "entities/BERT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1315,9 +2016,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "entities/Vaswani->concepts/Transformer:EXTRACTED",
+    "id": "entities/Vaswani->entities/BERT:EXTRACTED",
     "from": "entities/Vaswani",
-    "to": "concepts/Transformer",
+    "to": "entities/BERT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1325,9 +2026,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/attention-is-all-you-need->entities/Google:EXTRACTED",
-    "from": "sources/attention-is-all-you-need",
-    "to": "entities/Google",
+    "id": "entities/Vaswani->entities/T5:EXTRACTED",
+    "from": "entities/Vaswani",
+    "to": "entities/T5",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1335,9 +2036,19 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/attention-is-all-you-need->entities/Bahdanau:EXTRACTED",
-    "from": "sources/attention-is-all-you-need",
-    "to": "entities/Bahdanau",
+    "id": "entities/Vaswani->entities/LLaMA:EXTRACTED",
+    "from": "entities/Vaswani",
+    "to": "entities/LLaMA",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "entities/Vaswani->concepts/AttentionMechanism:EXTRACTED",
+    "from": "entities/Vaswani",
+    "to": "concepts/AttentionMechanism",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1355,9 +2066,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/attention-is-all-you-need->concepts/AttentionMechanism:EXTRACTED",
+    "id": "sources/attention-is-all-you-need->entities/Google:EXTRACTED",
     "from": "sources/attention-is-all-you-need",
-    "to": "concepts/AttentionMechanism",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1375,8 +2086,8 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/intro-to-llms->concepts/AttentionMechanism:EXTRACTED",
-    "from": "sources/intro-to-llms",
+    "id": "sources/attention-is-all-you-need->concepts/AttentionMechanism:EXTRACTED",
+    "from": "sources/attention-is-all-you-need",
     "to": "concepts/AttentionMechanism",
     "type": "EXTRACTED",
     "color": "#555555",
@@ -1385,9 +2096,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/intro-to-llms->entities/OpenAI:EXTRACTED",
-    "from": "sources/intro-to-llms",
-    "to": "entities/OpenAI",
+    "id": "sources/attention-is-all-you-need->entities/Bahdanau:EXTRACTED",
+    "from": "sources/attention-is-all-you-need",
+    "to": "entities/Bahdanau",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1395,9 +2106,69 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "sources/intro-to-llms->entities/BERT:EXTRACTED",
-    "from": "sources/intro-to-llms",
-    "to": "entities/BERT",
+    "id": "sources/github-hermes-ecosystem->entities/NousResearch:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "entities/NousResearch",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->entities/Meta:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "entities/Meta",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->entities/HermesAgent:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "entities/HermesAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->entities/HermesJSEngine:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "entities/HermesJSEngine",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->concepts/AIAgent:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "concepts/AIAgent",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->entities/ReactNative:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "entities/ReactNative",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/github-hermes-ecosystem->concepts/SelfImprovingAI:EXTRACTED",
+    "from": "sources/github-hermes-ecosystem",
+    "to": "concepts/SelfImprovingAI",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1425,6 +2196,16 @@ const originalEdges = [
     "label": ""
   },
   {
+    "id": "sources/intro-to-llms->entities/BERT:EXTRACTED",
+    "from": "sources/intro-to-llms",
+    "to": "entities/BERT",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
     "id": "sources/intro-to-llms->concepts/Transformer:EXTRACTED",
     "from": "sources/intro-to-llms",
     "to": "concepts/Transformer",
@@ -1435,9 +2216,29 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "syntheses/foundation-models-overview->entities/LLaMA:EXTRACTED",
+    "id": "sources/intro-to-llms->entities/OpenAI:EXTRACTED",
+    "from": "sources/intro-to-llms",
+    "to": "entities/OpenAI",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "sources/intro-to-llms->concepts/AttentionMechanism:EXTRACTED",
+    "from": "sources/intro-to-llms",
+    "to": "concepts/AttentionMechanism",
+    "type": "EXTRACTED",
+    "color": "#555555",
+    "confidence": 1.0,
+    "title": "",
+    "label": ""
+  },
+  {
+    "id": "syntheses/foundation-models-overview->concepts/Transformer:EXTRACTED",
     "from": "syntheses/foundation-models-overview",
-    "to": "entities/LLaMA",
+    "to": "concepts/Transformer",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1455,9 +2256,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "syntheses/foundation-models-overview->entities/T5:EXTRACTED",
+    "id": "syntheses/foundation-models-overview->entities/Google:EXTRACTED",
     "from": "syntheses/foundation-models-overview",
-    "to": "entities/T5",
+    "to": "entities/Google",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1475,9 +2276,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "syntheses/foundation-models-overview->entities/Google:EXTRACTED",
+    "id": "syntheses/foundation-models-overview->entities/GPT:EXTRACTED",
     "from": "syntheses/foundation-models-overview",
-    "to": "entities/Google",
+    "to": "entities/GPT",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1495,9 +2296,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "syntheses/foundation-models-overview->entities/GPT:EXTRACTED",
+    "id": "syntheses/foundation-models-overview->entities/T5:EXTRACTED",
     "from": "syntheses/foundation-models-overview",
-    "to": "entities/GPT",
+    "to": "entities/T5",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1505,9 +2306,9 @@ const originalEdges = [
     "label": ""
   },
   {
-    "id": "syntheses/foundation-models-overview->concepts/Transformer:EXTRACTED",
+    "id": "syntheses/foundation-models-overview->entities/LLaMA:EXTRACTED",
     "from": "syntheses/foundation-models-overview",
-    "to": "concepts/Transformer",
+    "to": "entities/LLaMA",
     "type": "EXTRACTED",
     "color": "#555555",
     "confidence": 1.0,
@@ -1636,7 +2437,7 @@ function renderMarkdown(markdown) {
       continue;
     }
 
-    const headingMatch = trimmed.match(/^(#(1, 6))\s+(.+)$/);
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
       flushParagraph();
       flushList();
@@ -1646,7 +2447,7 @@ function renderMarkdown(markdown) {
       continue;
     }
 
-    if (/^(-(3,)|\*(3,))$/.test(trimmed)) {
+    if (/^(-{3,}|\*{3,})$/.test(trimmed)) {
       flushParagraph();
       flushList();
       flushQuote();

@@ -4,10 +4,12 @@ from __future__ import annotations
 """Lightweight API server for LLM Wiki Agent."""
 
 import json
+import logging
 import os
 import re
 import sys
 import time
+import socket
 import subprocess
 from pathlib import Path
 from collections import defaultdict
@@ -24,6 +26,23 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
+# MCP & Skill imports
+try:
+    from mcp_manager import get_mcp_manager
+except ImportError:
+    get_mcp_manager = None
+try:
+    from skill_engine import get_skill_engine
+except ImportError:
+    get_skill_engine = None
+
+# litellm availability check
+try:
+    import litellm as _litellm_module
+    LITELLM_AVAILABLE = True
+except ImportError:
+    LITELLM_AVAILABLE = False
+
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
@@ -37,7 +56,42 @@ ALLOWED_EXTENSIONS = {
 }
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024
 
+# ── Structured logging setup ──
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("wiki_api")
+
 app = FastAPI(title="LLM Wiki API")
+
+# ── Pydantic request models (must be defined before route handlers) ──
+class UploadTextPayload(BaseModel):
+    title: str = Field(..., min_length=1, description="Document title")
+    content: str = Field(default="", description="Markdown or plain text content")
+
+class IngestPayload(BaseModel):
+    path: str = Field(..., min_length=1, description="Path to raw file to ingest")
+
+class AgentKitGeneratePayload(BaseModel):
+    target: str = Field(default="all", pattern="^(all|mcp|skill)$")
+    package: bool = Field(default=False)
+    incremental: bool = Field(default=False)
+    skipDiagrams: bool = Field(default=False)
+
+class DownloadZipPayload(BaseModel):
+    paths: list[str] = Field(..., min_length=1, description="List of file paths to include in ZIP")
+
+class SaveFilePayload(BaseModel):
+    path: str = Field(..., min_length=1)
+    content: str = Field(default="")
+
+class LLMConfigPayload(BaseModel):
+    model: str = Field(default="anthropic/claude-3-5-sonnet-latest")
+    model_fast: str = Field(default="anthropic/claude-3-5-haiku-latest")
+    provider: str = Field(default="anthropic")
+    api_key: str = Field(default="")
 
 # ── Request logging middleware ──
 @app.middleware("http")
@@ -46,7 +100,11 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     duration = (time.time() - start) * 1000
     client = request.client.host if request.client else "-"
-    print(f"[{datetime.now().isoformat(timespec='seconds')}] {client} {request.method} {request.url.path} {response.status_code} {duration:.1f}ms")
+    logger.info(
+        "%s %s %s %.1fms",
+        client, request.method, request.url.path, duration,
+        extra={"status_code": response.status_code},
+    )
     return response
 
 # ── Simple in-memory rate limiter ──
@@ -69,17 +127,30 @@ async def rate_limit(request: Request, call_next):
 # ── Global exception handler ──
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    print(f"[ERROR] Unhandled exception at {request.url.path}: {exc}", file=sys.stderr)
+    logger.exception("Unhandled exception at %s: %s", request.url.path, exc)
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error", "detail": str(exc) if os.getenv("DEBUG") else "Please check server logs."},
     )
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def spa_fallback_handler(request: Request, exc: StarletteHTTPException):
+    """Serve index.html for SPA routes, but preserve API 404s."""
+    if exc.status_code == 404 and request.method in ("GET", "HEAD"):
+        if not request.url.path.startswith("/api/"):
+            index_path = FRONTEND_DIST / "index.html"
+            if index_path.exists():
+                return FileResponse(str(index_path))
+    # Re-raise as JSON for API routes or other status codes
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
 # Restrict CORS to localhost for security
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -161,14 +232,15 @@ def health():
         "pages": len(pages),
         "graph_ready": graph_exists,
         "wiki_dir": str(WIKI),
+        "litellm_available": LITELLM_AVAILABLE,
     }
 
 
 @app.get("/api/config/llm")
 def get_llm_config_legacy():
     cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
-    model_fast = cfg.get("model_fast") or os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest")
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
+    model_fast = _resolve_model(cfg, "LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest", model_key="model_fast")
     provider = cfg.get("provider", "anthropic")
     return {
         "model": model,
@@ -227,8 +299,9 @@ def get_system_status():
         },
         "llm": {
             "provider": cfg.get("provider", "anthropic"),
-            "model": cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest"),
+            "model": _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest"),
             "api_key_set": bool(cfg.get("api_key")),
+            "litellm_available": LITELLM_AVAILABLE,
         },
         "server": {
             "time": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -629,13 +702,20 @@ def _load_llm_config() -> dict:
     return cfg
 
 
+def _resolve_model(cfg: dict, env_var: str, default: str, model_key: str = "model") -> str:
+    """Resolve model name, ensuring provider prefix for litellm."""
+    model = cfg.get(model_key) or os.getenv(env_var, default)
+    provider = cfg.get("provider", "anthropic")
+    if "/" not in model:
+        model = f"{provider}/{model}"
+    return model
+
+
 @app.post("/api/agent-kit/llm-chat")
 async def agent_kit_llm_chat(request: Request):
     """Chat with LLM for agent-kit assistance (Skill / MCP generation, review, etc.)."""
-    try:
-        from litellm import completion
-    except ImportError:
-        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+    if not LITELLM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="litellm not installed. Run: pip install litellm")
 
     body = await request.json()
     messages = body.get("messages", [])
@@ -647,12 +727,13 @@ async def agent_kit_llm_chat(request: Request):
     full_messages.extend(messages)
 
     cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
     api_key = cfg.get("api_key", "")
-    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096}
+    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096, "temperature": 0.7}
     if api_key:
         kwargs["api_key"] = api_key
     try:
+        from litellm import completion
         response = completion(**kwargs)
         content = response.choices[0].message.content
         return {"content": content}
@@ -663,10 +744,8 @@ async def agent_kit_llm_chat(request: Request):
 @app.post("/api/agent-kit/llm-chat-stream")
 async def agent_kit_llm_chat_stream(request: Request):
     """Stream LLM chat responses via SSE for agent-kit assistance."""
-    try:
-        from litellm import acompletion
-    except ImportError:
-        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+    if not LITELLM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="litellm not installed. Run: pip install litellm")
 
     body = await request.json()
     messages = body.get("messages", [])
@@ -678,13 +757,103 @@ async def agent_kit_llm_chat_stream(request: Request):
     full_messages.extend(messages)
 
     cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
     api_key = cfg.get("api_key", "")
-    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096, "stream": True}
+    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096, "stream": True, "temperature": 0.7}
     if api_key:
         kwargs["api_key"] = api_key
 
     async def event_generator():
+        try:
+            from litellm import acompletion
+            response = await acompletion(**kwargs)
+            async for chunk in response:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# ── Wiki Chat (RAG) ──
+
+class WikiChatMessage(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1)
+
+class WikiChatRequest(BaseModel):
+    query: str = Field(..., min_length=1, description="Current user question")
+    messages: list[WikiChatMessage] = Field(default_factory=list, description="Conversation history")
+    context_pages: list[str] = Field(default_factory=list, description="Specific wiki pages to include as context")
+
+
+@app.post("/api/wiki-chat")
+@app.post("/api/wiki-chat/")
+async def wiki_chat(payload: WikiChatRequest):
+    """Chat with LLM using wiki knowledge as RAG context. Streams SSE."""
+    if not LITELLM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="litellm not installed. Run: pip install litellm")
+
+    query = payload.query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="query is required")
+
+    # 1. Retrieve knowledge context
+    sources = []
+    knowledge_chunks = []
+    if payload.context_pages:
+        # Use specific pages as context
+        for wiki_path in payload.context_pages:
+            path = WIKI / wiki_path
+            if path.exists() and path.suffix == '.md':
+                try:
+                    content = path.read_text(encoding='utf-8')
+                    snippet = _extract_relevant_snippets(content, query)
+                    sources.append({"path": wiki_path, "preview": snippet[:200]})
+                    knowledge_chunks.append(f"--- Source: {wiki_path} ---\n{snippet}\n")
+                except (OSError, UnicodeDecodeError):
+                    continue
+    else:
+        # Search wiki for relevant pages
+        search_results = _search_wiki(query)
+        for r in search_results:
+            snippet = _extract_relevant_snippets(r["content"], query)
+            sources.append({"path": r["wiki_path"], "preview": snippet[:200]})
+            knowledge_chunks.append(f"--- Source: {r['wiki_path']} ---\n{snippet}\n")
+
+    knowledge_context = "\n".join(knowledge_chunks)
+    if not knowledge_context:
+        knowledge_context = "No relevant wiki pages found."
+
+    system_prompt = (
+        "You are a helpful assistant for the LLM Wiki knowledge base. "
+        "Answer the user's question based ONLY on the following retrieved wiki content. "
+        "If the answer is not in the retrieved content, say so clearly. "
+        "Cite sources using [source: path/to/page] format.\n\n"
+        f"Retrieved content:\n{knowledge_context}"
+    )
+
+    full_messages = [{"role": "system", "content": system_prompt}]
+    for m in payload.messages:
+        full_messages.append({"role": m.role, "content": m.content})
+    full_messages.append({"role": "user", "content": query})
+
+    cfg = _load_llm_config()
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+    kwargs: dict = {"model": model, "messages": full_messages, "max_tokens": 4096, "stream": True, "temperature": 0.7}
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    async def event_generator():
+        from litellm import acompletion
+        # First event: searching status
+        yield f"data: {json.dumps({'status': 'searching'}, ensure_ascii=False)}\n\n"
+        # Second event: sources metadata
+        yield f"data: {json.dumps({'sources': sources}, ensure_ascii=False)}\n\n"
         try:
             response = await acompletion(**kwargs)
             async for chunk in response:
@@ -776,10 +945,8 @@ def _extract_relevant_snippets(content: str, query: str, max_chars: int = MAX_WI
 @app.post("/api/agent-kit/generate-from-knowledge")
 async def agent_kit_generate_from_knowledge(request: Request):
     """Generate MCP Server or Skill code based on wiki knowledge retrieved from a user query."""
-    try:
-        from litellm import completion
-    except ImportError:
-        raise HTTPException(status_code=500, detail="litellm not installed. Run: pip install litellm")
+    if not LITELLM_AVAILABLE:
+        raise HTTPException(status_code=503, detail="litellm not installed. Run: pip install litellm")
 
     body = await request.json()
     query = body.get("query", "").strip()
@@ -838,7 +1005,7 @@ async def agent_kit_generate_from_knowledge(request: Request):
     )
 
     cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
     api_key = cfg.get("api_key", "")
     kwargs: dict = {
         "model": model,
@@ -852,6 +1019,7 @@ async def agent_kit_generate_from_knowledge(request: Request):
         kwargs["api_key"] = api_key
 
     try:
+        from litellm import completion
         response = completion(**kwargs)
         raw_content = response.choices[0].message.content or ""
     except Exception as e:
@@ -922,7 +1090,7 @@ async def agent_kit_save_file(request: Request):
 def get_llm_config():
     """Return LLM config (api_key is never exposed)."""
     if not yaml or not LLM_CONFIG_PATH.exists():
-        return {"model": os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest"), "model_fast": os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest"), "provider": "anthropic", "api_key_set": False}
+        return {"model": os.getenv("LLM_MODEL", "anthropic/claude-3-5-sonnet-latest"), "model_fast": os.getenv("LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest"), "provider": "anthropic", "api_key_set": False}
     try:
         cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     except Exception:
@@ -930,8 +1098,8 @@ def get_llm_config():
     provider = cfg.get("provider", "anthropic")
     key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
     return {
-        "model": cfg.get("model", os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest")),
-        "model_fast": cfg.get("model_fast", os.getenv("LLM_MODEL_FAST", "claude-3-5-haiku-latest")),
+        "model": cfg.get("model", os.getenv("LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")),
+        "model_fast": cfg.get("model_fast", os.getenv("LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest")),
         "provider": provider,
         "api_key_set": bool(cfg.get("api_key") or os.getenv(key_env)),
     }
@@ -966,36 +1134,383 @@ async def save_llm_config(payload: LLMConfigPayload):
     return {"ok": True}
 
 
+# ── MCP Management API ──
+
+class MCPInstallRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    source: str = Field(..., pattern="^(npm|pip|url|local|generated)$")
+    package: str = Field(default="")
+    url: str = Field(default="")
+    path: str = Field(default="")
+    display_name: str = Field(default="")
+    description: str = Field(default="")
+    version: str = Field(default="1.0.0")
+    transport: str = Field(default="stdio")
+    tools: list[str] = Field(default_factory=list)
+    config: dict = Field(default_factory=dict)
+    code: str = Field(default="")
+    requirements: str = Field(default="")
+
+
+@app.get("/api/mcp/list")
+def mcp_list():
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return {"servers": get_mcp_manager().list_servers()}
+
+
+@app.post("/api/mcp/install")
+async def mcp_install(payload: MCPInstallRequest):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    kwargs = {
+        "display_name": payload.display_name or payload.name,
+        "description": payload.description,
+        "version": payload.version,
+        "transport": payload.transport,
+        "tools": payload.tools,
+        "config": payload.config,
+        "code": payload.code,
+        "requirements": payload.requirements,
+        "package": payload.package,
+        "url": payload.url,
+        "path": payload.path,
+    }
+    result = get_mcp_manager().install(payload.name, payload.source, **kwargs)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.delete("/api/mcp/uninstall/{name}")
+def mcp_uninstall(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return get_mcp_manager().uninstall(name)
+
+
+@app.post("/api/mcp/start/{name}")
+def mcp_start(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    result = get_mcp_manager().start(name)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.post("/api/mcp/stop/{name}")
+def mcp_stop(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return get_mcp_manager().stop(name)
+
+
+@app.post("/api/mcp/restart/{name}")
+def mcp_restart(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    result = get_mcp_manager().restart(name)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.get("/api/mcp/status/{name}")
+def mcp_status(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return get_mcp_manager().status(name)
+
+
+@app.get("/api/mcp/logs/{name}")
+def mcp_logs(name: str, lines: int = Query(100, ge=1, le=1000)):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return get_mcp_manager().logs(name, lines)
+
+
+@app.post("/api/mcp/test/{name}")
+def mcp_test(name: str):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    return get_mcp_manager().test(name)
+
+
+@app.post("/api/mcp/call/{name}/{tool}")
+async def mcp_call(name: str, tool: str, request: Request):
+    if get_mcp_manager is None:
+        raise HTTPException(status_code=500, detail="mcp_manager not available")
+    body = await request.json()
+    return get_mcp_manager().call_tool(name, tool, body.get("arguments", {}))
+
+
+@app.post("/api/mcp/generate")
+async def mcp_generate(request: Request):
+    """Generate MCP Server code from a template."""
+    body = await request.json()
+    description = body.get("description", "")
+    template = body.get("template", "wiki-search")
+    name = body.get("name", "generated-server")
+
+    templates = {
+        "wiki-search": '''#!/usr/bin/env python3
+from __future__ import annotations
+import json
+from pathlib import Path
+from mcp.server.fastmcp import FastMCP
+
+REPO = Path(__file__).parent.parent.parent
+WIKI = REPO / "wiki"
+
+mcp = FastMCP("{name}")
+
+@mcp.tool()
+def search_wiki(query: str) -> str:
+    """Search wiki pages by keyword."""
+    results = []
+    q = query.lower()
+    for p in WIKI.rglob("*.md"):
+        if p.name in ("index.md", "log.md"):
+            continue
+        try:
+            content = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if q in content.lower():
+            results.append({{"id": str(p.relative_to(WIKI).with_suffix("")), "preview": content[:200]}})
+    return json.dumps(results[:20], ensure_ascii=False)
+
+if __name__ == "__main__":
+    mcp.run()
+''',
+        "filesystem": '''#!/usr/bin/env python3
+from __future__ import annotations
+import json
+from pathlib import Path
+from mcp.server.fastmcp import FastMCP
+
+REPO = Path(__file__).parent.parent.parent
+ALLOWED = [REPO / "wiki", REPO / "raw", REPO / "graph"]
+
+mcp = FastMCP("{name}")
+
+def _safe(path: Path) -> bool:
+    return any(path.resolve().is_relative_to(a.resolve()) for a in ALLOWED)
+
+@mcp.tool()
+def read_file(filepath: str) -> str:
+    """Read a file within allowed directories."""
+    p = Path(filepath).resolve()
+    if not _safe(p):
+        return json.dumps({{"error": "Access denied"}})
+    if not p.exists():
+        return json.dumps({{"error": "File not found"}})
+    return p.read_text(encoding="utf-8")
+
+if __name__ == "__main__":
+    mcp.run()
+''',
+    }
+
+    server_code = templates.get(template, templates["wiki-search"]).format(name=name)
+    return {
+        "template": template,
+        "description": description,
+        "files": {
+            "server.py": server_code,
+            "requirements.txt": "mcp>=1.2.0\n",
+        },
+    }
+
+
+# ── Skill Management API ──
+
+class SkillInstallRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    source: str = Field(default="generated", pattern="^(generated|local|url)$")
+    path: str = Field(default="")
+    version: str = Field(default="1.0.0")
+    description: str = Field(default="")
+    code: str = Field(default="")
+
+
+class SkillExecuteRequest(BaseModel):
+    input: str = Field(..., min_length=1)
+
+
+@app.get("/api/skills/list")
+def skills_list():
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    return {"skills": get_skill_engine().list_skills()}
+
+
+@app.post("/api/skills/install")
+async def skills_install(payload: SkillInstallRequest):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    kwargs = {
+        "version": payload.version,
+        "description": payload.description,
+        "path": payload.path,
+        "code": payload.code,
+    }
+    result = get_skill_engine().install(payload.name, payload.source, **kwargs)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@app.delete("/api/skills/uninstall/{name}")
+def skills_uninstall(name: str):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    return get_skill_engine().uninstall(name)
+
+
+@app.post("/api/skills/enable/{name}")
+def skills_enable(name: str):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    result = get_skill_engine().enable(name)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@app.post("/api/skills/disable/{name}")
+def skills_disable(name: str):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    result = get_skill_engine().disable(name)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@app.post("/api/skills/execute/{name}")
+async def skills_execute(name: str, payload: SkillExecuteRequest):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    try:
+        result = get_skill_engine().execute(name, payload.input)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Execution failed: {e}")
+    # Stream LLM response if litellm is available
+    if not LITELLM_AVAILABLE:
+        return {"result": result, "error": "litellm not installed"}
+
+    cfg = _load_llm_config()
+    model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
+    api_key = cfg.get("api_key", "")
+    messages = [
+        {"role": "system", "content": result.get("system_prompt", "")},
+        {"role": "user", "content": result.get("user_prompt", payload.input)},
+    ]
+    kwargs: dict = {"model": model, "messages": messages, "max_tokens": 4096, "stream": True}
+    if api_key:
+        kwargs["api_key"] = api_key
+
+    async def event_generator():
+        try:
+            from litellm import acompletion
+            response = await acompletion(**kwargs)
+            async for chunk in response:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.post("/api/skills/match")
+async def skills_match(request: Request):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    body = await request.json()
+    user_input = body.get("input", "")
+    matches = get_skill_engine().match_trigger(user_input)
+    return {
+        "input": user_input,
+        "matches": [
+            {"skill": m["skill"]["name"], "trigger": m["match"], "priority": m["config"].get("priority", 0)}
+            for m in matches
+        ],
+    }
+
+
+@app.post("/api/skills/generate")
+async def skills_generate(request: Request):
+    """Generate Skill from wiki knowledge (placeholder)."""
+    body = await request.json()
+    description = body.get("description", "")
+    return {
+        "description": description,
+        "files": {
+            "SKILL.md": f"# Generated Skill\n\n{description}\n",
+            "config.json": '{"name":"generated","version":"1.0.0"}',
+        },
+    }
+
+
+@app.get("/api/skills/templates")
+def skills_templates():
+    return {
+        "templates": [
+            {"name": "wiki-query", "description": "基于 wiki 知识库回答用户问题", "type": "rag"},
+            {"name": "document-ingest", "description": "将文档摄入到 wiki 知识库", "type": "action"},
+            {"name": "knowledge-graph", "description": "构建或重建知识图谱", "type": "action"},
+            {"name": "content-lint", "description": "对 wiki 内容进行质量检查", "type": "action"},
+            {"name": "mcp-generator", "description": "生成 MCP Server", "type": "generator"},
+            {"name": "github-analyzer", "description": "分析 GitHub 项目并摄入", "type": "pipeline"},
+            {"name": "export-kit", "description": "导出 Agent Kit", "type": "action"},
+        ]
+    }
+
+
+@app.get("/api/skills/detail/{name}")
+def skills_detail(name: str):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    detail = get_skill_engine().get_skill_detail(name)
+    if "error" in detail:
+        raise HTTPException(status_code=404, detail=detail["error"])
+    return detail
+
+
+@app.put("/api/skills/save/{name}")
+async def skills_save(name: str, request: Request):
+    if get_skill_engine is None:
+        raise HTTPException(status_code=500, detail="skill_engine not available")
+    body = await request.json()
+    path = body.get("path", "")
+    content = body.get("content", "")
+    if not path:
+        raise HTTPException(status_code=400, detail="path is required")
+    result = get_skill_engine().save_skill_file(name, path, content)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
 
-# ── Pydantic request models ──
-class UploadTextPayload(BaseModel):
-    title: str = Field(..., min_length=1, description="Document title")
-    content: str = Field(default="", description="Markdown or plain text content")
 
-class IngestPayload(BaseModel):
-    path: str = Field(..., min_length=1, description="Path to raw file to ingest")
-
-class AgentKitGeneratePayload(BaseModel):
-    target: str = Field(default="all", pattern="^(all|mcp|skill)$")
-    package: bool = Field(default=False)
-    incremental: bool = Field(default=False)
-    skipDiagrams: bool = Field(default=False)
-
-class DownloadZipPayload(BaseModel):
-    paths: list[str] = Field(..., min_length=1, description="List of file paths to include in ZIP")
-
-class SaveFilePayload(BaseModel):
-    path: str = Field(..., min_length=1)
-    content: str = Field(default="")
-
-class LLMConfigPayload(BaseModel):
-    model: str = Field(default="claude-3-5-sonnet-latest")
-    model_fast: str = Field(default="claude-3-5-haiku-latest")
-    provider: str = Field(default="anthropic")
-    api_key: str = Field(default="")
+def _check_port_available(host: str, port: int) -> bool:
+    """Check if a TCP port is available for binding."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        try:
+            sock.bind((host, port))
+            return True
+        except OSError:
+            return False
 
 
 # Load LLM config on startup
@@ -1008,4 +1523,14 @@ if __name__ == "__main__":
     cli.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     cli.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
     cli_args = cli.parse_args()
+
+    if not _check_port_available(cli_args.host, cli_args.port):
+        logger.error(
+            "Port %d on %s is already in use. "
+            "Try: python tools/api_server.py --port %d",
+            cli_args.port, cli_args.host, cli_args.port + 1,
+        )
+        sys.exit(1)
+
+    logger.info("Starting LLM Wiki API on http://%s:%d", cli_args.host, cli_args.port)
     uvicorn.run(app, host=cli_args.host, port=cli_args.port)

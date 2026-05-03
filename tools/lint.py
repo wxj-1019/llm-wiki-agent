@@ -25,80 +25,128 @@ from pathlib import Path
 from collections import defaultdict
 from datetime import date
 
-import os
-
-# Fix Windows console encoding for Unicode output
-if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
-
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
 GRAPH_DIR = REPO_ROOT / "graph"
 GRAPH_JSON = GRAPH_DIR / "graph.json"
 LOG_FILE = WIKI_DIR / "log.md"
-SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
+
+# Fix Windows console encoding for Unicode output
+if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
-def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+# ── Shared wiki utilities (with inline fallback) ────────────────────
+try:
+    from tools.shared.wiki import (
+        read_file,
+        all_wiki_pages,
+    )
+except ImportError:
+    def read_file(path: Path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
 
-
-def _load_llm_config() -> dict:
-    cfg_path = REPO_ROOT / "config" / "llm.yaml"
-    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
-    if cfg_path.exists():
-        try:
-            import yaml
-            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-            return {**defaults, **data}
-        except Exception:
-            pass
-    return defaults
-
-
-def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
-    try:
-        from litellm import completion
-    except ImportError:
-        print("Error: litellm not installed. Run: pip install litellm")
-        sys.exit(1)
-
-    cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv(model_env, default_model)
-    api_key = cfg.get("api_key", "")
-
-    kwargs = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": max_tokens
-    }
-    if api_key:
-        kwargs["api_key"] = api_key
-
-    response = completion(**kwargs)
-    return response.choices[0].message.content
-
-
-def all_wiki_pages() -> list[Path]:
-    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-    return [p for p in WIKI_DIR.rglob("*.md")
-            if p.name not in exclude]
+    def all_wiki_pages() -> list[Path]:
+        exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
+        return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
 
 
 def extract_wikilinks(content: str) -> list[str]:
+    """Extract wikilink targets, stripping display aliases."""
     links = re.findall(r'\[\[([^\]]+)\]\]', content)
-    # Handle [[PageName|display text]] alias syntax
     return [link.split('|')[0].strip() for link in links]
 
 
 def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:
-    """Try to resolve a [[WikiLink]] to a file path."""
+    """Find page(s) whose stem matches *name* (case-insensitive)."""
     candidates = []
     for p in pages:
         if p.stem.lower() == name.lower() or p.stem == name:
             candidates.append(p)
     return candidates
 
+
+# ── Shared LLM utilities (with inline fallback) ─────────────────────
+try:
+    from tools.shared.llm import _load_llm_config, call_llm, LLMUnavailableError
+except ImportError:
+    import os
+
+    def _load_llm_config() -> dict:
+        cfg_path = REPO_ROOT / "config" / "llm.yaml"
+        defaults = {
+            "provider": "anthropic",
+            "model": "anthropic/claude-3-5-sonnet-latest",
+            "api_key": "",
+            "api_base": "",
+        }
+        if cfg_path.exists():
+            try:
+                import yaml
+                data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                return {**defaults, **data}
+            except Exception:
+                pass
+        return defaults
+
+    class LLMUnavailableError(Exception):
+        pass
+
+    def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
+        try:
+            from litellm import completion
+        except ImportError:
+            raise LLMUnavailableError("litellm not installed")
+
+        cfg = _load_llm_config()
+        model = cfg.get("model") or os.getenv(model_env, default_model)
+        provider = cfg.get("provider", "anthropic")
+        if "/" not in model:
+            model = f"{provider}/{model}"
+        api_key = cfg.get("api_key", "")
+
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+        }
+        if api_key:
+            kwargs["api_key"] = api_key
+
+        response = completion(**kwargs)
+        return response.choices[0].message.content
+
+
+# ── Shared log utilities (with inline fallback) ─────────────────────
+try:
+    from tools.shared.log import append_log
+except ImportError:
+    LOG_HEADER = (
+        "# Wiki Log\n\n"
+        "> Append-only chronological record of all operations.\n\n"
+        "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+        "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+        "---\n"
+    )
+
+    def append_log(entry: str) -> None:
+        entry_text = entry.strip()
+        if not LOG_FILE.exists():
+            LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+            return
+        existing = read_file(LOG_FILE).strip()
+        if existing.startswith("# Wiki Log"):
+            parts = existing.split("\n---\n", 1)
+            if len(parts) == 2:
+                new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+            else:
+                new_content = entry_text + "\n\n" + existing
+        else:
+            new_content = entry_text + "\n\n" + existing
+        LOG_FILE.write_text(new_content, encoding="utf-8")
+
+
+# ── Structural checks ───────────────────────────────────────────────
 
 def find_orphans(pages: list[Path]) -> list[Path]:
     inbound = defaultdict(int)
@@ -146,7 +194,6 @@ def check_link_density(pages: list[Path], min_outbound: int = 2) -> list[dict]:
             continue
         content = read_file(p)
         links = extract_wikilinks(content)
-        # Deduplicate links per page
         unique_links = set(link.lower() for link in links)
         if len(unique_links) < min_outbound:
             results.append({
@@ -208,7 +255,6 @@ def check_hub_stubs(graph_data: dict, pages: list[Path], min_content_chars: int 
     std_deg = statistics.stdev(deg_values)
     threshold = mean_deg + 2 * std_deg
 
-    # Map node_id -> page path
     node_to_path: dict[str, Path] = {}
     for p in pages:
         nid = p.relative_to(WIKI_DIR).as_posix().replace(".md", "")
@@ -261,14 +307,12 @@ def check_isolated_communities(graph_data: dict) -> list[dict]:
     """Find communities with zero external edges (knowledge silos)."""
     comm_map = _build_community_map(graph_data)
 
-    # Build community -> members
     comm_members: dict[int, list[str]] = {}
     for node_id, comm_id in comm_map.items():
         if comm_id < 0:
             continue
         comm_members.setdefault(comm_id, []).append(node_id)
 
-    # Track which communities have external edges
     has_external = set()
     for edge in graph_data.get("edges", []):
         ca = comm_map.get(edge["from"], -1)
@@ -279,13 +323,13 @@ def check_isolated_communities(graph_data: dict) -> list[dict]:
 
     results = []
     for comm_id, members in sorted(comm_members.items()):
-        if len(members) < 2:  # skip single-node "communities"
+        if len(members) < 2:
             continue
         if comm_id not in has_external:
             results.append({
                 "community_id": comm_id,
                 "node_count": len(members),
-                "members": members[:10],  # cap display
+                "members": members[:10],
             })
     return results
 
@@ -300,7 +344,6 @@ def run_lint():
 
     print(f"Linting {len(pages)} wiki pages...")
 
-    # Deterministic checks
     orphans = find_orphans(pages)
     broken = find_broken_links(pages)
     missing_entities = find_missing_entities(pages)
@@ -309,7 +352,6 @@ def run_lint():
     print(f"  broken links: {len(broken)}")
     print(f"  missing entity pages: {len(missing_entities)}")
 
-    # Link density check
     sparse_pages = check_link_density(pages)
     print(f"  sparse pages (< 2 outbound links): {len(sparse_pages)}")
 
@@ -332,16 +374,17 @@ def run_lint():
     else:
         print("  [skip] no graph.json — run build_graph.py first for graph-aware checks")
 
-    # Build context for semantic checks (contradictions, gaps)
-    # Use a deterministic sample of pages to stay within context limits
+    # Build context for semantic checks
     sample = sorted(pages, key=lambda p: p.relative_to(REPO_ROOT).as_posix())[:20]
     pages_context = ""
     for p in sample:
         rel = p.relative_to(REPO_ROOT)
-        pages_context += f"\n\n### {rel}\n{read_file(p)[:1500]}"  # truncate long pages
+        pages_context += f"\n\n### {rel}\n{read_file(p)[:1500]}"
 
-    print("  running semantic lint via API...")
-    prompt = f"""You are linting an LLM Wiki. Review the pages below and identify:
+    semantic_report = ""
+    try:
+        print("  running semantic lint via API...")
+        prompt = f"""You are linting an LLM Wiki. Review the pages below and identify:
 1. Contradictions between pages (claims that conflict)
 2. Stale content (summaries that newer sources have superseded)
 3. Data gaps (important questions the wiki can't answer — suggest specific sources to find)
@@ -358,7 +401,16 @@ Return a markdown lint report with these sections:
 
 Be specific — name the exact pages and claims involved.
 """
-    semantic_report = call_llm(prompt, "LLM_MODEL", "claude-3-5-sonnet-latest", max_tokens=3000)
+        semantic_report = call_llm(prompt, "LLM_MODEL", "claude-3-5-sonnet-latest", max_tokens=3000)
+    except LLMUnavailableError:
+        print("  [skip] semantic lint requires litellm. Install with: pip install litellm")
+        semantic_report = (
+            "## Semantic Checks (skipped)\n\n"
+            "> [!note]\n"
+            "> Semantic linting (contradictions, stale content, data gaps) requires `litellm`.\n"
+            "> Structural checks above completed successfully.\n"
+            "> Install with: `pip install litellm` to enable semantic analysis."
+        )
 
     # Compose full report
     report_lines = [
@@ -384,7 +436,8 @@ Be specific — name the exact pages and claims involved.
 
     if missing_entities:
         report_lines.append("### Missing Entity Pages (mentioned 3+ times but no page)")
-        report_lines.append("> [!warning] Action Required\n> Run `python tools/heal.py` to automatically materialize these missing hubs.")
+        report_lines.append("> [!warning] Action Required\n> Run `python tools/heal.py` to automatically materialize these missing hubs."
+        )
         for name in missing_entities:
             report_lines.append(f"- `[[{name}]]`")
         report_lines.append("")
@@ -418,7 +471,6 @@ Be specific — name the exact pages and claims involved.
         report_lines.append("> Graph data is empty. Ingest sources and run `python tools/build_graph.py` to populate.")
         report_lines.append("")
     else:
-        # Hub stubs
         report_lines.append(f"### Hub Pages with Insufficient Content ({len(hub_stubs)} pages)")
         if hub_stubs:
             report_lines.append("These hub nodes carry disproportionate connectivity but have thin content:")
@@ -432,7 +484,6 @@ Be specific — name the exact pages and claims involved.
             report_lines.append("No hub stubs detected — all high-degree nodes have sufficient content.")
         report_lines.append("")
 
-        # Fragile bridges
         report_lines.append(f"### Fragile Bridges ({len(fragile_bridges)} community pairs)")
         if fragile_bridges:
             report_lines.append("These community connections rely on a single edge — one broken link isolates them:")
@@ -442,7 +493,6 @@ Be specific — name the exact pages and claims involved.
             report_lines.append("No fragile bridges — all community connections have redundant links.")
         report_lines.append("")
 
-        # Isolated communities
         report_lines.append(f"### Isolated Communities ({len(isolated_comms)} communities)")
         if isolated_comms:
             report_lines.append("These communities have zero external connections — knowledge silos:")
@@ -465,32 +515,6 @@ Be specific — name the exact pages and claims involved.
     report = "\n".join(report_lines)
     print("\n" + report)
     return report
-
-
-LOG_HEADER = (
-    "# Wiki Log\n\n"
-    "> Append-only chronological record of all operations.\n\n"
-    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
-    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
-    "---\n"
-)
-
-
-def append_log(entry: str):
-    entry_text = entry.strip()
-    if not LOG_FILE.exists():
-        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
-        return
-    existing = read_file(LOG_FILE).strip()
-    if existing.startswith("# Wiki Log"):
-        parts = existing.split("\n---\n", 1)
-        if len(parts) == 2:
-            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
-        else:
-            new_content = entry_text + "\n\n" + existing
-    else:
-        new_content = entry_text + "\n\n" + existing
-    LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
 if __name__ == "__main__":

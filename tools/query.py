@@ -28,50 +28,78 @@ LOG_FILE = WIKI_DIR / "log.md"
 SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
 
 
-def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+# ── Shared utilities (with inline fallback) ─────────────────────────
+try:
+    from tools.shared.wiki import read_file, write_file
+except ImportError:
+    def read_file(path: Path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
 
+    def write_file(path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        print(f"  saved: {path.relative_to(REPO_ROOT)}")
 
-def write_file(path: Path, content: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    print(f"  saved: {path.relative_to(REPO_ROOT)}")
-
-
-def _load_llm_config() -> dict:
-    cfg_path = REPO_ROOT / "config" / "llm.yaml"
-    defaults = {"provider": "anthropic", "model": "claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
-    if cfg_path.exists():
+# ── Shared path safety (with inline fallback) ──
+try:
+    from tools.shared.paths import sanitize_wiki_path
+except ImportError:
+    def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
+        if not path_str or path_str in (".", ".."):
+            raise ValueError(f"Invalid path: {path_str!r}")
+        path_str = path_str.lstrip("/\\")
+        target = (base_dir / path_str).resolve()
+        base = base_dir.resolve()
         try:
-            import yaml
-            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-            return {**defaults, **data}
-        except Exception:
-            pass
-    return defaults
+            target.relative_to(base)
+        except ValueError:
+            raise ValueError(f"Path traversal blocked: {path_str!r}")
+        return target
 
 
-def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
-    try:
-        from litellm import completion
-    except ImportError:
-        print("Error: litellm not installed. Run: pip install litellm")
-        sys.exit(1)
 
-    cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv(model_env, default_model)
-    api_key = cfg.get("api_key", "")
 
-    kwargs = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": max_tokens
-    }
-    if api_key:
-        kwargs["api_key"] = api_key
 
-    response = completion(**kwargs)
-    return response.choices[0].message.content
+# ── Shared LLM utilities (with inline fallback) ──
+try:
+    from tools.shared.llm import _load_llm_config, call_llm
+except ImportError:
+    def _load_llm_config() -> dict:
+        cfg_path = REPO_ROOT / "config" / "llm.yaml"
+        defaults = {"provider": "anthropic", "model": "anthropic/claude-3-5-sonnet-latest", "api_key": "", "api_base": ""}
+        if cfg_path.exists():
+            try:
+                import yaml
+                data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                return {**defaults, **data}
+            except Exception:
+                pass
+        return defaults
+
+    def call_llm(prompt: str, model_env: str, default_model: str, max_tokens: int = 4096) -> str:
+        try:
+            from litellm import completion
+        except ImportError:
+            print("Error: litellm not installed. Run: pip install litellm")
+            sys.exit(1)
+
+        cfg = _load_llm_config()
+        model = cfg.get("model") or os.getenv(model_env, default_model)
+        provider = cfg.get("provider", "anthropic")
+        if "/" not in model:
+            model = f"{provider}/{model}"
+        api_key = cfg.get("api_key", "")
+
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens
+        }
+        if api_key:
+            kwargs["api_key"] = api_key
+
+        response = completion(**kwargs)
+        return response.choices[0].message.content
 
 
 def find_relevant_pages(question: str, index_content: str) -> list[Path]:
@@ -137,30 +165,33 @@ def find_relevant_pages(question: str, index_content: str) -> list[Path]:
     return relevant[:15]  # cap to avoid context overflow
 
 
-LOG_HEADER = (
-    "# Wiki Log\n\n"
-    "> Append-only chronological record of all operations.\n\n"
-    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
-    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
-    "---\n"
-)
+# ── Shared log utilities (with inline fallback) ─────────────────────
+try:
+    from tools.shared.log import append_log
+except ImportError:
+    LOG_HEADER = (
+        "# Wiki Log\n\n"
+        "> Append-only chronological record of all operations.\n\n"
+        "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+        "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+        "---\n"
+    )
 
-
-def append_log(entry: str):
-    entry_text = entry.strip()
-    if not LOG_FILE.exists():
-        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
-        return
-    existing = read_file(LOG_FILE).strip()
-    if existing.startswith("# Wiki Log"):
-        parts = existing.split("\n---\n", 1)
-        if len(parts) == 2:
-            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+    def append_log(entry: str) -> None:
+        entry_text = entry.strip()
+        if not LOG_FILE.exists():
+            LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+            return
+        existing = read_file(LOG_FILE).strip()
+        if existing.startswith("# Wiki Log"):
+            parts = existing.split("\n---\n", 1)
+            if len(parts) == 2:
+                new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+            else:
+                new_content = entry_text + "\n\n" + existing
         else:
             new_content = entry_text + "\n\n" + existing
-    else:
-        new_content = entry_text + "\n\n" + existing
-    LOG_FILE.write_text(new_content, encoding="utf-8")
+        LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
 def query(question: str, save_path: str | None = None):
@@ -229,7 +260,7 @@ Write a well-structured markdown answer with headers, bullets, and [[wikilink]] 
                 return
             save_path = f"syntheses/{slug}.md"
 
-        full_save_path = WIKI_DIR / save_path
+        full_save_path = sanitize_wiki_path(save_path, WIKI_DIR)
         # Escape quotes in the question to avoid breaking YAML frontmatter
         safe_title = question[:80].replace('"', '\\"')
         frontmatter = f"""---

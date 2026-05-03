@@ -39,29 +39,86 @@ LOG_FILE = WIKI_DIR / "log.md"
 STUB_THRESHOLD_CHARS = 100
 
 
-def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+# ── Shared utilities (with inline fallback) ─────────────────────────
+try:
+    from tools.shared.wiki import (
+        read_file,
+        all_wiki_pages,
+        strip_frontmatter,
+        extract_frontmatter_title,
+    )
+except ImportError:
+    def read_file(path: Path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+
+    def all_wiki_pages() -> list[Path]:
+        exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
+        return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
+
+    def strip_frontmatter(content: str) -> str:
+        if content.startswith("---"):
+            match = re.search(r"^---\s*$", content[3:], re.MULTILINE)
+            if match:
+                return content[3 + match.end():].strip()
+        return content.strip()
+
+    def extract_frontmatter_title(content: str) -> str:
+        match = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', content, re.MULTILINE)
+        return match.group(1).strip() if match else ""
 
 
-def all_wiki_pages() -> list[Path]:
-    """All .md files in wiki/, excluding meta files."""
-    exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-    return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
+try:
+    from tools.shared.log import append_log
+except ImportError:
+    LOG_HEADER = (
+        "# Wiki Log\n\n"
+        "> Append-only chronological record of all operations.\n\n"
+        "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+        "---\n"
+    )
+
+    def append_log(entry: str) -> None:
+        entry_text = entry.strip()
+        if not LOG_FILE.exists():
+            LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+            return
+        existing = read_file(LOG_FILE).strip()
+        if existing.startswith("# Wiki Log"):
+            parts = existing.split("\n---\n", 1)
+            if len(parts) == 2:
+                new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+            else:
+                new_content = entry_text + "\n\n" + existing
+        else:
+            new_content = entry_text + "\n\n" + existing
+        LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
-def strip_frontmatter(content: str) -> str:
-    """Remove YAML frontmatter (--- ... ---) from content.
+# ── Wikilink helpers ────────────────────────────────────────────────
 
-    Handles frontmatter values that contain '---' by matching the
-    first newline-delimited --- boundary after the opening ---.
+def extract_wikilinks(content: str) -> list[str]:
+    """Extract all [[WikiLink]] targets from page content.
+
+    Handles both [[PageName]] and [[PageName|display alias]] formats.
     """
-    if content.startswith("---"):
-        # Match --- at the start of a line after the opening ---
-        match = re.search(r"^---\s*$", content[3:], re.MULTILINE)
-        if match:
-            end_pos = 3 + match.end()
-            return content[end_pos:].strip()
-    return content.strip()
+    return re.findall(r'\[\[([^\]]+)\]\]', content)
+
+
+def all_wiki_page_stems() -> set[str]:
+    """Return set of all wiki page stems (case-insensitive)."""
+    pages = set()
+    for p in all_wiki_pages():
+        pages.add(p.stem.lower())
+    return pages
+
+
+# Section mapping for auto-indexing
+SECTION_MAP = {
+    "sources": "Sources",
+    "entities": "Entities",
+    "concepts": "Concepts",
+    "syntheses": "Syntheses",
+}
 
 
 # ── Check: Empty / Stub files ───────────────────────────────────────
@@ -106,9 +163,6 @@ def check_index_sync(pages: list[Path]) -> dict:
     index_content = read_file(INDEX_FILE)
     index_links = _parse_index_links(index_content)
 
-    # Normalize index links to absolute paths for comparison
-    # overview.md is listed under ## Overview, not in the per-type sections.
-    # Exclude it from both sides to avoid false positives.
     meta_pages = {"overview.md"}
 
     index_paths = set()
@@ -134,6 +188,29 @@ def check_index_sync(pages: list[Path]) -> dict:
         "in_index_not_on_disk": in_index_not_on_disk,
         "on_disk_not_in_index": on_disk_not_in_index,
     }
+
+
+# ── Check: Broken wikilinks ───────────────────────────────────────
+
+def check_broken_links(pages: list[Path]) -> list[dict]:
+    """Find wikilinks that point to non-existent pages.
+
+    Handles [[PageName]] and [[PageName|alias]] formats.
+    Only checks links targeting wiki pages (not external URLs).
+    """
+    existing_stems = all_wiki_page_stems()
+    broken = []
+    for p in pages:
+        content = read_file(p)
+        for link in extract_wikilinks(content):
+            link_target = link.split("|")[0].strip()
+            link_stem = Path(link_target.replace("\\", "/")).stem.lower()
+            if link_stem not in existing_stems:
+                broken.append({
+                    "page": str(p.relative_to(REPO_ROOT)),
+                    "link": link,
+                })
+    return broken
 
 
 # ── Check: Log coverage ────────────────────────────────────────────
@@ -165,10 +242,7 @@ def check_log_coverage(pages: list[Path]) -> list[dict]:
 
     missing = []
     for p in sorted(source_dir.glob("*.md")):
-        # Try matching by slug (filename without .md) or by frontmatter title
         slug = p.stem.lower().replace("-", " ").replace("_", " ")
-
-        # Also try extracting title from frontmatter
         content = read_file(p)
         title_match = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', content, re.MULTILINE)
         fm_title = title_match.group(1).strip().lower() if title_match else ""
@@ -183,6 +257,76 @@ def check_log_coverage(pages: list[Path]) -> list[dict]:
     return missing
 
 
+# ── Fix Helpers ─────────────────────────────────────────────────────
+
+def fix_index_sync(pages: list[Path]) -> list[str]:
+    """Auto-add missing pages to index.md. Returns list of actions taken."""
+    sync = check_index_sync(pages)
+    missing = sync["on_disk_not_in_index"]
+    if not missing:
+        return []
+
+    index_content = read_file(INDEX_FILE)
+    actions = []
+    for rel_path in missing:
+        p = REPO_ROOT / rel_path
+        if not p.exists():
+            continue
+        content = read_file(p)
+        title = extract_frontmatter_title(content) or p.stem
+        parent = p.parent.name
+        section = SECTION_MAP.get(parent, "Sources")
+        entry = f"- [{title}]({Path(rel_path).as_posix()}) — {parent.rstrip('s')} page"
+
+        section_header = f"## {section}"
+        if section_header in index_content:
+            if entry not in index_content:
+                index_content = index_content.replace(
+                    section_header + "\n",
+                    section_header + "\n" + entry + "\n",
+                )
+                actions.append(f"Added {rel_path} to ## {section}")
+        else:
+            index_content += f"\n{section_header}\n{entry}\n"
+            actions.append(f"Added {rel_path} to new ## {section}")
+
+    if actions:
+        INDEX_FILE.write_text(index_content, encoding="utf-8")
+    return actions
+
+
+def fix_log_coverage(pages: list[Path]) -> list[str]:
+    """Auto-add missing log entries for source pages. Returns list of actions taken."""
+    missing = check_log_coverage(pages)
+    if not missing:
+        return []
+
+    log_content = read_file(LOG_FILE)
+    today = date.today().isoformat()
+    actions = []
+    for item in missing:
+        p = REPO_ROOT / item["path"]
+        if not p.exists():
+            continue
+        title = item["title"] or item["slug"]
+        entry = f"## [{today}] ingest | {title}\n\nAuto-added by health --fix."
+        if entry.split("\n")[0] not in log_content:
+            if log_content.strip():
+                log_content += "\n\n" + entry
+            else:
+                log_content = (
+                    "# Wiki Log\n\n"
+                    "> Append-only chronological record of all operations.\n\n"
+                    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+                    "---\n\n" + entry
+                )
+            actions.append(f"Added log entry for {item['path']}")
+
+    if actions:
+        LOG_FILE.write_text(log_content, encoding="utf-8")
+    return actions
+
+
 # ── Report Generation ───────────────────────────────────────────────
 
 def run_health() -> dict:
@@ -195,6 +339,7 @@ def run_health() -> dict:
         "empty_files": check_empty_files(pages),
         "index_sync": check_index_sync(pages),
         "log_coverage": check_log_coverage(pages),
+        "broken_links": check_broken_links(pages),
     }
 
 
@@ -246,6 +391,21 @@ def format_report(results: dict) -> str:
         lines.append("index.md is in sync with disk. [OK]")
         lines.append("")
 
+    # ── Broken Wikilinks
+    broken = results["broken_links"]
+    lines.append(f"## Broken Wikilinks ({len(broken)} found)")
+    lines.append("")
+    if broken:
+        lines.append("These wikilinks point to pages that don't exist:")
+        lines.append("")
+        lines.append("| Page | Broken Link |")
+        lines.append("|---|---|")
+        for bl in broken:
+            lines.append(f"| `{bl['page']}` | `[[{bl['link']}]]` |")
+    else:
+        lines.append("All wikilinks resolve to existing pages. [OK]")
+    lines.append("")
+
     # ── Log Coverage
     log_missing = results["log_coverage"]
     lines.append(f"## Log Coverage ({len(log_missing)} source pages without log entry)")
@@ -270,6 +430,8 @@ if __name__ == "__main__":
                         help="Save report to wiki/health-report.md")
     parser.add_argument("--json", action="store_true",
                         help="Output machine-readable JSON instead of markdown")
+    parser.add_argument("--fix", action="store_true",
+                        help="Auto-repair index sync and log coverage issues (stub files are reported only)")
     args = parser.parse_args()
 
     results = run_health()
@@ -279,6 +441,19 @@ if __name__ == "__main__":
     else:
         report = format_report(results)
         print(report)
+
+        if args.fix:
+            pages = all_wiki_pages()
+            fix_actions = []
+            fix_actions.extend(fix_index_sync(pages))
+            fix_actions.extend(fix_log_coverage(pages))
+            if fix_actions:
+                print("\n## Auto-Fix Actions")
+                for action in fix_actions:
+                    print(f"  ✓ {action}")
+            else:
+                print("\n## Auto-Fix Actions")
+                print("  No repairs needed.")
 
         if args.save:
             report_path = WIKI_DIR / "health-report.md"

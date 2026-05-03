@@ -8,18 +8,16 @@ It resolves broken entity links by scanning existing contexts where the entity i
 
 Usage:
     python tools/heal.py
+    python tools/heal.py --dry-run
 """
+
+from __future__ import annotations
 
 import os
 import sys
+import argparse
 from pathlib import Path
 from datetime import date
-
-try:
-    from litellm import completion
-except ImportError:
-    print("Error: litellm not installed. Run: pip install litellm")
-    sys.exit(1)
 
 # Ensure tools can be imported
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -33,51 +31,88 @@ INDEX_FILE = WIKI_DIR / "index.md"
 LOG_FILE = WIKI_DIR / "log.md"
 
 
-def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+# ── Shared utilities (with inline fallback) ─────────────────────────
+try:
+    from tools.shared.wiki import read_file
+except ImportError:
+    def read_file(path: Path) -> str:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-LOG_HEADER = (
-    "# Wiki Log\n\n"
-    "> Append-only chronological record of all operations.\n\n"
-    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
-    "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
-    "---\n"
-)
+try:
+    from tools.shared.llm import _load_llm_config, call_llm, LLMUnavailableError
+except ImportError:
+    def _load_llm_config() -> dict:
+        cfg_path = REPO_ROOT / "config" / "llm.yaml"
+        defaults = {
+            "provider": "anthropic",
+            "model": "anthropic/claude-3-5-haiku-latest",
+            "api_key": "",
+            "api_base": "",
+        }
+        if cfg_path.exists():
+            try:
+                import yaml
+                data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                return {**defaults, **data}
+            except Exception:
+                pass
+        return defaults
 
+    class LLMUnavailableError(Exception):
+        pass
 
-def _load_llm_config() -> dict:
-    cfg_path = REPO_ROOT / "config" / "llm.yaml"
-    defaults = {"provider": "anthropic", "model": "claude-3-5-haiku-latest", "api_key": "", "api_base": ""}
-    if cfg_path.exists():
+    def call_llm(prompt: str, max_tokens: int = 1500) -> str:
         try:
-            import yaml
-            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-            return {**defaults, **data}
-        except Exception:
-            pass
-    return defaults
+            from litellm import completion
+        except ImportError as exc:
+            raise LLMUnavailableError("litellm not installed") from exc
 
+        cfg = _load_llm_config()
+        model = cfg.get("model") or os.getenv("LLM_MODEL", "anthropic/claude-3-5-haiku-latest")
+        provider = cfg.get("provider", "anthropic")
+        if "/" not in model:
+            model = f"{provider}/{model}"
+        api_key = cfg.get("api_key", "")
 
-def call_llm(prompt: str, max_tokens: int = 1500) -> str:
-    cfg = _load_llm_config()
-    model = cfg.get("model") or os.getenv("LLM_MODEL", "claude-3-5-haiku-latest")
-    api_key = cfg.get("api_key", "")
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+        }
+        if api_key:
+            kwargs["api_key"] = api_key
 
-    kwargs = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": max_tokens
-    }
-    if api_key:
-        kwargs["api_key"] = api_key
-
-    try:
         response = completion(**kwargs)
         return response.choices[0].message.content
-    except Exception as e:
-        print(f"  [ERROR] LLM call failed: {e}")
-        raise
+
+
+try:
+    from tools.shared.log import append_log
+except ImportError:
+    LOG_HEADER = (
+        "# Wiki Log\n\n"
+        "> Append-only chronological record of all operations.\n\n"
+        "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
+        "Parse recent entries: `grep \"^## \\[\" wiki/log.md | tail -10`\n\n"
+        "---\n"
+    )
+
+    def append_log(entry: str) -> None:
+        entry_text = entry.strip()
+        if not LOG_FILE.exists():
+            LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
+            return
+        existing = read_file(LOG_FILE).strip()
+        if existing.startswith("# Wiki Log"):
+            parts = existing.split("\n---\n", 1)
+            if len(parts) == 2:
+                new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
+            else:
+                new_content = entry_text + "\n\n" + existing
+        else:
+            new_content = entry_text + "\n\n" + existing
+        LOG_FILE.write_text(new_content, encoding="utf-8")
 
 
 def search_sources(entity: str, pages: list[Path]) -> list[Path]:
@@ -92,11 +127,19 @@ def search_sources(entity: str, pages: list[Path]) -> list[Path]:
     return sources[:15]
 
 
-def update_index(entries: list[str]):
+def update_index(entries: list[str]) -> None:
     """Add entity entries to index.md under ## Entities section."""
     content = read_file(INDEX_FILE)
     if not content:
-        content = "# Wiki Index\n\n## Overview\n- [Overview](overview.md) — living synthesis\n\n## Sources\n\n## Entities\n\n## Concepts\n\n## Syntheses\n"
+        content = (
+            "# Wiki Index\n\n"
+            "## Overview\n"
+            "- [Overview](overview.md) — living synthesis\n\n"
+            "## Sources\n\n"
+            "## Entities\n\n"
+            "## Concepts\n\n"
+            "## Syntheses\n"
+        )
     for entry in entries:
         if entry.strip() in content:
             continue
@@ -108,29 +151,32 @@ def update_index(entries: list[str]):
     INDEX_FILE.write_text(content, encoding="utf-8")
 
 
-def append_log(entry: str):
-    entry_text = entry.strip()
-    if not LOG_FILE.exists():
-        LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
-        return
-    existing = read_file(LOG_FILE).strip()
-    if existing.startswith("# Wiki Log"):
-        parts = existing.split("\n---\n", 1)
-        if len(parts) == 2:
-            new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
-        else:
-            new_content = entry_text + "\n\n" + existing
-    else:
-        new_content = entry_text + "\n\n" + existing
-    LOG_FILE.write_text(new_content, encoding="utf-8")
-
-
-def heal_missing_entities():
+def heal_missing_entities(dry_run: bool = False):
     pages = all_wiki_pages()
     missing_entities = find_missing_entities(pages)
 
     if not missing_entities:
         print("Graph is fully connected. No missing entities found!")
+        return
+
+    if dry_run:
+        print(f"Found {len(missing_entities)} missing entity nodes (dry-run, no changes):\n")
+        for entity in missing_entities:
+            sources = search_sources(entity, pages)
+            source_names = ", ".join(s.name for s in sources[:5])
+            if len(sources) > 5:
+                source_names += f" and {len(sources) - 5} more"
+            print(f"  - [[{entity}]] — referenced in {len(sources)} page(s) ({source_names})")
+        print(f"\nRun without --dry-run to generate entity pages.")
+        return
+
+    try:
+        from litellm import completion
+    except ImportError:
+        print(f"Found {len(missing_entities)} missing entity nodes:")
+        for entity in missing_entities:
+            print(f"  - [[{entity}]]")
+        print("\n[SKIP] Cannot generate pages — litellm not installed. Run: pip install litellm")
         return
 
     ENTITIES_DIR.mkdir(exist_ok=True, parents=True)
@@ -165,7 +211,6 @@ Write a comprehensive paragraph defining what `{entity}` means in the context of
 """
         try:
             result = call_llm(prompt)
-            # Sanitize entity name to prevent path traversal
             safe_entity = Path(entity).name
             if not safe_entity or safe_entity in (".", ".."):
                 print(f" [!] Skipping invalid entity name: {entity!r}")
@@ -184,10 +229,13 @@ Write a comprehensive paragraph defining what `{entity}` means in the context of
         update_index(entries)
         print(f"  indexed: {len(entries)} entity page(s)")
 
-        # Append to log
         names = ", ".join(created)
         append_log(f"## [{today}] heal | Auto-healed missing entities\n\nCreated entity pages for: {names}.")
 
 
 if __name__ == "__main__":
-    heal_missing_entities()
+    parser = argparse.ArgumentParser(description="Auto-heal missing entity pages in the wiki")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="List missing entities without generating pages")
+    args = parser.parse_args()
+    heal_missing_entities(dry_run=args.dry_run)
