@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Iterator
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
@@ -46,9 +47,11 @@ def resolve_wikilink_target(link: str) -> str:
     return link.split("|")[0].strip()
 
 
-def all_wiki_pages() -> list[Path]:
-    """Return all .md files in wiki/, excluding meta files."""
-    return [p for p in WIKI_DIR.rglob("*.md") if p.name not in META_FILES]
+def all_wiki_pages() -> Iterator[Path]:
+    """Yield all .md files in wiki/, excluding meta files."""
+    for p in WIKI_DIR.rglob("*.md"):
+        if p.name not in META_FILES:
+            yield p
 
 
 def all_wiki_page_stems() -> set[str]:
@@ -76,8 +79,25 @@ def extract_frontmatter_type(content: str) -> str:
 
 
 def extract_frontmatter_title(content: str) -> str:
-    """Return the ``title`` field from YAML frontmatter, or empty string."""
-    match = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', content, re.MULTILINE)
+    """Return the ``title`` field from YAML frontmatter, or empty string.
+
+    Tries YAML parsing first for robust multi-line support, then falls back
+    to a simple regex for single-line titles.
+    """
+    if content.startswith("---"):
+        try:
+            import yaml
+            match = re.search(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if match:
+                fm = yaml.safe_load(match.group(1))
+                if isinstance(fm, dict):
+                    title = fm.get("title", "")
+                    if isinstance(title, str):
+                        return title.strip()
+        except Exception:
+            pass
+    # Fallback to regex for single-line titles
+    match = re.search(r'^title:\s*["\']?(.+?)["\']?(?:\s*$|(?=\n\w+:|$))', content, re.MULTILINE)
     return match.group(1).strip() if match else ""
 
 

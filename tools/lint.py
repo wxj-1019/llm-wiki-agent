@@ -46,9 +46,11 @@ except ImportError:
     def read_file(path: Path) -> str:
         return path.read_text(encoding="utf-8") if path.exists() else ""
 
-    def all_wiki_pages() -> list[Path]:
+    def all_wiki_pages():
         exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-        return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
+        for p in WIKI_DIR.rglob("*.md"):
+            if p.name not in exclude:
+                yield p
 
 
 def extract_wikilinks(content: str) -> list[str]:
@@ -175,7 +177,8 @@ def find_missing_entities(pages: list[Path]) -> list[str]:
     existing_pages = {p.stem.lower() for p in pages}
     for p in pages:
         content = read_file(p)
-        links = extract_wikilinks(content)
+        # Deduplicate links per-page before counting
+        links = set(extract_wikilinks(content))
         for link in links:
             if link.lower() not in existing_pages:
                 mention_counts[link] += 1
@@ -335,7 +338,7 @@ def check_isolated_communities(graph_data: dict) -> list[dict]:
 
 
 def run_lint():
-    pages = all_wiki_pages()
+    pages = list(all_wiki_pages())
     today = date.today().isoformat()
 
     if not pages:
@@ -375,7 +378,8 @@ def run_lint():
         print("  [skip] no graph.json — run build_graph.py first for graph-aware checks")
 
     # Build context for semantic checks
-    sample = sorted(pages, key=lambda p: p.relative_to(REPO_ROOT).as_posix())[:20]
+    # Sample up to 50 pages for semantic lint (increased from 20 for better coverage)
+    sample = sorted(pages, key=lambda p: p.relative_to(REPO_ROOT).as_posix())[:50]
     pages_context = ""
     for p in sample:
         rel = p.relative_to(REPO_ROOT)

@@ -51,9 +51,11 @@ except ImportError:
     def read_file(path: Path) -> str:
         return path.read_text(encoding="utf-8") if path.exists() else ""
 
-    def all_wiki_pages() -> list[Path]:
+    def all_wiki_pages():
         exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-        return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
+        for p in WIKI_DIR.rglob("*.md"):
+            if p.name not in exclude:
+                yield p
 
     def strip_frontmatter(content: str) -> str:
         if content.startswith("---"):
@@ -176,9 +178,10 @@ def check_index_sync(pages: list[Path]) -> dict:
         if p.name not in meta_pages:
             disk_paths.add(p.resolve())
 
+    # Defensive guard: skip paths that somehow resolved outside the repo
     in_index_not_on_disk = [
         str(p.relative_to(REPO_ROOT)) for p in sorted(index_paths - disk_paths)
-        if REPO_ROOT in p.parents or p == REPO_ROOT
+        if p.is_relative_to(REPO_ROOT)
     ]
     on_disk_not_in_index = [
         str(p.relative_to(REPO_ROOT)) for p in sorted(disk_paths - index_paths)
@@ -301,7 +304,6 @@ def fix_log_coverage(pages: list[Path]) -> list[str]:
     if not missing:
         return []
 
-    log_content = read_file(LOG_FILE)
     today = date.today().isoformat()
     actions = []
     for item in missing:
@@ -310,20 +312,8 @@ def fix_log_coverage(pages: list[Path]) -> list[str]:
             continue
         title = item["title"] or item["slug"]
         entry = f"## [{today}] ingest | {title}\n\nAuto-added by health --fix."
-        if entry.split("\n")[0] not in log_content:
-            if log_content.strip():
-                log_content += "\n\n" + entry
-            else:
-                log_content = (
-                    "# Wiki Log\n\n"
-                    "> Append-only chronological record of all operations.\n\n"
-                    "Format: `## [YYYY-MM-DD] <operation> | <title>`\n\n"
-                    "---\n\n" + entry
-                )
-            actions.append(f"Added log entry for {item['path']}")
-
-    if actions:
-        LOG_FILE.write_text(log_content, encoding="utf-8")
+        append_log(entry)
+        actions.append(f"Added log entry for {item['path']}")
     return actions
 
 
@@ -331,7 +321,7 @@ def fix_log_coverage(pages: list[Path]) -> list[str]:
 
 def run_health() -> dict:
     """Run all health checks, return structured results."""
-    pages = all_wiki_pages()
+    pages = list(all_wiki_pages())
 
     return {
         "date": date.today().isoformat(),
@@ -443,7 +433,7 @@ if __name__ == "__main__":
         print(report)
 
         if args.fix:
-            pages = all_wiki_pages()
+            pages = list(all_wiki_pages())
             fix_actions = []
             fix_actions.extend(fix_index_sync(pages))
             fix_actions.extend(fix_log_coverage(pages))

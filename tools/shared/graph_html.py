@@ -24,8 +24,13 @@ EDGE_COLORS = {
 
 def render_html(nodes: list[dict], edges: list[dict]) -> str:
     """Generate self-contained vis.js HTML with interactive filtering."""
-    nodes_json = json.dumps(nodes, indent=2, ensure_ascii=False).replace("</", "<\\/")
-    edges_json = json.dumps(edges, indent=2, ensure_ascii=False).replace("</", "<\\/")
+    def _escape_json_for_script(value: str) -> str:
+        """Escape JSON string for safe embedding inside <script> tags.
+        Prevents </script> injection and JavaScript line-separator exploits."""
+        return value.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+
+    nodes_json = _escape_json_for_script(json.dumps(nodes, indent=2, ensure_ascii=False))
+    edges_json = _escape_json_for_script(json.dumps(edges, indent=2, ensure_ascii=False))
 
     legend_items = "".join(
         f'<span style="background:{color};padding:3px 8px;margin:2px;border-radius:3px;font-size:12px">{t}</span>'
@@ -41,7 +46,7 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
 <head>
 <meta charset="UTF-8">
 <title>LLM Wiki — Knowledge Graph</title>
-<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js" crossorigin="anonymous" integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"></script>
 <style>
   body {{ margin: 0; background: #1a1a2e; font-family: 'Inter', sans-serif; color: #eee; }}
   #graph {{ width: 100vw; height: 100vh; }}

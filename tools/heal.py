@@ -62,14 +62,14 @@ except ImportError:
     class LLMUnavailableError(Exception):
         pass
 
-    def call_llm(prompt: str, max_tokens: int = 1500) -> str:
+    def call_llm(prompt: str, max_tokens: int = 1500, model_env: str = "LLM_MODEL", default_model: str = "anthropic/claude-3-5-haiku-latest", max_retries: int = 2, timeout: int = 120) -> str:
         try:
             from litellm import completion
         except ImportError as exc:
             raise LLMUnavailableError("litellm not installed") from exc
 
         cfg = _load_llm_config()
-        model = cfg.get("model") or os.getenv("LLM_MODEL", "anthropic/claude-3-5-haiku-latest")
+        model = cfg.get("model") or os.getenv(model_env, default_model)
         provider = cfg.get("provider", "anthropic")
         if "/" not in model:
             model = f"{provider}/{model}"
@@ -79,12 +79,22 @@ except ImportError:
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
+            "timeout": timeout,
         }
         if api_key:
             kwargs["api_key"] = api_key
 
-        response = completion(**kwargs)
-        return response.choices[0].message.content
+        last_err = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = completion(**kwargs)
+                return response.choices[0].message.content
+            except Exception as e:
+                last_err = e
+                if attempt < max_retries:
+                    import time
+                    time.sleep(2 ** attempt)
+        raise last_err
 
 
 try:
@@ -117,12 +127,16 @@ except ImportError:
 
 def search_sources(entity: str, pages: list[Path]) -> list[Path]:
     """Find up to 15 pages where this entity is mentioned natively."""
+    if len(entity) < 2:
+        return []
     sources = []
+    entity_lower = entity.lower()
+    pattern = re.compile(rf'\[\[{re.escape(entity)}\]\]', re.IGNORECASE)
     for p in pages:
         parent_name = p.parent.name.lower()
-        if parent_name != "entities" and parent_name != "concepts":
+        if parent_name not in ("entities", "concepts"):
             content = p.read_text(encoding="utf-8")
-            if entity.lower() in content.lower():
+            if pattern.search(content):
                 sources.append(p)
     return sources[:15]
 
@@ -152,7 +166,7 @@ def update_index(entries: list[str]) -> None:
 
 
 def heal_missing_entities(dry_run: bool = False):
-    pages = all_wiki_pages()
+    pages = list(all_wiki_pages())
     missing_entities = find_missing_entities(pages)
 
     if not missing_entities:
