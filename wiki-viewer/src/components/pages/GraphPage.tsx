@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
 const APPLE_NODE_PALETTE = [
   '#007AFF',
@@ -27,7 +27,7 @@ function getComputedColor(varName: string): string {
 const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 
 import { Link, useNavigate } from 'react-router-dom';
-import { Network as VisNetwork } from 'vis-network/standalone';
+import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 import type { Network } from 'vis-network';
 import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +43,8 @@ export function GraphPage() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
+  const nodesDataSetRef = useRef<DataSet<unknown> | null>(null);
+  const edgesDataSetRef = useRef<DataSet<unknown> | null>(null);
   const graphData = useWikiStore((s) => s.graphData);
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
@@ -53,11 +55,8 @@ export function GraphPage() {
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set(['source', 'entity', 'concept', 'synthesis']));
   const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
 
-  // Memoize nodes/edges derived from graphData to avoid reference churn
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const nodes = graphData?.nodes || [];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const edges = graphData?.edges || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
+  const edges = useMemo(() => graphData?.edges || [], [graphData]);
 
   // Get rid of stale state when graphData changes (nodes may have been added/removed)
   useEffect(() => {
@@ -110,9 +109,14 @@ export function GraphPage() {
         arrows: 'to' as const,
       }));
 
+    const nodesDataSet = new DataSet(visNodes);
+    const edgesDataSet = new DataSet(visEdges);
+    nodesDataSetRef.current = nodesDataSet;
+    edgesDataSetRef.current = edgesDataSet;
+
     const network = new VisNetwork(
       containerRef.current,
-      { nodes: visNodes, edges: visEdges },
+      { nodes: nodesDataSet, edges: edgesDataSet },
       {
         physics: {
           barnesHut: {
@@ -170,14 +174,14 @@ export function GraphPage() {
       id: n.id,
       hidden: !nodeIds.has(n.id),
     }));
-    networkRef.current.body.data.nodes.update(nodeUpdates);
+    nodesDataSetRef.current?.update(nodeUpdates);
 
     // Update edges: hide edges with filtered-out endpoints
     const edgeUpdates = edges.map((e) => ({
       id: e.id,
       hidden: !nodeIds.has(e.from) || !nodeIds.has(e.to),
     }));
-    networkRef.current.body.data.edges.update(edgeUpdates);
+    edgesDataSetRef.current?.update(edgeUpdates);
   }, [filterTypes, graphData, nodes, edges]);
 
   const selectedNodeData = selectedNode ? nodes.find((n) => n.id === selectedNode) : null;
@@ -290,7 +294,8 @@ export function GraphPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setShowOnboard(false);
               safeSet(GRAPH_ONBOARDED_KEY, '1');
             }}

@@ -36,9 +36,11 @@ export function SkillsPage() {
 
   useEffect(() => {
     fetchSkills();
+    const interval = setInterval(() => fetchSkills(), 30000);
+    return () => clearInterval(interval);
   }, [fetchSkills]);
 
-  const action = async (url: string, method: string = 'POST', name?: string) => {
+  const action = useCallback(async (url: string, method: string = 'POST', name?: string) => {
     setLoading(true);
     try {
       const res = await fetch(url, { method });
@@ -55,7 +57,7 @@ export function SkillsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchSkills, addNotification, t]);
 
   const showDetail = async (name: string) => {
     try {

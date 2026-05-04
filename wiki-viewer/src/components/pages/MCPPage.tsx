@@ -25,6 +25,7 @@ export function MCPPage() {
   useDocumentTitle(t('mcp.title', 'MCP 管理'));
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [actioningServer, setActioningServer] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [logName, setLogName] = useState('');
@@ -42,12 +43,22 @@ export function MCPPage() {
 
   useEffect(() => {
     fetchServers();
-    const id = setInterval(fetchServers, 3000);
-    return () => clearInterval(id);
+    const id = setInterval(fetchServers, 10000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchServers();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchServers]);
 
-  const action = async (url: string, method: string = 'POST', name?: string) => {
+  const action = useCallback(async (url: string, method: string = 'POST', name?: string) => {
     setLoading(true);
+    if (name) setActioningServer(name);
     try {
       const res = await fetch(url, { method });
       const data = await res.json();
@@ -62,8 +73,9 @@ export function MCPPage() {
       addNotification(String(e), 'error');
     } finally {
       setLoading(false);
+      setActioningServer(null);
     }
-  };
+  }, [fetchServers, addNotification, t]);
 
   const showLogs = async (name: string) => {
     setLogName(name);
@@ -84,7 +96,7 @@ export function MCPPage() {
           <h1 className="text-2xl font-semibold">{t('mcp.title', 'MCP 管理')}</h1>
         </div>
         <button
-          onClick={() => alert(t('mcp.comingSoon', '安装功能即将推出，请手动将 server.py 放入 mcp-servers/ 目录'))}
+          onClick={() => addNotification(t('mcp.comingSoon', '安装功能即将推出，请手动将 server.py 放入 mcp-servers/ 目录'), 'info')}
           disabled={loading}
           className="apple-button text-sm flex items-center gap-2 disabled:opacity-50"
         >
@@ -126,8 +138,8 @@ export function MCPPage() {
                 {s.status !== 'running' ? (
                   <button
                     onClick={() => action(`/api/mcp/start/${s.name}`, 'POST', s.display_name || s.name)}
-                    disabled={loading}
-                    className="p-2 hover:bg-green-500/10 hover:text-green-500 rounded-xl transition-colors"
+                    disabled={actioningServer === s.name}
+                    className="p-2 hover:bg-green-500/10 hover:text-green-500 rounded-xl transition-colors disabled:opacity-50"
                     title={t('mcp.start', '启动')}
                   >
                     <Play size={14} />
@@ -135,8 +147,8 @@ export function MCPPage() {
                 ) : (
                   <button
                     onClick={() => action(`/api/mcp/stop/${s.name}`, 'POST', s.display_name || s.name)}
-                    disabled={loading}
-                    className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors"
+                    disabled={actioningServer === s.name}
+                    className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
                     title={t('mcp.stop', '停止')}
                   >
                     <Square size={14} />
@@ -144,8 +156,8 @@ export function MCPPage() {
                 )}
                 <button
                   onClick={() => action(`/api/mcp/restart/${s.name}`, 'POST', s.display_name || s.name)}
-                  disabled={loading}
-                  className="p-2 hover:bg-apple-blue/10 hover:text-apple-blue rounded-xl transition-colors"
+                  disabled={actioningServer === s.name}
+                  className="p-2 hover:bg-apple-blue/10 hover:text-apple-blue rounded-xl transition-colors disabled:opacity-50"
                   title={t('mcp.restart', '重启')}
                 >
                   <RotateCcw size={14} />
@@ -159,8 +171,8 @@ export function MCPPage() {
                 </button>
                 <button
                   onClick={() => action(`/api/mcp/uninstall/${s.name}`, 'DELETE', s.display_name || s.name)}
-                  disabled={loading}
-                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors"
+                  disabled={actioningServer === s.name}
+                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
                   title={t('mcp.uninstall', '卸载')}
                 >
                   <Trash2 size={14} />

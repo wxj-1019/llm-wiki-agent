@@ -211,5 +211,6 @@ function parseLog(text: string): LogEntry[] {
       });
     }
   }
-  return entries;
+  // Return newest entries first (log.md is append-only with newest at bottom)
+  return entries.reverse();
 }

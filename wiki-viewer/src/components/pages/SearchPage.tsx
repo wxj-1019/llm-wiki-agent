@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -42,17 +42,20 @@ export function SearchPage() {
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
+  const userEditedRef = useRef(false);
 
   const debouncedQuery = useDebounce(query, 200);
   const results = useMemo(() => {
     if (!debouncedQuery.trim()) return [];
-    return searchNodes(debouncedQuery);
+    return searchNodes(debouncedQuery).slice(0, 50);
   }, [debouncedQuery]);
 
   useDocumentTitle(t('search.title'));
 
   useEffect(() => {
-    setQuery(initialQuery);
+    if (!userEditedRef.current) {
+      setQuery(initialQuery);
+    }
   }, [initialQuery]);
 
   return (
@@ -64,7 +67,7 @@ export function SearchPage() {
         <input
           autoFocus
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); userEditedRef.current = true; }}
           placeholder={t('search.placeholder')}
           className="apple-input pl-9 text-lg"
         />

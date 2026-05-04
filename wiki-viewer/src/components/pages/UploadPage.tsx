@@ -218,13 +218,25 @@ export function UploadPage() {
     }
     setBatchIngesting(true);
     let successCount = 0;
+    const failed: string[] = [];
     for (const path of selectedPaths) {
       try {
         const result = await triggerIngest(path);
-        if (result.success) successCount++;
-      } catch { /* continue */ }
+        if (result.success) {
+          successCount++;
+        } else {
+          failed.push(path);
+        }
+      } catch (e) {
+        failed.push(path);
+      }
     }
-    showToast(t('upload.success.ingest') + ` (${successCount}/${selectedPaths.size})`, successCount > 0 ? 'success' : 'error');
+    const total = selectedPaths.size;
+    if (failed.length > 0) {
+      showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed)`, successCount > 0 ? 'success' : 'error');
+    } else {
+      showToast(`${successCount}/${total} ${t('upload.success.ingest')}`, 'success');
+    }
     setSelectedPaths(new Set());
     setBatchIngesting(false);
     refreshGraphData();
@@ -295,7 +307,7 @@ export function UploadPage() {
         {[
           { label: t('upload.stats.totalFiles'), value: animatedTotalFiles, icon: FolderOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/8', suffix: '' },
           { label: t('upload.stats.totalSize'), value: formatBytes(stats.totalSize), icon: HardDrive, color: 'text-apple-purple', bg: 'bg-apple-purple/8', suffix: '', raw: true },
-          { label: t('upload.stats.ingested'), value: files.filter((f) => f.name.endsWith('.md')).length, icon: CheckCircle, color: 'text-apple-green', bg: 'bg-apple-green/8', suffix: '' },
+          { label: t('upload.stats.ingested'), value: files.filter((f) => f.ingested).length, icon: CheckCircle, color: 'text-apple-green', bg: 'bg-apple-green/8', suffix: '' },
         ].map((s, i) => (
           <motion.div
             key={s.label}

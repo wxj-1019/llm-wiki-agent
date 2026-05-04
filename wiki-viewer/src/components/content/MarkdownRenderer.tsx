@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState, memo } from 'react';
+import React, { useEffect, useMemo, useState, memo, useRef } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import { codeToHtml } from 'shiki';
+import DOMPurify from 'dompurify';
 import { WikiLink } from './WikiLink';
 import { parseFrontmatter } from '@/lib/frontmatter';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +32,7 @@ function useThemeName() {
 
 const CodeBlock = memo(function CodeBlock(props: { className?: string; children?: React.ReactNode; inline?: boolean }) {
   const { className, children, inline } = props;
+  const { t } = useTranslation();
   const match = /language-(\w+)/.exec(className ?? '');
   const lang = match ? match[1] : '';
   const theme = useThemeName();
@@ -61,7 +63,6 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
     );
   }
 
-  const { t } = useTranslation();
   const CopyButton = (
     <button
       onClick={handleCopy}
@@ -86,7 +87,7 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
   return (
     <div className="relative my-4 rounded-xl overflow-x-auto text-sm">
       {CopyButton}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />
     </div>
   );
 });
@@ -115,6 +116,11 @@ function processWikiLinks(children: React.ReactNode): React.ReactNode {
     return children.map((child, i) => (
       <React.Fragment key={i}>{processWikiLinks(child)}</React.Fragment>
     ));
+  }
+  if (React.isValidElement(children) && children.props.children) {
+    return React.cloneElement(children, {
+      children: processWikiLinks(children.props.children as React.ReactNode),
+    });
   }
   return children;
 }
@@ -211,11 +217,14 @@ export function MarkdownRenderer({ content, enableSourceCitations, onSourceClick
     return rawBody;
   }, [content, enableSourceCitations]);
 
+  const onSourceClickRef = useRef(onSourceClick);
+  onSourceClickRef.current = onSourceClick;
+
   const aComponent = useMemo(() => {
     return memo(function AWrapper({ href, children }: { href?: string; children?: React.ReactNode }) {
-      return <A href={href} onSourceClick={onSourceClick}>{children}</A>;
+      return <A href={href} onSourceClick={onSourceClickRef.current}>{children}</A>;
     });
-  }, [onSourceClick]);
+  }, []);
 
   return (
     <ReactMarkdown

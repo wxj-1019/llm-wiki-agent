@@ -17,6 +17,7 @@ import { StreamDeduplicator, mergeStreamChunk } from '@/lib/streamUtils';
 const SESSIONS_KEY = 'wiki-chat-sessions';
 
 interface ChatEntry {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: WikiChatSource[];
@@ -41,9 +42,26 @@ function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function isValidSession(s: unknown): s is ChatSession {
+  if (!isObject(s)) return false;
+  const obj = s as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.title === 'string' &&
+    isArray(obj.messages) &&
+    typeof obj.updatedAt === 'number' &&
+    typeof obj.isDefaultTitle === 'boolean'
+  );
+}
+
 function isValidSessions(data: unknown): data is { sessions: ChatSession[]; activeId: string } {
   if (!isObject(data)) return false;
-  return isArray(data.sessions) && typeof data.activeId === 'string';
+  const obj = data as Record<string, unknown>;
+  return (
+    isArray(obj.sessions) &&
+    (obj.sessions as unknown[]).every(isValidSession) &&
+    typeof obj.activeId === 'string'
+  );
 }
 
 function loadSessions(): { sessions: ChatSession[]; activeId: string } {
@@ -78,10 +96,16 @@ export function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottomRef = useRef(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const contextSentRef = useRef(false);
 
   const activeSession = sessions.find((s) => s.id === activeId) || sessions[0];
   const entries = activeSession?.messages || [];
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
 
   useDocumentTitle(activeSession?.title || t('chat.title'));
 
@@ -174,9 +198,10 @@ export function ChatPage() {
   // Auto-send from URL context parameter
   useEffect(() => {
     const context = searchParams.get('context');
-    if (!context || entries.length > 0 || loading) return;
+    if (!context || entries.length > 0 || loading || contextSentRef.current) return;
+    contextSentRef.current = true;
     const query = t('chat.askAboutPage', { page: context.replace('.md', '').split('/').pop() || context });
-    const userEntry: ChatEntry = { role: 'user', content: query, timestamp: Date.now() };
+    const userEntry: ChatEntry = { id: generateId(), role: 'user', content: query, timestamp: Date.now() };
     setEntries((prev) => [...prev, userEntry]);
     doSend(query, [context]);
     setSearchParams({}, { replace: true });
@@ -184,7 +209,7 @@ export function ChatPage() {
   }, []);
 
   const doSend = useCallback(async (query: string, contextPages?: string[]) => {
-    const assistantEntry: ChatEntry = { role: 'assistant', content: '' };
+    const assistantEntry: ChatEntry = { id: generateId(), role: 'assistant', content: '' };
     setEntries((prev) => [...prev, assistantEntry]);
     setLoading(true);
     setStreaming(true);
@@ -193,7 +218,7 @@ export function ChatPage() {
     abortRef.current = new AbortController();
 
     try {
-      const currentEntries = entries;
+      const currentEntries = entriesRef.current;
       const history: WikiChatMessage[] = currentEntries.slice(-10).map((e) => ({
         role: e.role,
         content: e.content,
@@ -263,12 +288,12 @@ export function ChatPage() {
       setStreaming(false);
       abortRef.current = null;
     }
-  }, [entries, t, setEntries]);
+  }, [t, setEntries]);
 
   const handleSend = useCallback(() => {
     const query = input.trim();
     if (!query || loading) return;
-    const userEntry: ChatEntry = { role: 'user', content: query };
+    const userEntry: ChatEntry = { id: generateId(), role: 'user', content: query };
     setEntries((prev) => [...prev, userEntry]);
     setInput('');
     doSend(query);
@@ -307,16 +332,16 @@ export function ChatPage() {
       const next = prev.filter((s) => s.id !== id);
       if (next.length === 0) {
         const s: ChatSession = { id: generateId(), title: defaultTitle, messages: [], updatedAt: Date.now(), isDefaultTitle: true };
+        setActiveId(s.id);
         return [s];
+      }
+      if (activeIdRef.current === id) {
+        setActiveId(next[0].id);
       }
       return next;
     });
-    if (activeId === id) {
-      const remaining = sessions.filter((s) => s.id !== id);
-      setActiveId(remaining[0]?.id || '');
-    }
     addNotification(t('chat.sessionDeleted', '会话已删除'), 'success');
-  }, [activeId, sessions, defaultTitle, addNotification, t]);
+  }, [defaultTitle, addNotification, t]);
 
   const handleClear = useCallback(() => {
     setEntries([]);
@@ -327,7 +352,8 @@ export function ChatPage() {
       await navigator.clipboard.writeText(content);
       setCopiedIndex(index);
       addNotification(t('chat.copySuccess', '已复制'), 'success');
-      setTimeout(() => setCopiedIndex((prev) => (prev === index ? null : prev)), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopiedIndex((prev) => (prev === index ? null : prev)), 2000);
     } catch {
       addNotification(t('chat.copyFailed', '复制失败'), 'error');
     }
@@ -457,7 +483,7 @@ export function ChatPage() {
           <AnimatePresence initial={false}>
             {entries.map((entry, i) => (
               <motion.div
-                key={i}
+                key={entry.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
               >

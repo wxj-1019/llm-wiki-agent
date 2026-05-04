@@ -38,12 +38,12 @@ export function RootLayout() {
       <ToastContainer />
       <CommandPalette />
       {!isOnline && (
-        <div className="fixed top-14 left-0 right-0 z-50 bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue">
+        <div className="fixed top-14 left-0 right-0 z-[45] bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue">
           <WifiOff size={14} />
           <span>{t('error.offline')}</span>
         </div>
       )}
-      <div className="flex flex-1 overflow-hidden pt-14">
+      <div className={`flex flex-1 overflow-hidden ${!isOnline ? 'pt-[6.5rem]' : 'pt-14'}`}>
         <Sidebar />
         {/*
           Desktop: margin-left matches sidebar (240px expanded, 56px collapsed).

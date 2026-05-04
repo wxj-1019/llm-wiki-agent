@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe, Check } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -66,6 +67,12 @@ export function Header() {
   };
 
   useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!searchOpen) return;
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -117,8 +124,15 @@ export function Header() {
           <kbd className="hidden md:inline-flex px-1.5 py-0.5 rounded-md text-[10px] bg-[var(--bg-primary)] border border-[var(--border-default)]">{t('shortcut.ctrlK')}</kbd>
         </button>
 
-        {searchOpen && (
-          <div className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg">
+        <AnimatePresence>
+          {searchOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg"
+            >
             <input
               autoFocus
               value={query}
@@ -159,9 +173,9 @@ export function Header() {
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
       <Link
         to="/graph"

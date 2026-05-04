@@ -3,6 +3,7 @@ import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Se
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 
 interface NavItem {
   icon: React.ElementType;
@@ -53,6 +54,11 @@ export function Sidebar() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useWikiStore((s) => s.toggleSidebar);
   const location = useLocation();
+  const [disablePointerEvents, setDisablePointerEvents] = useState(false);
+
+  useEffect(() => {
+    setDisablePointerEvents(sidebarCollapsed);
+  }, [sidebarCollapsed]);
 
   const handleNavClick = () => {
     if (window.matchMedia('(max-width: 768px)').matches && !sidebarCollapsed) {
@@ -160,12 +166,13 @@ export function Sidebar() {
               onClick={toggleSidebar}
             />
             <motion.aside
-              className="md:hidden fixed left-0 top-14 bottom-0 z-40 bg-[var(--bg-primary)] border-r border-[var(--border-default)] overflow-y-auto"
+              className={`md:hidden fixed left-0 top-14 bottom-0 z-40 bg-[var(--bg-primary)] border-r border-[var(--border-default)] overflow-y-auto ${disablePointerEvents ? 'pointer-events-none' : ''}`}
               initial={{ x: -240 }}
               animate={{ x: 0 }}
               exit={{ x: -240 }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               style={{ width: '240px' }}
+              data-sidebar-mobile="true"
             >
               {sidebarContent}
             </motion.aside>

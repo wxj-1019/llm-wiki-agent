@@ -148,16 +148,25 @@ export function CommandPalette() {
 
   // Reset selection when results change
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [allCommands.length]);
+    setSelectedIndex(allCommands.findIndex((c) => !c.id.startsWith('sep-')));
+  }, [allCommands]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const isSep = (idx: number) => idx >= 0 && idx < allCommands.length && allCommands[idx].id.startsWith('sep-');
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((i) => (i + 1) % allCommands.length);
+      setSelectedIndex((i) => {
+        let next = (i + 1) % allCommands.length;
+        while (isSep(next) && next !== i) next = (next + 1) % allCommands.length;
+        return next;
+      });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((i) => (i - 1 + allCommands.length) % allCommands.length);
+      setSelectedIndex((i) => {
+        let next = (i - 1 + allCommands.length) % allCommands.length;
+        while (isSep(next) && next !== i) next = (next - 1 + allCommands.length) % allCommands.length;
+        return next;
+      });
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const cmd = allCommands[selectedIndex];

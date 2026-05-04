@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,10 @@ export function HomePage() {
   );
 
   useEffect(() => {
+    setSelectedIdx(-1);
+  }, [debouncedHomeQuery]);
+
+  useEffect(() => {
     if (homeQuery.length === 0) return;
     const handler = (e: MouseEvent) => {
       if (searchWrapperRef.current && !searchWrapperRef.current.contains(e.target as Node)) {
@@ -42,23 +46,32 @@ export function HomePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [homeQuery]);
 
-  const sources = nodes.filter((n) => n.type === 'source');
-  const entities = nodes.filter((n) => n.type === 'entity');
-  const concepts = nodes.filter((n) => n.type === 'concept');
-  const syntheses = nodes.filter((n) => n.type === 'synthesis');
+  const sources = useMemo(() => nodes.filter((n) => n.type === 'source'), [nodes]);
+  const entities = useMemo(() => nodes.filter((n) => n.type === 'entity'), [nodes]);
+  const concepts = useMemo(() => nodes.filter((n) => n.type === 'concept'), [nodes]);
+  const syntheses = useMemo(() => nodes.filter((n) => n.type === 'synthesis'), [nodes]);
 
-  const recentNodes = recentPages
-    .map((id) => nodes.find((n) => n.id === id))
-    .filter(Boolean)
-    .slice(0, 3);
+  const recentNodes = useMemo(
+    () => recentPages.map((id) => nodes.find((n) => n.id === id)).filter(Boolean).slice(0, 3),
+    [recentPages, nodes]
+  );
 
-  const [randomNode, setRandomNode] = useState<typeof nodes[0] | null>(null);
-  useEffect(() => {
-    if (nodes.length > 0) {
-      setRandomNode(nodes[Math.floor(Math.random() * nodes.length)]);
-    }
+  const randomNode = useMemo(() => {
+    if (nodes.length === 0) return null;
+    return nodes[Math.floor(Math.random() * nodes.length)];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
+
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+  }, []);
+  useEffect(() => {
+    return () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current); };
+  }, []);
 
   useDocumentTitle();
 
@@ -133,7 +146,8 @@ export function HomePage() {
                     onClick={() => {
                       navigator.clipboard.writeText(t('empty.ingestCommand'));
                       setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
+                      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+                      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
                     }}
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-primary)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)] hover:border-[var(--border-strong)] rounded-xl"
                   >
@@ -154,7 +168,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mb-12"
           >
-            <div className="relative max-w-xl" ref={searchWrapperRef}>
+            <div className="relative max-w-xl" ref={searchWrapperRef} role="search">
               <div className="flex items-center gap-3 w-full px-5 py-3 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_3px_rgba(10,132,255,0.15)] transition-all duration-200 rounded-2xl">
                 <Search size={18} className="text-[var(--text-tertiary)] shrink-0" />
                 <input
@@ -162,7 +176,6 @@ export function HomePage() {
                   onChange={(e) => { setHomeQuery(e.target.value); setSelectedIdx(-1); }}
                   placeholder={t('home.searchPlaceholder')}
                   className="flex-1 bg-transparent outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
-                  role="search"
                   aria-label={t('home.searchPlaceholder')}
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') {

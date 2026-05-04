@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle, FileQuestion } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
@@ -30,9 +30,9 @@ function formatDate(dateStr: string): string {
 
 const typeColors: Record<string, string> = {
   source: 'text-apple-blue bg-apple-blue/10',
-  entity: 'text-apple-blue bg-apple-blue/10',
-  concept: 'text-apple-blue bg-apple-blue/10',
-  synthesis: 'text-apple-blue bg-apple-blue/10',
+  entity: 'text-apple-green bg-apple-green/10',
+  concept: 'text-apple-purple bg-apple-purple/10',
+  synthesis: 'text-apple-orange bg-apple-orange/10',
 };
 
 export function PageDetailPage({ type }: Props) {
@@ -58,8 +58,8 @@ export function PageDetailPage({ type }: Props) {
     );
   }, [graphData, type, param]);
 
-  const { meta, body } = node ? parseFrontmatter(node.markdown) : { meta: null, body: '' };
-  const backlinks = node ? getBacklinks(node.id) : [];
+  const { meta, body } = useMemo(() => node ? parseFrontmatter(node.markdown) : { meta: null, body: '' }, [node]);
+  const backlinks = useMemo(() => node ? getBacklinks(node.id) : [], [node, getBacklinks]);
 
   useEffect(() => {
     if (node) {
@@ -117,8 +117,8 @@ export function PageDetailPage({ type }: Props) {
     }
     return (
       <div className="empty-state-warm mt-20">
-        <div className="text-4xl mb-3">📄</div>
-        <h3 className=" text-lg font-semibold">{t('detail.notFound')}</h3>
+        <FileQuestion size={48} className="text-[var(--text-tertiary)] mb-3" />
+        <h3 className="text-lg font-semibold">{t('detail.notFound')}</h3>
       </div>
     );
   }
@@ -171,34 +171,15 @@ export function PageDetailPage({ type }: Props) {
             <MessageCircle size={14} />
             <span className="hidden sm:inline">{t('detail.askAbout')}</span>
           </Link>
-          <button
-            onClick={() => {
-              toggleFavorite(node.id);
-              setFavBounce((k) => k + 1);
-              addNotification(
-                isFavorite(node.id) ? t('detail.favorite.removed') : t('detail.favorite.added'),
-                'success'
-              );
-            }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
-              isFavorite(node.id)
-                ? 'text-red-500 bg-red-500/10 border-red-500/30'
-                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
-            }`}
-            title={isFavorite(node.id) ? t('detail.favorite.remove') : t('detail.favorite.add')}
-          >
-            <motion.span
-              key={favBounce}
-              initial={{ scale: 0.6 }}
-              animate={{ scale: [0.6, 1.3, 1] }}
-              transition={{ duration: 0.35 }}
-            >
-              <Heart size={14} fill={isFavorite(node.id) ? 'currentColor' : 'none'} />
-            </motion.span>
-            <span className="hidden sm:inline">
-              {isFavorite(node.id) ? t('detail.favorite.remove') : t('detail.favorite.add')}
-            </span>
-          </button>
+          <FavoriteButton
+            nodeId={node.id}
+            favBounce={favBounce}
+            setFavBounce={setFavBounce}
+            toggleFavorite={toggleFavorite}
+            isFavorite={isFavorite}
+            addNotification={addNotification}
+            t={t}
+          />
         </div>
         <h1 className="text-4xl font-semibold tracking-tight mb-4">{node.label}</h1>
 
@@ -268,6 +249,60 @@ export function PageDetailPage({ type }: Props) {
         )}
       </div>
     </motion.div>
+  );
+}
+
+function FavoriteButton({
+  nodeId,
+  favBounce,
+  setFavBounce,
+  toggleFavorite,
+  isFavorite,
+  addNotification,
+  t,
+}: {
+  nodeId: string;
+  favBounce: number;
+  setFavBounce: React.Dispatch<React.SetStateAction<number>>;
+  toggleFavorite: (id: string) => void;
+  isFavorite: (id: string) => boolean;
+  addNotification: (msg: string, type: 'success' | 'error') => void;
+  t: (key: string) => string;
+}) {
+  const willBeFavorite = !isFavorite(nodeId);
+  const fav = isFavorite(nodeId);
+
+  const handleClick = () => {
+    toggleFavorite(nodeId);
+    setFavBounce((k) => k + 1);
+    addNotification(
+      willBeFavorite ? t('detail.favorite.added') : t('detail.favorite.removed'),
+      'success'
+    );
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
+        fav
+          ? 'text-red-500 bg-red-500/10 border-red-500/30'
+          : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+      }`}
+      title={fav ? t('detail.favorite.remove') : t('detail.favorite.add')}
+    >
+      <motion.span
+        key={favBounce}
+        initial={{ scale: 0.6 }}
+        animate={{ scale: [0.6, 1.3, 1] }}
+        transition={{ duration: 0.35 }}
+      >
+        <Heart size={14} fill={fav ? 'currentColor' : 'none'} />
+      </motion.span>
+      <span className="hidden sm:inline">
+        {fav ? t('detail.favorite.remove') : t('detail.favorite.add')}
+      </span>
+    </button>
   );
 }
 

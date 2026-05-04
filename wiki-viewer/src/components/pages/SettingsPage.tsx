@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
@@ -31,6 +31,15 @@ export function SettingsPage() {
   const [llmKeySet, setLlmKeySet] = useState(false);
   const [llmSaveStatus, setLlmSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const llmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (llmTimerRef.current) clearTimeout(llmTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     checkApi();
@@ -47,7 +56,9 @@ export function SettingsPage() {
           setLlmKeySet(d.api_key_set || false);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        addNotification(t('settings.error', 'Failed to load LLM config'), 'error');
+      });
   }, []);
 
   const handleSave = async () => {
@@ -59,7 +70,8 @@ export function SettingsPage() {
       setSaveStatus('success');
       addNotification(t('settings.saved'), 'success');
     }
-    setTimeout(() => setSaveStatus('idle'), 2000);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
   };
 
   const handleDownload = () => {
@@ -98,7 +110,8 @@ export function SettingsPage() {
     } catch {
       setLlmSaveStatus('error');
     }
-    setTimeout(() => setLlmSaveStatus('idle'), 2000);
+    if (llmTimerRef.current) clearTimeout(llmTimerRef.current);
+    llmTimerRef.current = setTimeout(() => setLlmSaveStatus('idle'), 2000);
   };
 
   const coreTabs = [

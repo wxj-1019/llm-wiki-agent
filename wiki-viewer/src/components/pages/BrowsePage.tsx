@@ -164,7 +164,7 @@ export function BrowsePage() {
           const card = <PageCard node={node} backlinks={getBacklinks(node.id)} />;
           if (!useMotion) {
             return (
-              <div key={node.id} className="transition-opacity duration-300" style={{ animationDelay: `${Math.min(i * 20, 300)}ms` }}>
+              <div key={node.id}>
                 {card}
               </div>
             );

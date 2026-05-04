@@ -13,12 +13,8 @@ export function WikiLink({ target, children }: WikiLinkProps) {
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes ?? [];
 
-  // Parse piped link: [[Target|Display]] → target=Target, display=Display
-  const pipeIdx = target.indexOf('|');
-  const actualTarget = pipeIdx >= 0 ? target.substring(0, pipeIdx) : target;
   const display = children;
-
-  const { path, exists } = resolveWikiLink(actualTarget, nodes);
+  const { path, exists } = resolveWikiLink(target, nodes);
 
   if (exists) {
     return (
