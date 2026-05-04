@@ -1,6 +1,11 @@
 # LLM Wiki Agent — 跨领域整合发散思维报告
 
 > 版本：v1.0 | 日期：2026-05-03 | 搜索范围：8 大维度 × 40+ 项目
+>
+> 📎 **相关文档**：
+> - [2026 竞争格局更新](../docs/competitive-landscape-2026-update.md) — 最新竞品情报补充
+> - [战略路线图整合版](../docs/strategic-roadmap-consolidated.md) — 本文档建议的优先级排序与去重
+> - [整合实施手册](../docs/integration-playbook.md) — 本文档 Top 整合方向的具体实现
 
 ---
 

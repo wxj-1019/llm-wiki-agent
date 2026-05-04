@@ -1,6 +1,11 @@
 # LLM Wiki Agent — 竞品分析与发展路线图
 
 > 版本：v2.0 | 日期：2026-05-03 | 搜索范围：GitHub/NPM/PyPI/技术博客 110+ 项目
+>
+> 📎 **相关文档**：
+> - [2026 竞争格局更新](../docs/competitive-landscape-2026-update.md) — 2026-04 wave 新进入者深度分析
+> - [战略路线图整合版](../docs/strategic-roadmap-consolidated.md) — 本文档与其他两份文档的合并版
+> - [整合实施手册](../docs/integration-playbook.md) — 技术路线图的具体实现指南
 
 ---
 

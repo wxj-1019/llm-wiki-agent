@@ -2,6 +2,11 @@
 
 > 生成时间：2026-05-03
 > 基于项目代码库完整扫描 + 市场主流产品调研
+>
+> 📎 **相关文档**：
+> - [2026 竞争格局更新](../docs/competitive-landscape-2026-update.md) — 2026-04 wave 新进入者分析
+> - [战略路线图整合版](../docs/strategic-roadmap-consolidated.md) — 合并三份文档的优先级路线图
+> - [整合实施手册](../docs/integration-playbook.md) — Top 5 整合的架构与代码
 
 ---
 
