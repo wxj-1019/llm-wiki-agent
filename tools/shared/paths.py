@@ -31,13 +31,18 @@ def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
 
 def safe_filename(name: str) -> str:
     """Sanitize a string for use as a filename (not a full path)."""
-    # Replace path separators and other unsafe characters
     safe = name.replace("/", "_").replace("\\", "_")
     safe = safe.replace("..", "_")
-    # Remove control characters
     safe = "".join(ch for ch in safe if ord(ch) > 31)
-    # Trim whitespace
     safe = safe.strip()
     if not safe:
         raise ValueError("Filename is empty after sanitization")
+    _WINDOWS_RESERVED = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    }
+    stem = safe.rsplit(".", 1)[0].upper() if "." in safe else safe.upper()
+    if stem in _WINDOWS_RESERVED:
+        safe = f"_{safe}"
     return safe

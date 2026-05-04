@@ -132,8 +132,8 @@ def find_relevant_pages(question: str, index_content: str) -> list[Path]:
             matched = any(word in question_lower for word in title_lower.split() if len(word) > 2)
 
         if matched:
-            p = WIKI_DIR / href
-            if p.exists() and p not in relevant:
+            p = (WIKI_DIR / href).resolve()
+            if p.exists() and str(p).startswith(str(WIKI_DIR.resolve())) and p not in relevant:
                 relevant.append(p)
 
     # Also try graph-based expansion: find neighbors of matched pages
@@ -253,7 +253,10 @@ Write a well-structured markdown answer with headers, bullets, and [[wikilink]] 
     # Step 5: Optionally save answer
     if save_path is not None:
         if save_path == "":
-            # Prompt for filename
+            # Prompt for filename (skip in non-TTY environments)
+            if not sys.stdin.isatty():
+                print("Non-interactive environment detected. Use --save <path> to save.")
+                return
             slug = input("\nSave as (slug, e.g. 'my-analysis'): ").strip()
             if not slug:
                 print("Skipping save.")

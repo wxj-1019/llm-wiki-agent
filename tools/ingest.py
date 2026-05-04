@@ -169,30 +169,43 @@ def write_file(path: Path, content: str):
     print(f"  wrote: {path.relative_to(REPO_ROOT)}")
 
 
-def build_wiki_context() -> str:
+def build_wiki_context(max_page_chars: int = 2000) -> str:
     parts = []
     if INDEX_FILE.exists():
         parts.append(f"## wiki/index.md\n{read_file(INDEX_FILE)}")
     if OVERVIEW_FILE.exists():
-        parts.append(f"## wiki/overview.md\n{read_file(OVERVIEW_FILE)}")
-    # Include a few recent source pages for contradiction checking
+        overview = read_file(OVERVIEW_FILE)
+        parts.append(f"## wiki/overview.md\n{overview[:max_page_chars]}")
     sources_dir = WIKI_DIR / "sources"
     if sources_dir.exists():
         recent = sorted(sources_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
         for p in recent:
-            parts.append(f"## {p.relative_to(REPO_ROOT)}\n{read_file(p)}")
+            content = read_file(p)
+            if len(content) > max_page_chars:
+                content = content[:max_page_chars] + "\n... (truncated)"
+            parts.append(f"## {p.relative_to(REPO_ROOT)}\n{content}")
     return "\n\n---\n\n".join(parts)
 
 
 def parse_json_from_response(text: str) -> dict:
-    # Strip markdown code fences if present
     text = re.sub(r"^```(?:json)?\s*", "", text.strip())
     text = re.sub(r"\s*```$", "", text.strip())
-    # Find the outermost JSON object
-    match = re.search(r"\{[\s\S]*\}", text)
-    if not match:
+    start = text.find("{")
+    if start == -1:
         raise ValueError("No JSON object found in response")
-    return json.loads(match.group())
+    depth = 0
+    end = start
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if depth != 0:
+        raise ValueError("Unbalanced JSON braces in response")
+    return json.loads(text[start:end])
 
 
 def update_index(new_entry: str, section: str = "Sources"):
@@ -275,7 +288,8 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
 
     # Determine which pages to scan for broken links
     if changed_pages:
-        scan_paths = [WIKI_DIR / p for p in changed_pages if (WIKI_DIR / p).exists()]
+        scan_paths = [(WIKI_DIR / p).resolve() for p in changed_pages if (WIKI_DIR / p).exists()]
+        scan_paths = [p for p in scan_paths if str(p).startswith(str(WIKI_DIR.resolve()))]
     else:
         scan_paths = [p for p in WIKI_DIR.rglob("*.md")
                       if p.name not in ("index.md", "log.md", "lint-report.md", "health-report.md")]
@@ -362,7 +376,6 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
     cp = checkpoint if checkpoint is not None else {}
 
     source = Path(source_path)
-    source = Path(source_path)
     if not source.exists():
         print(f"Error: file not found: {source_path}")
         sys.exit(1)
@@ -372,11 +385,11 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
     if source.suffix.lower() != ".md":
         if not auto_convert:
             print(f"  Skipping non-.md file (--no-convert): {source.name}")
-            return
+            return {"success": False, "error": f"Skipped non-.md file: {source.name}"}
         if source.suffix.lower() not in CONVERTIBLE_EXTENSIONS:
             print(f"  ⚠️  Unsupported format: {source.suffix} — skipping {source.name}")
             print(f"       Supported: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
-            return
+            return {"success": False, "error": f"Unsupported format: {source.suffix}"}
         print(f"  Converting {source.name} to markdown...")
         converted_path = convert_to_md(source)
         source = converted_path

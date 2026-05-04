@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import atexit
+import collections
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 from typing import Optional
+
+_SAFE_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$')
 
 try:
     import psutil
@@ -29,7 +33,7 @@ class MCPManager:
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.registry_path = base_dir / "installed.json"
         self.processes: dict[str, subprocess.Popen] = {}
-        self.log_buffers: dict[str, list[str]] = {}
+        self.log_buffers: dict[str, collections.deque] = {}
         self.max_servers = int(os.getenv("MCP_MAX_SERVERS", str(DEFAULT_MAX_SERVERS)))
         self._load_registry()
         atexit.register(self.stop_all)
@@ -72,6 +76,8 @@ class MCPManager:
         return result
 
     def install(self, name: str, source: str, **kwargs) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid server name: {name}. Use only alphanumeric, hyphens, underscores (2-64 chars)"}
         if len(self.registry.get("servers", [])) >= self.max_servers:
             return {"error": f"Maximum {self.max_servers} servers limit reached"}
         server_dir = self.base_dir / name
@@ -129,8 +135,23 @@ class MCPManager:
         package = kwargs.get("package", "")
         if not package:
             return {"error": "package is required for pip source"}
+        # Validate package name to prevent command injection
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', package) or len(package) > 100:
+            return {"error": f"Invalid package name: {package}"}
+        # Package whitelist to reduce supply-chain attack surface
+        env_whitelist = {p.strip() for p in os.getenv("MCP_PACKAGE_WHITELIST", "").split(",") if p.strip()}
+        default_whitelist = {
+            "mcp-server-filesystem", "mcp-server-github", "mcp-server-gitlab",
+            "mcp-server-slack", "mcp-server-sqlite", "mcp-server-puppeteer",
+            "mcp", "mcp-server", "mcp-client",
+        }
+        allowed = default_whitelist | env_whitelist
+        if package not in allowed:
+            return {"error": f"Package '{package}' is not in the allowed whitelist. Set MCP_PACKAGE_WHITELIST env var to extend."}
+        # Install into server-specific directory for isolation
+        target_dir = server_dir / "packages"
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", package],
+            [sys.executable, "-m", "pip", "install", package, "--target", str(target_dir)],
             capture_output=True, text=True, timeout=120,
         )
         if result.returncode != 0:
@@ -141,6 +162,8 @@ class MCPManager:
         url = kwargs.get("url", "")
         if not url:
             return {"error": "url is required for url source"}
+        if not url.startswith(("https://", "git://", "git@")):
+            return {"error": "Only https://, git://, and git@ URLs are allowed"}
         result = subprocess.run(
             ["git", "clone", url, str(server_dir)],
             capture_output=True, text=True, timeout=120,
@@ -149,8 +172,10 @@ class MCPManager:
             return {"error": f"git clone failed: {result.stderr[:500]}"}
         req_file = server_dir / "requirements.txt"
         if req_file.exists():
+            # Install into server-specific directory for isolation
+            target_dir = server_dir / "packages"
             subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
+                [sys.executable, "-m", "pip", "install", "-r", str(req_file), "--target", str(target_dir)],
                 capture_output=True, text=True, timeout=120,
             )
         return {}
@@ -180,6 +205,8 @@ class MCPManager:
         return {}
 
     def uninstall(self, name: str) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid server name: {name}"}
         self.stop(name)
         server_dir = self.base_dir / name
         if server_dir.exists():
@@ -207,10 +234,11 @@ class MCPManager:
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             cwd=str(server_dir),
             env=env,
+            text=True, errors='replace',
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
         )
         self.processes[name] = proc
-        self.log_buffers[name] = []
+        self.log_buffers[name] = collections.deque(maxlen=500)
         self._update_registry(name, "running", proc.pid)
         self._start_log_reader(name, proc)
         return {"pid": proc.pid, "status": "running"}
@@ -272,8 +300,8 @@ class MCPManager:
         return {"error": f"Server not found: {name}"}
 
     def logs(self, name: str, lines: int = 100) -> dict:
-        buf = self.log_buffers.get(name, [])
-        return {"logs": buf[-lines:]}
+        buf = self.log_buffers.get(name, collections.deque(maxlen=500))
+        return {"logs": list(buf)[-lines:]}
 
     def test(self, name: str) -> dict:
         st = self.status(name)
@@ -303,13 +331,14 @@ class MCPManager:
         self._save_registry()
 
     def _start_log_reader(self, name: str, proc: subprocess.Popen):
+        if name not in self.log_buffers:
+            self.log_buffers[name] = collections.deque(maxlen=500)
+        buf = self.log_buffers[name]
         def reader():
             try:
                 for line in proc.stdout:
-                    decoded = line.decode("utf-8", errors="replace").rstrip()
-                    self.log_buffers[name].append(decoded)
-                    if len(self.log_buffers[name]) > 1000:
-                        self.log_buffers[name] = self.log_buffers[name][-500:]
+                    decoded = line.rstrip()[:2000]
+                    buf.append(decoded)
             except Exception:
                 pass
         t = threading.Thread(target=reader, daemon=True)
@@ -367,7 +396,10 @@ class MCPManager:
                 "config": {},
             },
         ]
-        self.registry["servers"] = builtins
+        existing_names = {s["name"] for s in self.registry.get("servers", [])}
+        for b in builtins:
+            if b["name"] not in existing_names:
+                self.registry.setdefault("servers", []).append(b)
         self._save_registry()
 
 

@@ -24,8 +24,9 @@ def _load_llm_config() -> dict:
 
             data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
             return {**defaults, **data}
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.getLogger("wiki_llm").warning("Failed to load LLM config from %s: %s", cfg_path, exc)
     return defaults
 
 
@@ -39,6 +40,8 @@ def call_llm(
     model_env: str = "LLM_MODEL",
     default_model: str = "claude-3-5-sonnet-latest",
     max_tokens: int = 4096,
+    max_retries: int = 2,
+    timeout: int = 120,
 ) -> str:
     """Call the LLM via litellm with config-driven model selection."""
     try:
@@ -59,9 +62,19 @@ def call_llm(
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
+        "timeout": timeout,
     }
     if api_key:
         kwargs["api_key"] = api_key
 
-    response = completion(**kwargs)
-    return response.choices[0].message.content
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            response = completion(**kwargs)
+            return response.choices[0].message.content
+        except Exception as e:
+            last_err = e
+            if attempt < max_retries:
+                import time
+                time.sleep(2 ** attempt)
+    raise last_err

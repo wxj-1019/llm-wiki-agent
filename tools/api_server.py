@@ -109,15 +109,22 @@ async def log_requests(request: Request, call_next):
 
 # ── Simple in-memory rate limiter ──
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
-RATE_LIMIT_MAX = 60  # requests per window
-RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 60
+RATE_LIMIT_WINDOW = 60
+_rate_limit_last_cleanup = time.time()
+RATE_LIMIT_CLEANUP_INTERVAL = 300
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
+    global _rate_limit_last_cleanup
     client = request.client.host if request.client else "unknown"
     now = time.time()
+    if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
+        expired = [k for k, v in _rate_limit_store.items() if not v or all(now - t >= RATE_LIMIT_WINDOW for t in v)]
+        for k in expired:
+            del _rate_limit_store[k]
+        _rate_limit_last_cleanup = now
     window = _rate_limit_store[client]
-    # Prune old entries
     _rate_limit_store[client] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
     if len(_rate_limit_store[client]) >= RATE_LIMIT_MAX:
         return JSONResponse(status_code=429, content={"error": "Rate limit exceeded. Please slow down."})
@@ -139,7 +146,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 async def spa_fallback_handler(request: Request, exc: StarletteHTTPException):
     """Serve index.html for SPA routes, but preserve API 404s."""
     if exc.status_code == 404 and request.method in ("GET", "HEAD"):
-        if not request.url.path.startswith("/api/"):
+        path = request.url.path
+        # Don't fallback for API, docs, or openapi routes
+        if not path.startswith("/api/") and not path.startswith("/docs") and path not in ("/openapi.json",):
             index_path = FRONTEND_DIST / "index.html"
             if index_path.exists():
                 return FileResponse(str(index_path))
@@ -207,7 +216,7 @@ def get_overview():
     return {"markdown": path.read_text(encoding="utf-8")}
 
 @app.get("/api/search")
-def search(q: str = Query("", min_length=1)):
+def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200)):
     if not q or len(q.strip()) == 0:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required and must be non-empty")
     q_clean = q.strip().lower()
@@ -215,13 +224,18 @@ def search(q: str = Query("", min_length=1)):
     for p in WIKI.rglob("*.md"):
         if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
             continue
-        content = p.read_text(encoding="utf-8")
+        try:
+            content = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
         if q_clean in content.lower():
             results.append({
                 "id": p.relative_to(WIKI).as_posix().replace(".md", ""),
                 "path": str(p.relative_to(REPO)),
                 "preview": content[:200],
             })
+            if len(results) >= limit:
+                break
     return {"results": results, "total": len(results)}
 
 @app.get("/api/health")
@@ -231,7 +245,6 @@ def health():
     return {
         "pages": len(pages),
         "graph_ready": graph_exists,
-        "wiki_dir": str(WIKI),
         "litellm_available": LITELLM_AVAILABLE,
     }
 
@@ -316,11 +329,14 @@ def list_raw_files():
     files = []
     for p in raw_dir.rglob("*"):
         if p.is_file() and p.name != ".gitkeep":
+            # Check if a corresponding source page exists in wiki/sources/
+            source_path = REPO / "wiki" / "sources" / f"{p.stem}.md"
             files.append({
                 "path": p.relative_to(REPO).as_posix(),
                 "name": p.name,
                 "size": p.stat().st_size,
                 "modified": p.stat().st_mtime,
+                "ingested": source_path.exists(),
             })
     files.sort(key=lambda x: x["modified"], reverse=True)
     return {"files": files}
@@ -372,17 +388,17 @@ async def upload_file(file: UploadFile = File(...)):
         target = uploads_dir / f"{stem}_{counter}{orig_suffix}"
         counter += 1
 
-    # Stream read with early size check to avoid loading huge files into memory
-    content = b""
-    while True:
-        chunk = await file.read(1024 * 1024)  # 1 MB chunks
-        if not chunk:
-            break
-        content += chunk
-        if len(content) > MAX_UPLOAD_SIZE:
-            raise HTTPException(status_code=413, detail="File too large (max 20MB)")
-
-    target.write_bytes(content)
+    total_size = 0
+    with open(target, "wb") as f:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_UPLOAD_SIZE:
+                target.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+            f.write(chunk)
 
     # Try markitdown conversion for non-text files
     converted = None
@@ -401,7 +417,7 @@ async def upload_file(file: UploadFile = File(...)):
         "success": True,
         "path": target.relative_to(REPO).as_posix(),
         "converted_path": converted,
-        "size": len(content),
+        "size": total_size,
     }
 
 
@@ -508,11 +524,15 @@ def get_config(name: str):
     return {"name": safe_name, "content": path.read_text(encoding="utf-8")}
 
 
+ALLOWED_CONFIG_NAMES = {"llm", "github", "app", "search"}
+
 @app.post("/api/config/{name}")
 async def save_config(name: str, request: Request):
     safe_name = Path(name).name
     if not safe_name or safe_name in (".", ".."):
         raise HTTPException(status_code=400, detail="Invalid config name")
+    if safe_name not in ALLOWED_CONFIG_NAMES:
+        raise HTTPException(status_code=400, detail=f"Config name must be one of: {', '.join(sorted(ALLOWED_CONFIG_NAMES))}")
     path = REPO / "config" / f"{safe_name}.yaml"
     try:
         path.resolve().relative_to((REPO / "config").resolve())
@@ -520,6 +540,11 @@ async def save_config(name: str, request: Request):
         raise HTTPException(status_code=400, detail="Invalid path")
     path.parent.mkdir(parents=True, exist_ok=True)
     body = await request.body()
+    if yaml:
+        try:
+            yaml.safe_load(body.decode("utf-8"))
+        except yaml.YAMLError:
+            raise HTTPException(status_code=400, detail="Invalid YAML content")
     path.write_text(body.decode("utf-8"), encoding="utf-8")
     return {"ok": True, "path": str(path)}
 
@@ -678,27 +703,45 @@ async def agent_kit_download_zip(payload: DownloadZipPayload):
 
 
 LLM_CONFIG_PATH = REPO / "config" / "llm.yaml"
+LLM_API_KEY_PATH = REPO / ".cache" / "llm_api_key"
+_llm_config_cache: dict = {}
+_llm_config_cache_ts: float = 0.0
+_LLM_CONFIG_TTL = 5.0
 
 
 def _load_llm_config() -> dict:
-    """Load LLM config from config/llm.yaml and apply env overrides."""
+    """Load LLM config from config/llm.yaml and apply env overrides. Cached with TTL.
+    API key is loaded separately from .cache/llm_api_key for security."""
+    global _llm_config_cache, _llm_config_cache_ts
+    import time
+    now = time.time()
+    if _llm_config_cache and (now - _llm_config_cache_ts) < _LLM_CONFIG_TTL:
+        return _llm_config_cache
     if not yaml or not LLM_CONFIG_PATH.exists():
         return {}
     try:
         cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     except Exception:
         return {}
-    # Apply to environment so all tools/scripts pick it up
+    # Load API key from separate secure location
+    if LLM_API_KEY_PATH.exists():
+        api_key = LLM_API_KEY_PATH.read_text(encoding="utf-8").strip()
+        if api_key:
+            cfg["api_key"] = api_key
+    # Back-compat: also check yaml if separate file doesn't exist
+    elif cfg.get("api_key"):
+        pass  # already in cfg
     if cfg.get("model"):
         os.environ.setdefault("LLM_MODEL", cfg["model"])
     if cfg.get("model_fast"):
         os.environ.setdefault("LLM_MODEL_FAST", cfg["model_fast"])
-    # Set provider API key env var if present
     provider = cfg.get("provider", "anthropic")
     api_key = cfg.get("api_key", "")
     if api_key:
         key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
         os.environ[key_env] = api_key
+    _llm_config_cache = cfg
+    _llm_config_cache_ts = now
     return cfg
 
 
@@ -774,6 +817,7 @@ async def agent_kit_llm_chat_stream(request: Request):
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -805,9 +849,10 @@ async def wiki_chat(payload: WikiChatRequest):
     sources = []
     knowledge_chunks = []
     if payload.context_pages:
-        # Use specific pages as context
         for wiki_path in payload.context_pages:
-            path = WIKI / wiki_path
+            path = (WIKI / wiki_path).resolve()
+            if not str(path).startswith(str(WIKI.resolve())):
+                continue
             if path.exists() and path.suffix == '.md':
                 try:
                     content = path.read_text(encoding='utf-8')
@@ -863,6 +908,7 @@ async def wiki_chat(payload: WikiChatRequest):
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -1097,17 +1143,22 @@ def get_llm_config():
         cfg = {}
     provider = cfg.get("provider", "anthropic")
     key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
+    api_key_set = bool(
+        (LLM_API_KEY_PATH.exists() and LLM_API_KEY_PATH.read_text(encoding="utf-8").strip())
+        or cfg.get("api_key")
+        or os.getenv(key_env)
+    )
     return {
         "model": cfg.get("model", os.getenv("LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")),
         "model_fast": cfg.get("model_fast", os.getenv("LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest")),
         "provider": provider,
-        "api_key_set": bool(cfg.get("api_key") or os.getenv(key_env)),
+        "api_key_set": api_key_set,
     }
 
 
 @app.post("/api/llm-config")
 async def save_llm_config(payload: LLMConfigPayload):
-    """Save LLM config to config/llm.yaml (api_key is stored securely on server)."""
+    """Save LLM config to config/llm.yaml (api_key is stored separately in .cache/)."""
     if not yaml:
         raise HTTPException(status_code=500, detail="PyYAML not installed. Run: pip install pyyaml")
     cfg = {
@@ -1116,18 +1167,19 @@ async def save_llm_config(payload: LLMConfigPayload):
         "provider": payload.provider,
     }
     api_key = payload.api_key
-    # Only update api_key if a non-empty value is provided
+    # Store api_key in separate secure location, never in llm.yaml
     if api_key:
-        cfg["api_key"] = api_key
-    else:
-        # Preserve existing api_key if not sent (client doesn't have it)
-        if LLM_CONFIG_PATH.exists():
-            try:
-                existing = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-                if existing.get("api_key"):
-                    cfg["api_key"] = existing["api_key"]
-            except Exception:
-                pass
+        LLM_API_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LLM_API_KEY_PATH.write_text(api_key, encoding="utf-8")
+    # Back-compat cleanup: remove any plaintext api_key from llm.yaml
+    if LLM_CONFIG_PATH.exists():
+        try:
+            existing = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
+            if "api_key" in existing:
+                existing.pop("api_key")
+                LLM_CONFIG_PATH.write_text(yaml.safe_dump(existing, default_flow_style=False, sort_keys=False), encoding="utf-8")
+        except Exception:
+            pass
     LLM_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     LLM_CONFIG_PATH.write_text(yaml.safe_dump(cfg, default_flow_style=False, sort_keys=False), encoding="utf-8")
     _load_llm_config()
@@ -1423,6 +1475,7 @@ async def skills_execute(name: str, payload: SkillExecuteRequest):
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

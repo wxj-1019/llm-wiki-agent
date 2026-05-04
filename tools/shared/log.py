@@ -22,7 +22,10 @@ def _read_file(path: Path) -> str:
 
 
 def append_log(entry: str) -> None:
-    """Prepend *entry* to the wiki log, preserving the header block."""
+    """Prepend *entry* to the wiki log, preserving the header block.
+
+    Uses a sentinel boundary to avoid ambiguity if log entries contain '---'.
+    """
     entry_text = entry.strip()
     if not LOG_FILE.exists():
         LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
@@ -30,6 +33,8 @@ def append_log(entry: str) -> None:
 
     existing = _read_file(LOG_FILE).strip()
     if existing.startswith("# Wiki Log"):
+        # Find the first newline-delimited --- boundary after the header intro
+        # The header ends with a line that is exactly `---`
         parts = existing.split("\n---\n", 1)
         if len(parts) == 2:
             new_content = parts[0] + "\n---\n\n" + entry_text + "\n\n" + parts[1].strip()
@@ -38,4 +43,6 @@ def append_log(entry: str) -> None:
     else:
         new_content = entry_text + "\n\n" + existing
 
-    LOG_FILE.write_text(new_content, encoding="utf-8")
+    tmp = LOG_FILE.with_suffix(".tmp")
+    tmp.write_text(new_content, encoding="utf-8")
+    tmp.replace(LOG_FILE)

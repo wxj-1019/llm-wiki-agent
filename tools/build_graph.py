@@ -122,9 +122,11 @@ except ImportError:
     def read_file(path: Path) -> str:
         return path.read_text(encoding="utf-8") if path.exists() else ""
 
-    def all_wiki_pages() -> list[Path]:
+    def all_wiki_pages():
         exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
-        return [p for p in WIKI_DIR.rglob("*.md") if p.name not in exclude]
+        for p in WIKI_DIR.rglob("*.md"):
+            if p.name not in exclude:
+                yield p
 
     def extract_wikilinks(content: str) -> list[str]:
         return list(set(re.findall(r'\[\[([^\]]+)\]\]', content)))
@@ -209,7 +211,6 @@ def build_nodes(pages: list[Path]) -> list[dict]:
             "type": node_type,
             "color": TYPE_COLORS.get(node_type, TYPE_COLORS["unknown"]),
             "path": p.relative_to(REPO_ROOT).as_posix(),
-            "markdown": content,
             "preview": preview,
         })
     return nodes
@@ -331,11 +332,7 @@ def build_inferred_edges(pages: list[Path], existing_edges: list[dict], cache: d
     grand_total = total_pages + already_done
     print(f"  inferring relationships for {total_pages} remaining pages (of {grand_total} total)...")
 
-    # Build a summary of existing nodes for context
     node_list = "\n".join(f"- {page_id(p)} ({extract_frontmatter_type(read_file(p))})" for p in pages)
-    existing_edge_summary = "\n".join(
-        f"- {e['from']} → {e['to']} (EXTRACTED)" for e in existing_edges[:30]
-    )
 
     for i, p in enumerate(changed_pages, 1):
         full_content = read_file(p)
@@ -436,8 +433,7 @@ Rules:
 def deduplicate_edges(edges: list[dict]) -> list[dict]:
     """Merge duplicate edges (same from→to pair) keeping highest confidence.
 
-    Uses (from, to, type) as key to preserve directionality for EXTRACTED edges.
-    For INFERRED/AMBIGUOUS edges, also checks bidirectional equivalents.
+    Uses (from, to, type) as key to preserve directionality.
     """
     best: dict[str, dict] = {}  # "from->to:type" -> best edge
 
@@ -451,13 +447,6 @@ def deduplicate_edges(edges: list[dict]) -> list[dict]:
         existing = best.get(key)
         if not existing or e.get("confidence", 0) > existing.get("confidence", 0):
             best[key] = e
-
-        # For non-EXTRACTED edges, also check bidirectional dup
-        if etype != "EXTRACTED":
-            rev_key = f"{to_id}->{from_id}:{etype}"
-            rev_existing = best.get(rev_key)
-            if not rev_existing or e.get("confidence", 0) > rev_existing.get("confidence", 0):
-                best[rev_key] = e
 
     deduped = []
     for edge in best.values():
@@ -713,7 +702,7 @@ COMMUNITY_COLORS = [
 
 def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = False,
                 report: bool = False, save: bool = False):
-    pages = all_wiki_pages()
+    pages = list(all_wiki_pages())
     today = date.today().isoformat()
 
     if not pages:

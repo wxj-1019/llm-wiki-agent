@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Optional
 
+_SAFE_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$')
+
 try:
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2.sandbox import SandboxedEnvironment
+    from jinja2 import FileSystemLoader
 except ImportError:
-    Environment = None
+    SandboxedEnvironment = None
     FileSystemLoader = None
 
 REPO = Path(__file__).parent.parent
@@ -52,6 +56,8 @@ class SkillEngine:
         return None
 
     def install(self, name: str, source: str = "generated", **kwargs) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid skill name: {name}. Use only alphanumeric, hyphens, underscores (2-64 chars)"}
         skill_dir = self.skills_dir / name
         skill_dir.mkdir(parents=True, exist_ok=True)
 
@@ -162,13 +168,18 @@ class SkillEngine:
     def _collect_context(self, query: str, config: dict) -> list[dict]:
         max_pages = config.get("parameters", {}).get("max_context_pages", 5)
         max_file_size = 500_000  # 500KB limit per file
+        max_scanned = 500  # Limit total files scanned to avoid excessive I/O
         results = []
         q = query.lower()
         keywords = q.split()
         scored = []
+        scanned = 0
         for p in self.wiki_dir.rglob("*.md"):
             if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
                 continue
+            scanned += 1
+            if scanned > max_scanned:
+                break
             try:
                 if p.stat().st_size > max_file_size:
                     continue
@@ -193,9 +204,9 @@ class SkillEngine:
         prompts_dir = skill_dir / "prompts"
         if not (prompts_dir / template_name).exists():
             return ""
-        if Environment is None:
+        if SandboxedEnvironment is None:
             return (prompts_dir / template_name).read_text(encoding="utf-8")
-        env = Environment(loader=FileSystemLoader(str(prompts_dir)))
+        env = SandboxedEnvironment(loader=FileSystemLoader(str(prompts_dir)))
         template = env.get_template(template_name)
         return template.render(**context)
 
@@ -226,12 +237,14 @@ class SkillEngine:
         return detail
 
     def save_skill_file(self, name: str, path: str, content: str) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid skill name: {name}"}
         skill_dir = self.skills_dir / name
         if not skill_dir.exists():
             return {"error": f"Skill not found: {name}"}
         # Normalize path to prevent traversal
-        safe_path = path.replace("..", "").lstrip("/\\")
-        if not safe_path:
+        safe_path = path.lstrip("/\\")
+        if not safe_path or ".." in safe_path:
             return {"error": "Invalid path"}
         target = (skill_dir / safe_path).resolve()
         try:
