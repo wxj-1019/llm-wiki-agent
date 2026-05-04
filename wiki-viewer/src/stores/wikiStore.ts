@@ -48,7 +48,9 @@ function loadGraphCache(): GraphData | null {
   const parsed = safeGet(GRAPH_CACHE_KEY, isObject, null);
   if (!parsed) return null;
   if (Date.now() - (parsed._cachedAt as number || 0) > GRAPH_CACHE_TTL_MS) return null;
-  return parsed.data as GraphData;
+  const data = parsed.data;
+  if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) return null;
+  return data as GraphData;
 }
 
 function saveGraphCache(data: GraphData) {
@@ -59,12 +61,16 @@ function saveGraphCache(data: GraphData) {
 // Scroll-triggered state (readingProgress) fires ~100 times per article read.
 // We debounce localStorage writes to 1 second to avoid blocking the main thread.
 let _persistTimer: ReturnType<typeof setTimeout> | null = null;
-function schedulePersist(state: WikiState) {
+function schedulePersist() {
   if (_persistTimer) clearTimeout(_persistTimer);
-  _persistTimer = setTimeout(() => writePersist(state), 1000);
+  _persistTimer = setTimeout(() => {
+    const state = useWikiStore.getState();
+    writePersist(state);
+  }, 1000);
 }
-function persistNow(state: WikiState) {
+function persistNow() {
   if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+  const state = useWikiStore.getState();
   writePersist(state);
 }
 function writePersist(state: WikiState) {
@@ -77,6 +83,15 @@ function writePersist(state: WikiState) {
   };
   safeSet('wiki-viewer-storage', data);
 }
+
+function persistState(state: WikiState) {
+  if (_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(() => writePersist(state), 500);
+}
+
+const MAX_READING_PROGRESS = 100;
+
+let _initPromise: Promise<void> | null = null;
 
 export const useWikiStore = create<WikiState>((set, get) => ({
   graphData: null,
@@ -92,33 +107,41 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   initialize: async () => {
     const { graphData } = get();
     if (graphData) return;
+    if (_initPromise) return _initPromise;
 
-    // Try loading from cache first for instant render
-    const cached = loadGraphCache();
-    if (cached) {
-      initSearch(cached.nodes);
-      set({ graphData: cached, loading: false });
-      // Silently refresh in background
+    _initPromise = (async () => {
       try {
-        const data = await fetchGraphData();
-        initSearch(data.nodes);
-        set({ graphData: data, loading: false });
-        saveGraphCache(data);
-      } catch {
-        // Keep cached data on refresh failure
-      }
-      return;
-    }
+        // Try loading from cache first for instant render
+        const cached = loadGraphCache();
+        if (cached) {
+          initSearch(cached.nodes);
+          set({ graphData: cached, loading: false });
+          // Silently refresh in background
+          try {
+            const data = await fetchGraphData();
+            initSearch(data.nodes);
+            set({ graphData: data, loading: false });
+            saveGraphCache(data);
+          } catch {
+            // Keep cached data on refresh failure
+          }
+          return;
+        }
 
-    set({ loading: true, error: null });
-    try {
-      const data = await fetchGraphData();
-      initSearch(data.nodes);
-      set({ graphData: data, loading: false });
-      saveGraphCache(data);
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
-    }
+        set({ loading: true, error: null });
+        try {
+          const data = await fetchGraphData();
+          initSearch(data.nodes);
+          set({ graphData: data, loading: false });
+          saveGraphCache(data);
+        } catch (err) {
+          set({ error: (err as Error).message, loading: false });
+        }
+      } finally {
+        _initPromise = null;
+      }
+    })();
+    return _initPromise;
   },
 
   refreshGraphData: async () => {
@@ -136,12 +159,10 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
-    persistNow(get());
   },
 
   toggleSidebar: () => {
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed }));
-    persistNow(get());
   },
 
   openCommandPalette: () => set({ commandPaletteOpen: true }),
@@ -170,7 +191,6 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       const recentPages = [pageId, ...filtered].slice(0, 20);
       return { recentPages };
     });
-    persistNow(get());
   },
 
   toggleFavorite: (pageId) => {
@@ -180,7 +200,6 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         : [...s.favorites, pageId];
       return { favorites };
     });
-    persistNow(get());
   },
 
   isFavorite: (pageId) => get().favorites.includes(pageId),
@@ -188,10 +207,29 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   setReadingProgress: (pageId, progress) => {
     set((s) => {
       const readingProgress = { ...s.readingProgress, [pageId]: progress };
+      // LRU eviction: keep only the most recent MAX_READING_PROGRESS entries
+      const keys = Object.keys(readingProgress);
+      if (keys.length > MAX_READING_PROGRESS) {
+        const sorted = keys.sort((a, b) => (readingProgress[a] ?? 0) - (readingProgress[b] ?? 0));
+        const toDelete = sorted.slice(0, keys.length - MAX_READING_PROGRESS);
+        for (const k of toDelete) delete readingProgress[k];
+      }
       return { readingProgress };
     });
-    schedulePersist(get());
   },
 }));
+
+// Auto-persist when relevant fields change
+useWikiStore.subscribe((state, prevState) => {
+  if (
+    state.theme !== prevState.theme ||
+    state.sidebarCollapsed !== prevState.sidebarCollapsed ||
+    state.recentPages !== prevState.recentPages ||
+    state.readingProgress !== prevState.readingProgress ||
+    state.favorites !== prevState.favorites
+  ) {
+    persistState(state);
+  }
+});
 
 applyTheme((persisted.theme as WikiState['theme']) || 'system');

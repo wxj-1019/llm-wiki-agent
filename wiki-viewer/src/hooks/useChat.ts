@@ -25,14 +25,23 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
   const [previewPath, setPreviewPath] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
   const chatAbortRef = useRef<AbortController | null>(null);
+  const chatMessagesRef = useRef(chatMessages);
+  chatMessagesRef.current = chatMessages;
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      safeSet('agent-kit-chat-history', chatMessages);
+    }, 500);
+    return () => {
+      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    };
+  }, [chatMessages]);
 
   const [knowledgeGenTarget, setKnowledgeGenTarget] = useState<'mcp' | 'skill' | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [showSources, setShowSources] = useState(false);
-
-  useEffect(() => {
-    safeSet('agent-kit-chat-history', chatMessages);
-  }, [chatMessages]);
 
   const handleStopChat = useCallback(() => {
     chatAbortRef.current?.abort();
@@ -43,8 +52,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
   const handleSendChat = useCallback(async (content: string) => {
     if (!content.trim() || chatLoading) return;
     const userMsg: ChatMessage = { role: 'user', content };
-    const newMessages = [...chatMessages, userMsg];
-    setChatMessages(newMessages);
+    setChatMessages((prev) => [...prev, userMsg]);
     setChatInput('');
     setChatLoading(true);
     const abort = new AbortController();
@@ -102,7 +110,8 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
     try {
       const assistantMsg: ChatMessage = { role: 'assistant', content: '' };
       setChatMessages((prev) => [...prev, assistantMsg]);
-      const stream = chatWithLLMStream(newMessages, undefined, abort.signal);
+      const historyForApi = [...chatMessagesRef.current, userMsg];
+      const stream = chatWithLLMStream(historyForApi, undefined, abort.signal);
       const deduper = new StreamDeduplicator();
       for await (const part of stream) {
         if (part.error) {
@@ -139,7 +148,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       setChatLoading(false);
       chatAbortRef.current = null;
     }
-  }, [chatMessages, chatLoading, knowledgeGenTarget, addToast]);
+  }, [chatLoading, knowledgeGenTarget, addToast]);
 
   const handleQuickPrompt = useCallback(async (type: 'review-skill' | 'review-mcp' | 'suggest-tools' | 'custom') => {
     setChatOpen(true);
@@ -168,7 +177,8 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       }
 
       const displayPrompt = userPrompt.slice(0, 200) + (userPrompt.length > 200 ? '...' : '');
-      setChatMessages([
+      setChatMessages((prev) => [
+        ...prev,
         { role: 'user', content: displayPrompt },
         { role: 'assistant', content: '' },
       ]);
@@ -177,26 +187,27 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       chatAbortRef.current = abort;
       const messages: ChatMessage[] = [{ role: 'user', content: userPrompt }];
       const stream = chatWithLLMStream(messages, systemPrompt, abort.signal);
+      const deduper = new StreamDeduplicator();
       let fullReply = '';
-      let lastChunk = '';
       for await (const part of stream) {
         if (part.error) {
-          setChatMessages((prev) => [
-            prev[0],
-            { role: 'assistant', content: `Error: ${part.error}` },
-          ]);
+          setChatMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = { role: 'assistant', content: `Error: ${part.error}` };
+            return next;
+          });
           addToast(part.error, 'error');
           return;
         }
         if (part.chunk) {
-          // Skip consecutive duplicate chunks (network/litellm may resend)
-          if (part.chunk === lastChunk) continue;
-          lastChunk = part.chunk;
-          fullReply += part.chunk;
-          setChatMessages((prev) => [
-            prev[0],
-            { role: 'assistant', content: fullReply },
-          ]);
+          const result = deduper.process(part.chunk);
+          if (!result) continue;
+          fullReply += result.text;
+          setChatMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = { role: 'assistant', content: fullReply };
+            return next;
+          });
         }
         if (part.done) break;
       }
@@ -208,10 +219,13 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
     } catch (e) {
       const err = (e as Error).message;
       setChatMessages((prev) => {
-        if (prev.length >= 2) {
-          return [prev[0], { role: 'assistant', content: `Error: ${err}` }];
+        const next = [...prev];
+        if (next.length >= 1) {
+          next[next.length - 1] = { role: 'assistant', content: `Error: ${err}` };
+        } else {
+          next.push({ role: 'assistant', content: `Error: ${err}` });
         }
-        return [{ role: 'assistant', content: `Error: ${err}` }];
+        return next;
       });
       addToast(err, 'error');
     } finally {

@@ -23,6 +23,7 @@ interface NotificationState {
 }
 
 let toastIdCounter = 0;
+const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
@@ -44,11 +45,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
 
     // Auto-dismiss toast after 4 seconds
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       set((state) => ({
         toasts: state.toasts.filter((t) => t.id !== id),
       }));
+      toastTimers.delete(id);
     }, 4000);
+    toastTimers.set(id, timer);
   },
 
   removeNotification: (id) =>
@@ -68,12 +71,22 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       notifications: state.notifications.map((n) => ({ ...n, read: true })),
     })),
 
-  clearNotifications: () => set({ notifications: [] }),
+  clearNotifications: () => {
+    toastTimers.forEach(clearTimeout);
+    toastTimers.clear();
+    set({ notifications: [], toasts: [] });
+  },
 
-  dismissToast: (id) =>
+  dismissToast: (id) => {
+    const timer = toastTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      toastTimers.delete(id);
+    }
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
-    })),
+    }));
+  },
 
   unreadCount: () => get().notifications.filter((n) => !n.read).length,
 }));

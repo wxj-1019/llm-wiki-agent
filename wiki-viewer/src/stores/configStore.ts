@@ -58,9 +58,24 @@ const DEFAULT_CONFIG: SystemConfig = {
 
 import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
 
+function deepMerge<T extends Record<string, unknown>>(target: T, source: unknown): T {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    const s = (source as Record<string, unknown>)[key];
+    const t = result[key];
+    if (s && typeof s === 'object' && !Array.isArray(s) && t && typeof t === 'object' && !Array.isArray(t)) {
+      result[key] = deepMerge(t as Record<string, unknown>, s);
+    } else {
+      result[key] = s;
+    }
+  }
+  return result as T;
+}
+
 function loadFromStorage(): SystemConfig {
   const stored = safeGet('wiki-system-config', isObject, {});
-  return { ...DEFAULT_CONFIG, ...stored } as SystemConfig;
+  return deepMerge(DEFAULT_CONFIG, stored) as SystemConfig;
 }
 
 interface ConfigState {
@@ -82,7 +97,8 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   apiAvailable: null,
 
   setConfig: (partial) => {
-    const next = { ...get().config, ...partial };
+    const current = get().config;
+    const next = deepMerge(current, partial) as SystemConfig;
     set({ config: next });
     safeSet('wiki-system-config', next);
   },
@@ -170,26 +186,26 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       if (g1) {
         const parsed = parseGithubYaml(g1);
         if (parsed) {
-          set({ config: { ...get().config, ...parsed } });
+          set({ config: deepMerge(get().config, parsed) as SystemConfig });
           updated = true;
         }
       }
       if (g2) {
         const parsed = parseRssYaml(g2);
         if (parsed) {
-          set({ config: { ...get().config, ...parsed } });
+          set({ config: deepMerge(get().config, parsed) as SystemConfig });
           updated = true;
         }
       }
       if (g3) {
         const parsed = parseArxivYaml(g3);
         if (parsed) {
-          set({ config: { ...get().config, ...parsed } });
+          set({ config: deepMerge(get().config, parsed) as SystemConfig });
           updated = true;
         }
       }
       if (updated) {
-        localStorage.setItem('wiki-system-config', JSON.stringify(get().config));
+        safeSet('wiki-system-config', get().config);
       }
       return updated;
     } catch {

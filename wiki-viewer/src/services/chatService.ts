@@ -16,6 +16,29 @@ export interface WikiChatChunk {
   done?: boolean;
 }
 
+function parseSseEvent(eventText: string): WikiChatChunk | null {
+  const lines = eventText.split('\n');
+  let data = '';
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      data += line.slice(6) + '\n';
+    }
+  }
+  data = data.trim();
+  if (!data) return null;
+  if (data === '[DONE]') return { done: true };
+  try {
+    const parsed = JSON.parse(data);
+    if (parsed.error) return { error: parsed.error };
+    if (parsed.chunk) return { chunk: parsed.chunk };
+    if (parsed.sources) return { sources: parsed.sources as WikiChatSource[] };
+    if (parsed.status) return { status: parsed.status };
+  } catch {
+    // ignore malformed lines
+  }
+  return null;
+}
+
 export async function* chatWithWikiStream(
   query: string,
   messages: WikiChatMessage[],
@@ -40,33 +63,27 @@ export async function* chatWithWikiStream(
   let buffer = '';
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-      if (data === '[DONE]') {
-        yield { done: true };
-        return;
-      }
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.error) {
-          yield { error: parsed.error };
+    if (value) {
+      buffer += decoder.decode(value, { stream: true });
+    }
+    const events = buffer.split('\n\n');
+    buffer = events.pop() || '';
+    for (const event of events) {
+      const chunk = parseSseEvent(event);
+      if (chunk) {
+        if (chunk.done) return;
+        if (chunk.error) {
+          yield chunk;
           return;
         }
-        if (parsed.chunk) {
-          yield { chunk: parsed.chunk };
-        }
-        if (parsed.sources) {
-          yield { sources: parsed.sources as WikiChatSource[] };
-        }
-      } catch {
-        // ignore malformed lines
+        yield chunk;
       }
     }
+    if (done) break;
+  }
+  // Process any remaining buffered data after stream ends
+  if (buffer.trim()) {
+    const chunk = parseSseEvent(buffer);
+    if (chunk) yield chunk;
   }
 }

@@ -45,6 +45,7 @@ export interface RawFile {
   name: string;
   size: number;
   modified: number;
+  ingested?: boolean;
 }
 
 export interface UploadResult {

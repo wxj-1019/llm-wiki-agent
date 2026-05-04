@@ -12,7 +12,11 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root');
+if (!rootEl) {
+  throw new Error('Root element not found. Ensure <div id="root"></div> exists in index.html.');
+}
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <RouterProvider router={router} />
   </React.StrictMode>

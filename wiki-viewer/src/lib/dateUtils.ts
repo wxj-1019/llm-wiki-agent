@@ -4,6 +4,6 @@ export function formatDistanceToNow(date: number | Date): string {
   try {
     return _formatDistanceToNow(date, { addSuffix: true });
   } catch {
-    return '';
+    return '未知时间';
   }
 }
