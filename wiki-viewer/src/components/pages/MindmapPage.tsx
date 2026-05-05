@@ -7,6 +7,7 @@ import { getPagePath } from '@/lib/wikilink';
 import { motion } from 'framer-motion';
 import { Network, ChevronRight, Download } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { MindmapSkeleton } from '@/components/ui/Skeleton';
 
 const MAX_DEPTH = 3;
 function getNodeColors(): Record<string, string> {
@@ -114,6 +115,7 @@ export function MindmapPage() {
   const graphData = useWikiStore((s) => s.graphData);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const nodes = graphData?.nodes || [];
+  const loading = useWikiStore((s) => s.loading);
   useDocumentTitle('Mindmap');
 
   const { rootNode, nodeMap } = useMemo(() => {
@@ -130,13 +132,8 @@ export function MindmapPage() {
     return { rootNode: buildMindTree(target.id, nodeMap, labelMap, 0), nodeMap };
   }, [slug, nodes, graphData]);
 
-  if (!graphData || nodes.length === 0) {
-    return (
-      <div className="empty-state-warm mt-20">
-        <Network size={48} className="text-[var(--text-tertiary)] mb-3" />
-        <h3 className="text-lg font-semibold">Loading mindmap...</h3>
-      </div>
-    );
+  if (loading || !graphData || nodes.length === 0) {
+    return <MindmapSkeleton />;
   }
 
   if (!rootNode) {

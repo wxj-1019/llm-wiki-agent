@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers } from 'lucide-react';
+import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers, Shuffle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,12 @@ export function HomePage() {
     return nodes[Math.floor(Math.random() * nodes.length)];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes.length]);
+
+  const handleRandomPick = useCallback(() => {
+    if (nodes.length === 0) return;
+    const node = nodes[Math.floor(Math.random() * nodes.length)];
+    navigate(getPagePath(node));
+  }, [nodes, navigate]);
 
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleCopy = useCallback(() => {
@@ -321,7 +327,7 @@ export function HomePage() {
         )}
 
         {/* Continue Reading */}
-        {recentNodes.length > 0 && (
+        {nodes.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -332,11 +338,25 @@ export function HomePage() {
               <Clock size={16} className="text-apple-purple" />
               {t('home.sections.continueReading')}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {recentNodes.map((node) => (
-                <PageCard key={node!.id} node={node!} />
-              ))}
-            </div>
+            {recentNodes.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {recentNodes.map((node) => (
+                  <PageCard key={node!.id} node={node!} />
+                ))}
+              </div>
+            ) : (
+              <div className="apple-card p-8 text-center">
+                <Clock size={32} className="mx-auto mb-3 text-[var(--border-strong)]" />
+                <p className="text-sm text-[var(--text-secondary)] mb-4">{t('home.continueReading.empty')}</p>
+                <button
+                  onClick={handleRandomPick}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-apple-purple/10 text-apple-purple text-sm font-medium rounded-xl hover:bg-apple-purple/20 transition-colors"
+                >
+                  <Shuffle size={14} />
+                  {t('home.continueReading.randomPick')}
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
 

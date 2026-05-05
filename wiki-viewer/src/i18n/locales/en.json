@@ -35,6 +35,8 @@
   "home.searchPlaceholder": "Search your knowledge base...",
   "home.sections.knowledgeGraph": "Knowledge Graph",
   "home.sections.continueReading": "Continue Reading",
+  "home.continueReading.empty": "No reading history yet. Start exploring your wiki!",
+  "home.continueReading.randomPick": "Random Pick",
   "home.sections.randomDiscovery": "Random Discovery",
   "home.empty.step1.title": "Drop Documents",
   "home.empty.step1.desc": "Put Markdown files into the raw/ directory",

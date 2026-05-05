@@ -35,6 +35,8 @@
   "home.searchPlaceholder": "搜索知识库...",
   "home.sections.knowledgeGraph": "知识图谱",
   "home.sections.continueReading": "继续阅读",
+  "home.continueReading.empty": "还没有阅读记录，开始探索你的 Wiki 吧！",
+  "home.continueReading.randomPick": "随机推荐",
   "home.sections.randomDiscovery": "随机发现",
   "home.empty.step1.title": "放入文档",
   "home.empty.step1.desc": "将 Markdown 文件放入 raw/ 目录",

@@ -4,6 +4,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { Wrench, Play, Trash2, Plus, Power, PowerOff, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { SkillsSkeleton } from '@/components/ui/Skeleton';
 
 interface Skill {
   name: string;
@@ -20,6 +21,7 @@ export function SkillsPage() {
   useDocumentTitle(t('skills.title', 'Skill 管理'));
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [detail, setDetail] = useState<{ meta: Skill; files: Record<string, string> } | null>(null);
   const addNotification = useNotificationStore((s) => s.addNotification);
@@ -31,6 +33,8 @@ export function SkillsPage() {
       setSkills(data.skills || []);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setInitialLoading(false);
     }
   }, []);
 
@@ -71,6 +75,10 @@ export function SkillsPage() {
 
   return (
     <div className="space-y-6">
+      {initialLoading ? (
+        <SkillsSkeleton />
+      ) : (
+      <>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Wrench size={24} className="text-apple-blue" />
@@ -163,6 +171,8 @@ export function SkillsPage() {
             ))}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

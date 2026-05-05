@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle, FileQuestion, Edit3, Save, X, Download, Eye, Columns, Users, Headphones } from 'lucide-react';
+import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle, FileQuestion, Edit3, Save, X, Download, Eye, Columns, Users, Headphones, ChevronDown, FileText, Globe, Printer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
@@ -60,6 +60,7 @@ export function PageDetailPage({ type }: Props) {
   const [hasDraft, setHasDraft] = useState(false);
   const [showAudio, setShowAudio] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const node = useMemo(() => {
@@ -242,23 +243,46 @@ export function PageDetailPage({ type }: Props) {
             {isEditing ? <X size={14} /> : <Edit3 size={14} />}
             <span className="hidden sm:inline">{isEditing ? t('detail.cancel') : t('detail.edit')}</span>
           </button>
-          <button
-            onClick={() => {
-              if (!node) return;
-              const blob = new Blob([node.markdown], { type: 'text/markdown' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `${node.label || 'page'}.md`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
-            title={t('detail.downloadMarkdown')}
-          >
-            <Download size={14} />
-            <span className="hidden sm:inline">{t('detail.export')}</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu((v) => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
+              title={t('detail.export')}
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">{t('detail.export')}</span>
+              <ChevronDown size={10} />
+            </button>
+            {showExportMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute right-0 top-full mt-1 glass rounded-xl p-1 min-w-[160px] z-50 shadow-lg"
+              >
+                <button
+                  onClick={() => { if (!node) return; const blob = new Blob([node.markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${node.label || 'page'}.md`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+                >
+                  <FileText size={14} />
+                  {t('detail.exportMarkdown', 'Markdown (.md)')}
+                </button>
+                <button
+                  onClick={() => { if (!node) return; const el = document.querySelector('.wiki-content'); if (!el) return; const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${node.label}</title>\n<style>\nbody{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.7;color:#1d1d1f}\nh1,h2,h3{font-weight:600;margin-top:1.5em}\ncode{background:#f5f5f7;padding:0.15em 0.4em;border-radius:4px;font-size:0.9em}\npre{background:#f5f5f7;padding:1em;border-radius:8px;overflow-x:auto}\nblockquote{border-left:3px solid #0071e3;margin-left:0;padding-left:1em;color:#6e6e73}\na{color:#0071e3}\ntable{border-collapse:collapse;width:100%}\nth,td{border:1px solid #d2d2d7;padding:0.5em}\n</style>\n</head>\n<body>\n<h1>${node.label}</h1>\n${el.innerHTML}\n</body>\n</html>`; const blob = new Blob([html], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${node.label || 'page'}.html`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+                >
+                  <Globe size={14} />
+                  {t('detail.exportHTML', 'HTML (.html)')}
+                </button>
+                <button
+                  onClick={() => { setShowExportMenu(false); setTimeout(() => window.print(), 100); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
+                >
+                  <Printer size={14} />
+                  {t('detail.exportPDF', 'PDF (Print)')}
+                </button>
+              </motion.div>
+            )}
+          </div>
           <button
             onClick={() => setShowAudio((v) => !v)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${

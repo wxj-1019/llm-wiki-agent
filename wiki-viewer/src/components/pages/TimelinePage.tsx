@@ -4,6 +4,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion } from 'framer-motion';
 import { Calendar, GitCommit, Search, Activity, BarChart3, Layers } from 'lucide-react';
+import { TimelineSkeleton } from '@/components/ui/Skeleton';
 
 interface TimelineEvent {
   date: string;
@@ -55,6 +56,7 @@ export function TimelinePage() {
   const { t } = useTranslation();
   useDocumentTitle(t('nav.timeline') || 'Timeline');
   const graphData = useWikiStore((s) => s.graphData);
+  const loading = useWikiStore((s) => s.loading);
 
   const now = useMemo(() => Date.now(), []);
 
@@ -84,6 +86,10 @@ export function TimelinePage() {
     }
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [events]);
+
+  if (loading || !graphData) {
+    return <TimelineSkeleton />;
+  }
 
   if (events.length === 0) {
     return (
