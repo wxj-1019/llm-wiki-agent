@@ -4,7 +4,7 @@ import { CloudUpload, FolderOpen, HardDrive, CheckCircle, Loader2 } from 'lucide
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchRawFiles, uploadFile, uploadText, triggerIngest,
-  fetchRawFileContent, deleteRawFile
+  fetchRawFileContent, deleteRawFile, ingestImageFile,
 } from '@/services/dataService';
 import type { RawFile, UploadResult, IngestResult } from '@/services/dataService';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -39,6 +39,7 @@ export function UploadPage() {
 
   const [ingestingPaths, setIngestingPaths] = useState<Set<string>>(new Set());
   const [deletingPaths, setDeletingPaths] = useState<Set<string>>(new Set());
+  const [imageIngestingPaths, setImageIngestingPaths] = useState<Set<string>>(new Set());
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -49,17 +50,6 @@ export function UploadPage() {
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        document.querySelector<HTMLInputElement>('[data-upload-search]')?.focus();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     addNotification(message, type);
@@ -109,16 +99,32 @@ export function UploadPage() {
     setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   }, []);
 
+  const isImageFile = useCallback((name: string) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name), []);
+
   const doUploadFiles = useCallback(async (fileList: File[]) => {
     setUploading(true);
     setUploadProgress({ current: 0, total: fileList.length });
     for (let i = 0; i < fileList.length; i++) {
       setUploadProgress({ current: i, total: fileList.length });
+      const file = fileList[i];
       try {
-        const result: UploadResult = await uploadFile(fileList[i]);
-        showToast(t('upload.success.upload', { path: result.path }), 'success');
+        if (isImageFile(file.name)) {
+          setImageIngestingPaths((prev) => new Set(prev).add(file.name));
+          const result = await ingestImageFile(file);
+          if (result.success) {
+            showToast(t('upload.success.imageIngest', { path: result.md_path }), 'success');
+            refreshGraphData();
+          } else {
+            showToast(t('upload.error.imageIngest', { error: result.stderr || 'Unknown' }), 'error');
+          }
+          setImageIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.name); return n; });
+        } else {
+          const result: UploadResult = await uploadFile(file);
+          showToast(t('upload.success.upload', { path: result.path }), 'success');
+        }
       } catch (err) {
         showToast(String(err), 'error');
+        setImageIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.name); return n; });
       }
     }
     setUploadProgress({ current: fileList.length, total: fileList.length });
@@ -127,7 +133,7 @@ export function UploadPage() {
       setUploading(false);
     }, 400);
     await loadFiles();
-  }, [loadFiles, showToast, t]);
+  }, [loadFiles, showToast, t, refreshGraphData, isImageFile]);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();

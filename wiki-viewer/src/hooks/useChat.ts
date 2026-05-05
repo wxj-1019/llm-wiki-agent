@@ -27,6 +27,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
   const chatAbortRef = useRef<AbortController | null>(null);
   const chatMessagesRef = useRef(chatMessages);
   chatMessagesRef.current = chatMessages;
+  const chatLoadingRef = useRef(false);
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -47,14 +48,16 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
     chatAbortRef.current?.abort();
     chatAbortRef.current = null;
     setChatLoading(false);
+    chatLoadingRef.current = false;
   }, []);
 
   const handleSendChat = useCallback(async (content: string) => {
-    if (!content.trim() || chatLoading) return;
+    if (!content.trim() || chatLoadingRef.current) return;
     const userMsg: ChatMessage = { role: 'user', content };
     setChatMessages((prev) => [...prev, userMsg]);
     setChatInput('');
     setChatLoading(true);
+    chatLoadingRef.current = true;
     const abort = new AbortController();
     chatAbortRef.current = abort;
 
@@ -101,6 +104,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
         addToast(err, 'error');
       } finally {
         setChatLoading(false);
+        chatLoadingRef.current = false;
         setKnowledgeGenTarget(null);
         chatAbortRef.current = null;
       }
@@ -146,13 +150,15 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       addToast(err, 'error');
     } finally {
       setChatLoading(false);
+      chatLoadingRef.current = false;
       chatAbortRef.current = null;
     }
-  }, [chatLoading, knowledgeGenTarget, addToast]);
+  }, [knowledgeGenTarget, addToast]);
 
   const handleQuickPrompt = useCallback(async (type: 'review-skill' | 'review-mcp' | 'suggest-tools' | 'custom') => {
     setChatOpen(true);
     setChatLoading(true);
+    chatLoadingRef.current = true;
     let systemPrompt = '';
     let userPrompt = '';
     let filePath = '';
@@ -230,6 +236,7 @@ export function useChat(addToast: (message: string, type: 'success' | 'error') =
       addToast(err, 'error');
     } finally {
       setChatLoading(false);
+      chatLoadingRef.current = false;
       chatAbortRef.current = null;
     }
   }, [addToast]);

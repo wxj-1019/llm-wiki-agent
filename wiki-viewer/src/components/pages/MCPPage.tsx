@@ -4,6 +4,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { Server, Play, Square, RotateCcw, Trash2, Plus, Terminal, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MCPPageSkeleton } from '@/components/ui/Skeleton';
 
 interface MCPServer {
   name: string;
@@ -25,6 +26,7 @@ export function MCPPage() {
   useDocumentTitle(t('mcp.title', 'MCP 管理'));
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [actioningServer, setActioningServer] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
@@ -111,8 +113,11 @@ export function MCPPage() {
 
       <div className="grid gap-4">
         {servers.length === 0 && (
-          <div className="text-center py-12 text-[var(--text-secondary)]">
-            {t('mcp.empty', '暂无已安装的 MCP Server')}
+          <div className="empty-state-warm py-12">
+            <div className="flex justify-center mb-3">
+              <Server size={40} className="text-[var(--text-tertiary)]" />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">{t('mcp.empty', '暂无已安装的 MCP Server')}</h3>
           </div>
         )}
         {servers.map((s) => (
@@ -126,7 +131,7 @@ export function MCPPage() {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-2.5 h-2.5 rounded-full ${
-                    s.status === 'running' ? 'bg-green-500' : 'bg-gray-400'
+                    s.status === 'running' ? 'bg-emerald-500' : 'bg-[var(--text-tertiary)]'
                   }`}
                 />
                 <h3 className="font-semibold">{s.display_name || s.name}</h3>
@@ -141,6 +146,7 @@ export function MCPPage() {
                     disabled={actioningServer === s.name}
                     className="p-2 hover:bg-green-500/10 hover:text-green-500 rounded-xl transition-colors disabled:opacity-50"
                     title={t('mcp.start', '启动')}
+                    aria-label={t('mcp.start', '启动')}
                   >
                     <Play size={14} />
                   </button>
@@ -150,6 +156,7 @@ export function MCPPage() {
                     disabled={actioningServer === s.name}
                     className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
                     title={t('mcp.stop', '停止')}
+                    aria-label={t('mcp.stop', '停止')}
                   >
                     <Square size={14} />
                   </button>
@@ -159,6 +166,7 @@ export function MCPPage() {
                   disabled={actioningServer === s.name}
                   className="p-2 hover:bg-apple-blue/10 hover:text-apple-blue rounded-xl transition-colors disabled:opacity-50"
                   title={t('mcp.restart', '重启')}
+                  aria-label={t('mcp.restart', '重启')}
                 >
                   <RotateCcw size={14} />
                 </button>
@@ -166,6 +174,7 @@ export function MCPPage() {
                   onClick={() => showLogs(s.name)}
                   className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl transition-colors"
                   title={t('mcp.logs', '日志')}
+                  aria-label={t('mcp.logs', '日志')}
                 >
                   <Terminal size={14} />
                 </button>
@@ -174,6 +183,7 @@ export function MCPPage() {
                   disabled={actioningServer === s.name}
                   className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
                   title={t('mcp.uninstall', '卸载')}
+                  aria-label={t('mcp.uninstall', '卸载')}
                 >
                   <Trash2 size={14} />
                 </button>

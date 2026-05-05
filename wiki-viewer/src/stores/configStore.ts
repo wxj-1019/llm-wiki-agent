@@ -58,10 +58,13 @@ const DEFAULT_CONFIG: SystemConfig = {
 
 import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
 
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function deepMerge<T extends Record<string, unknown>>(target: T, source: unknown): T {
   if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
   const result = { ...target };
   for (const key of Object.keys(source)) {
+    if (DANGEROUS_KEYS.has(key)) continue;
     const s = (source as Record<string, unknown>)[key];
     const t = result[key];
     if (s && typeof s === 'object' && !Array.isArray(s) && t && typeof t === 'object' && !Array.isArray(t)) {
@@ -138,7 +141,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   checkApi: async () => {
     try {
-      const res = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch('/api/health', { signal: ctrl.signal });
+      clearTimeout(timer);
       set({ apiAvailable: res.ok });
     } catch {
       set({ apiAvailable: false });

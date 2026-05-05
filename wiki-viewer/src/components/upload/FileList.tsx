@@ -85,6 +85,8 @@ const FileListItem = memo(function FileListItem({
       {/* Checkbox */}
       <button
         onClick={() => onToggleSelect(file.path)}
+        role="checkbox"
+        aria-checked={isSelected}
         className="shrink-0 text-[var(--text-tertiary)] hover:text-apple-blue transition-colors p-1 rounded-lg hover:bg-[var(--bg-secondary)]"
       >
         {isSelected ? (
@@ -124,12 +126,13 @@ const FileListItem = memo(function FileListItem({
 
       {/* Actions - hover reveal */}
       <div className={`flex items-center gap-0.5 shrink-0 transition-opacity duration-200 ${
-        isHovered || isSelected ? 'opacity-100' : 'opacity-0'
+        isHovered || isSelected ? 'opacity-100' : 'opacity-0 group-focus-within:opacity-100'
       }`}>
         <button
           onClick={() => onPreview(file)}
           className="p-2 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           title={t('upload.preview')}
+          aria-label={t('upload.preview')}
         >
           <Eye size={16} />
         </button>
@@ -147,6 +150,7 @@ const FileListItem = memo(function FileListItem({
           disabled={isDeleting}
           className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-tertiary)] hover:text-red-500 transition-colors disabled:opacity-50"
           title={t('upload.delete')}
+          aria-label={t('upload.delete')}
         >
           {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
         </button>
@@ -217,6 +221,7 @@ export function FileList({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={t('action.searchPlaceholder')}
+              aria-label={t('action.searchPlaceholder')}
               className="apple-input pl-8 text-xs w-44"
             />
           </div>

@@ -1,17 +1,12 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { ScrollText, Search, Wrench, Activity, Loader2, Copy, Check, ExternalLink, Frown } from 'lucide-react';
+import { ScrollText, Search, Wrench, Activity, Loader2, Copy, Check, ExternalLink, Frown, List } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getPagePath } from '@/lib/wikilink';
 import { useWikiStore } from '@/stores/wikiStore';
-
-interface LogEntry {
-  date: string;
-  operation: string;
-  title: string;
-}
+import { fetchLog, type LogEntry } from '@/services/dataService';
 
 const opIcons: Record<string, React.ElementType> = {
   ingest: ScrollText,
@@ -42,8 +37,18 @@ export function LogPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tailLimit, setTailLimit] = useState(() => {
+    try { return parseInt(localStorage.getItem('wiki-log-tail') || '100', 10) || 100; } catch { return 100; }
+  });
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes || [];
+  const nodeLabelMap = useMemo(() => {
+    const map = new Map<string, typeof nodes[0]>();
+    for (const n of nodes) {
+      map.set(n.label.toLowerCase(), n);
+    }
+    return map;
+  }, [nodes]);
 
   useEffect(() => {
     return () => {
@@ -62,24 +67,26 @@ export function LogPage() {
   }, [entries]);
 
   useEffect(() => {
-    const fetchLog = async () => {
+    const doFetch = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/log');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.markdown) {
-          setEntries(parseLog(data.markdown));
-        } else {
-          setEntries([]);
-        }
+        const { entries } = await fetchLog(tailLimit);
+        setEntries(entries);
       } catch {
         try {
           const res = await fetch('/data/wiki/log.md');
           if (res.ok) {
             const text = await res.text();
-            setEntries(parseLog(text));
+            // Fallback parse (same logic as dataService)
+            const lines = text.split('\n');
+            const parsed: LogEntry[] = [];
+            const re = /^##\s+\[(\d{4}-\d{2}-\d{2})\]\s+(\w+)\s+\|\s+(.+)$/;
+            for (const line of lines) {
+              const m = line.match(re);
+              if (m) parsed.push({ date: m[1], operation: m[2].toLowerCase(), title: m[3] });
+            }
+            setEntries(parsed.reverse());
           } else {
             setEntries([]);
           }
@@ -91,8 +98,8 @@ export function LogPage() {
         setLoading(false);
       }
     };
-    fetchLog();
-  }, []);
+    doFetch();
+  }, [tailLimit, t]);
 
   return (
     <div>
@@ -101,13 +108,31 @@ export function LogPage() {
       {!loading && !error && entries.length > 0 && (
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           {Object.entries(stats).map(([op, count]) => (
-            <span key={op} className={`text-xs font-medium px-2 py-1 rounded-full ${opColors[op] || 'bg-gray-100 text-gray-600'}`}>
+            <span key={op} className={`text-xs font-medium px-2 py-1 rounded-full ${opColors[op] || 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}>
               {t(`log.op.${op}` as string)}: {count}
             </span>
           ))}
-          <span className="text-xs text-[var(--text-tertiary)] ml-auto">
-            {t('log.stats.total', { count: entries.length })}
-          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <List size={12} className="text-[var(--text-tertiary)]" />
+            <select
+              value={tailLimit}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setTailLimit(val);
+                try { localStorage.setItem('wiki-log-tail', String(val)); } catch { /* ignore */ }
+              }}
+              className="text-xs bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-lg px-2 py-1 text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
+              aria-label={t('log.tailLabel')}
+            >
+              <option value={50}>{t('log.tail50')}</option>
+              <option value={100}>{t('log.tail100')}</option>
+              <option value={200}>{t('log.tail200')}</option>
+              <option value={0}>{t('log.tailAll')}</option>
+            </select>
+            <span className="text-xs text-[var(--text-tertiary)]">
+              {t('log.stats.total', { count: entries.length })}
+            </span>
+          </div>
         </div>
       )}
 
@@ -156,10 +181,15 @@ export function LogPage() {
         <div className="space-y-3">
           {entries.map((entry, i) => {
             const Icon = opIcons[entry.operation] || ScrollText;
-            const linkedNode = nodes.find((n) =>
-              entry.title.toLowerCase().includes(n.label.toLowerCase()) ||
-              n.label.toLowerCase().includes(entry.title.toLowerCase())
-            );
+            const linkedNode = (() => {
+              const lowerTitle = entry.title.toLowerCase();
+              for (const [label, node] of nodeLabelMap) {
+                if (lowerTitle.includes(label) || label.includes(lowerTitle)) {
+                  return node;
+                }
+              }
+              return undefined;
+            })();
             const handleClick = () => {
               if (!linkedNode) return;
               navigate(getPagePath(linkedNode));
@@ -167,14 +197,22 @@ export function LogPage() {
 
             return (
               <motion.div
-                key={`${entry.date}-${entry.operation}-${i}`}
+                key={`${entry.date}-${entry.operation}-${entry.title || i}`}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.03 }}
                 className={`apple-card p-4 flex items-center gap-4 cursor-pointer transition-colors ${linkedNode ? 'hover:bg-[var(--bg-secondary)]' : ''}`}
                 onClick={handleClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                  }
+                }}
               >
-                <div className={`p-2 rounded-lg ${opColors[entry.operation] || 'bg-gray-100 text-gray-600'}`}>
+                <div className={`p-2 rounded-lg ${opColors[entry.operation] || 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}>
                   <Icon size={16} />
                 </div>
                 <div className="flex-1">
@@ -198,19 +236,4 @@ export function LogPage() {
   );
 }
 
-function parseLog(text: string): LogEntry[] {
-  const lines = text.split('\n');
-  const entries: LogEntry[] = [];
-  for (const line of lines) {
-    const match = line.match(/^##\s+\[(\d{4}-\d{2}-\d{2})\]\s+(\w+)\s+\|\s+(.+)$/);
-    if (match) {
-      entries.push({
-        date: match[1],
-        operation: match[2].toLowerCase(),
-        title: match[3],
-      });
-    }
-  }
-  // Return newest entries first (log.md is append-only with newest at bottom)
-  return entries.reverse();
-}
+

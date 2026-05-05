@@ -36,6 +36,7 @@ export function PreviewPanel({ previewContent, previewName, onClose, onCopy }: P
                   onClick={onCopy}
                   className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   title={t('upload.copyContent')}
+                  aria-label={t('common.copy')}
                 >
                   <ClipboardCopy size={16} />
                 </button>

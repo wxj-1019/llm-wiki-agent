@@ -13,6 +13,7 @@ import { chatWithWikiStream, type WikiChatMessage, type WikiChatSource } from '@
 import { useNotificationStore } from '@/stores/notificationStore';
 import { safeGet, safeSet, isObject, isArray } from '@/lib/safeStorage';
 import { StreamDeduplicator, mergeStreamChunk } from '@/lib/streamUtils';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const SESSIONS_KEY = 'wiki-chat-sessions';
 
@@ -96,6 +97,7 @@ export function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottomRef = useRef(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sessionTrapRef = useFocusTrap<HTMLDivElement>(dropdownOpen);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const contextSentRef = useRef(false);
@@ -308,8 +310,13 @@ export function ChatPage() {
   }, [entries, doSend, setEntries]);
 
   const handleStop = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
+    try {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    } catch {
+      // Defensive: abort() can throw if already aborted or controller is invalid
       abortRef.current = null;
     }
   }, []);
@@ -388,12 +395,15 @@ export function ChatPage() {
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors border border-[var(--border-default)] rounded-xl max-w-[140px] sm:max-w-[200px]"
+              aria-expanded={dropdownOpen}
+              aria-haspopup="listbox"
             >
               <span className="truncate">{activeSession?.title || defaultTitle}</span>
               <ChevronDown size={12} className={`shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {dropdownOpen && (
               <motion.div
+                ref={sessionTrapRef}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="absolute right-0 top-full mt-2 py-1 glass rounded-xl min-w-[220px] z-50"
@@ -402,7 +412,10 @@ export function ChatPage() {
                   {sessions.map((s) => (
                     <div
                       key={s.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSwitchSession(s.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchSession(s.id); }}
                       className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors ${
                         s.id === activeId
                           ? 'bg-apple-blue/10 text-apple-blue'
@@ -413,7 +426,8 @@ export function ChatPage() {
                       {sessions.length > 1 && (
                         <button
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className="p-1 hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1 hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                          aria-label={t('chat.deleteSession', 'Delete session')}
                         >
                           <X size={10} />
                         </button>
@@ -438,8 +452,9 @@ export function ChatPage() {
             <button
               onClick={handleClear}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
+              aria-label={t('chat.clear')}
             >
-              <Trash2 size={13} />
+              <Trash2 size={13} aria-hidden="true" />
               <span className="hidden sm:inline">{t('chat.clear')}</span>
             </button>
           )}
@@ -521,6 +536,7 @@ export function ChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('chat.inputPlaceholder')}
+            aria-label={t('chat.inputPlaceholder')}
             rows={1}
             className="flex-1 apple-input resize-none max-h-32 text-sm py-2.5"
             disabled={loading}
@@ -533,8 +549,9 @@ export function ChatPage() {
                 ? 'rounded-full bg-transparent text-red-500 border border-red-200 hover:border-red-500'
                 : 'apple-button disabled:opacity-40 disabled:cursor-not-allowed'
             }`}
+            aria-label={streaming ? t('chat.stop') : t('chat.send')}
           >
-            {streaming ? <Square size={16} fill="currentColor" /> : <Send size={16} />}
+            {streaming ? <Square size={16} fill="currentColor" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
           </button>
         </div>
         <div className="max-w-3xl mx-auto mt-1.5 flex items-center justify-between">

@@ -1,19 +1,33 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
-const APPLE_NODE_PALETTE = [
-  '#007AFF',
-  '#34C759',
-  '#AF52DE',
-  '#FF9500',
-  '#FF2D55',
-  '#5AC8FA',
-];
+// Dark-mode-optimized palette: reads from CSS variables at runtime
+function getAppleNodePalette(): string[] {
+  const root = getComputedStyle(document.documentElement);
+  return [
+    root.getPropertyValue('--apple-blue').trim() || '#0A84FF',
+    root.getPropertyValue('--apple-green').trim() || '#30B350',
+    root.getPropertyValue('--apple-purple').trim() || '#A855F7',
+    root.getPropertyValue('--apple-orange').trim() || '#D97706',
+    root.getPropertyValue('--apple-red').trim() || '#E11D48',
+    root.getPropertyValue('--apple-teal').trim() || '#38BDF8',
+  ];
+}
+function getAppleNodeColor(group: number): string {
+  const palette = getAppleNodePalette();
+  return palette[group % palette.length];
+}
+function getThemeColors(): Record<string, string> {
+  const root = getComputedStyle(document.documentElement);
+  return {
+    source: root.getPropertyValue('--apple-blue').trim() || '#0A84FF',
+    entity: root.getPropertyValue('--apple-green').trim() || '#30B350',
+    concept: root.getPropertyValue('--apple-purple').trim() || '#A855F7',
+    synthesis: root.getPropertyValue('--apple-orange').trim() || '#D97706',
+  };
+}
 const EDGE_COLOR_EXTRACTED = 'rgba(0, 122, 255, 0.25)';
 const EDGE_COLOR_INFERRED = 'rgba(120, 120, 128, 0.15)';
 const EDGE_COLOR_AMBIGUOUS = 'rgba(120, 120, 128, 0.08)';
-function getAppleNodeColor(group: number): string {
-  return APPLE_NODE_PALETTE[group % APPLE_NODE_PALETTE.length];
-}
 function getAppleEdgeColor(edgeType: string): string {
   if (edgeType === 'EXTRACTED') return EDGE_COLOR_EXTRACTED;
   if (edgeType === 'AMBIGUOUS') return EDGE_COLOR_AMBIGUOUS;
@@ -29,7 +43,7 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 import type { Network } from 'vis-network';
-import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move } from 'lucide-react';
+import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,6 +68,21 @@ export function GraphPage() {
 
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set(['source', 'entity', 'concept', 'synthesis']));
   const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
+  const [isEditing, setIsEditing] = useState(false);
+  const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
+
+  // Close onboarding on Escape
+  useEffect(() => {
+    if (!showOnboard) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowOnboard(false);
+        safeSet(GRAPH_ONBOARDED_KEY, '1');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showOnboard]);
 
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const edges = useMemo(() => graphData?.edges || [], [graphData]);
@@ -78,13 +107,15 @@ export function GraphPage() {
 
     const fontColor = getComputedColor('--text-primary');
 
+    const themeColors = getThemeColors();
     const visNodes = nodes
       .filter((n) => filterTypes.has(n.type))
       .map((n) => {
-        const ic = getAppleNodeColor(n.group);
+        const ic = themeColors[n.type] || getAppleNodeColor(n.group);
         return {
           id: n.id,
           label: n.label,
+          type: n.type,
           color: {
             background: ic,
             border: ic,
@@ -92,7 +123,13 @@ export function GraphPage() {
           },
           value: n.value,
           title: n.preview,
-          font: { color: fontColor, size: 12, face: 'system-ui, -apple-system, sans-serif' },
+          font: {
+            color: fontColor,
+            size: 13,
+            face: 'system-ui, -apple-system, sans-serif',
+            strokeWidth: 3,
+            strokeColor: getComputedColor('--bg-primary'),
+          },
         };
       });
 
@@ -144,6 +181,7 @@ export function GraphPage() {
     });
 
     network.on('doubleClick', (params) => {
+      if (isEditing) return; // Disable navigation in edit mode
       if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
         const node = nodes.find((n) => n.id === nodeId);
@@ -159,7 +197,31 @@ export function GraphPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphData]); // Only re-run when graphData actually changes, not on filterTypes
+  }, [graphData, isEditing]); // Re-run when edit mode changes
+
+  // Update node colors when theme changes
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      if (!nodesDataSetRef.current) return;
+      const fontColor = getComputedColor('--text-primary');
+      const strokeColor = getComputedColor('--bg-primary');
+      const themeColors = getThemeColors();
+      const allNodes = nodesDataSetRef.current.get();
+      nodesDataSetRef.current.update(
+        (allNodes as any[]).map((n) => {
+          const ic = themeColors[n.type] || n.color?.background || '#0A84FF';
+          return {
+            id: n.id,
+            color: { background: ic, border: ic, highlight: { background: ic, border: '#fff' } },
+            font: { ...n.font, color: fontColor, strokeColor },
+          };
+        })
+      );
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Handle filter changes by updating node/edge visibility without rebuilding network
   useEffect(() => {
@@ -269,11 +331,99 @@ export function GraphPage() {
                 ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]'
                 : 'text-[var(--text-tertiary)]'
             }`}
+            title={t(tf.labelKey as string)}
+            aria-pressed={filterTypes.has(tf.key)}
           >
             <span className={`w-2 h-2 rounded-full ${tf.color}`} />
-            <span>{t(tf.labelKey as string)}</span>
+            <span className="hidden sm:inline">{t(tf.labelKey as string)}</span>
+            <span className="sm:hidden uppercase text-[10px]">{tf.key[0]}</span>
           </button>
         ))}
+        <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        <button
+          onClick={() => setIsEditing((v) => !v)}
+          className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl ${
+            isEditing
+              ? 'bg-apple-orange/10 text-apple-orange'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+          title={isEditing ? 'Exit edit mode' : 'Edit graph layout'}
+          aria-pressed={isEditing}
+          aria-label={isEditing ? 'Exit edit mode' : 'Edit graph layout'}
+        >
+          <Wrench size={14} />
+          <span className="hidden sm:inline">{isEditing ? 'Editing' : 'Edit'}</span>
+        </button>
+        {isEditing && (
+          <>
+            <button
+              onClick={async () => {
+                const net = networkRef.current;
+                if (!net) return;
+                const positions = net.getPositions();
+                try {
+                  const res = await fetch('/api/graph/save-layout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ positions }),
+                  });
+                  if (res.ok) {
+                    setSaveLayoutMsg('Layout saved');
+                    setTimeout(() => setSaveLayoutMsg(''), 2000);
+                  } else {
+                    setSaveLayoutMsg('Save failed');
+                  }
+                } catch {
+                  setSaveLayoutMsg('Save failed');
+                }
+              }}
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-apple-green bg-apple-green/10"
+            >
+              <Save size={14} />
+              <span className="hidden sm:inline">Save</span>
+            </button>
+            <button
+              onClick={() => {
+                const net = networkRef.current;
+                if (!net) return;
+                const selected = net.getSelectedNodes();
+                if (selected.length === 0) return;
+                if (!window.confirm(`Delete ${selected.length} selected node(s)?`)) return;
+                const ds = nodesDataSetRef.current;
+                if (ds) {
+                  selected.forEach((id: string) => ds.remove(id));
+                }
+              }}
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-red-500 bg-red-500/10"
+              title="Delete selected nodes"
+              aria-label="Delete selected nodes"
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
+          </>
+        )}
+        {saveLayoutMsg && (
+          <span className="text-xs text-[var(--text-secondary)]">{saveLayoutMsg}</span>
+        )}
+        <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        <button
+          onClick={() => {
+            if (!graphData) return;
+            const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `graph-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+          title="Export graph JSON"
+          aria-label="Export graph JSON"
+        >
+          <Download size={14} />
+          <span className="hidden sm:inline">Export</span>
+        </button>
       </div>
 
       {/* Node Detail Panel */}
@@ -294,6 +444,8 @@ export function GraphPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
             onClick={(e) => {
               e.stopPropagation();
               setShowOnboard(false);
@@ -366,6 +518,7 @@ function NodePanel({
         <button
           onClick={onClose}
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors p-1"
+          aria-label={t('common.close')}
         >
           <X size={16} />
         </button>
@@ -419,6 +572,7 @@ function GraphStats({
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex items-center justify-between w-full text-xs font-semibold text-[var(--text-primary)] mb-2"
+        aria-expanded={!collapsed}
       >
         <span className="flex items-center gap-1.5">
           <BarChart3 size={12} />

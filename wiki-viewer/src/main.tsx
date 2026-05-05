@@ -2,15 +2,24 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
+import { stopPolling } from './stores/wikiStore';
+import { registerSW } from 'virtual:pwa-register';
 import './i18n';
 import './index.css';
 
-// Register service worker for offline support
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {
-    // SW registration failed — app still works normally
+  registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl, registration) {
+      if (registration) {
+        setInterval(() => registration.update(), 60 * 60 * 1000);
+      }
+    },
   });
 }
+
+// Cleanup ETag polling on page unload
+window.addEventListener('beforeunload', stopPolling);
 
 const rootEl = document.getElementById('root');
 if (!rootEl) {

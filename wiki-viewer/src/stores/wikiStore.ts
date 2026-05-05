@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { fetchGraphData } from '@/services/dataService';
+import { fetchGraphData, fetchIndexEtag } from '@/services/dataService';
 import { initSearch } from '@/lib/search';
 import type { GraphData, GraphNode } from '@/types/graph';
 
@@ -26,6 +26,7 @@ interface WikiState {
   toggleFavorite: (pageId: string) => void;
   isFavorite: (pageId: string) => boolean;
   setReadingProgress: (pageId: string, progress: number) => void;
+  stopPolling: () => void;
 }
 
 function getSystemTheme(): 'light' | 'dark' {
@@ -60,19 +61,6 @@ function saveGraphCache(data: GraphData) {
 // ── Debounced persistence ──
 // Scroll-triggered state (readingProgress) fires ~100 times per article read.
 // We debounce localStorage writes to 1 second to avoid blocking the main thread.
-let _persistTimer: ReturnType<typeof setTimeout> | null = null;
-function schedulePersist() {
-  if (_persistTimer) clearTimeout(_persistTimer);
-  _persistTimer = setTimeout(() => {
-    const state = useWikiStore.getState();
-    writePersist(state);
-  }, 1000);
-}
-function persistNow() {
-  if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
-  const state = useWikiStore.getState();
-  writePersist(state);
-}
 function writePersist(state: WikiState) {
   const data = {
     theme: state.theme,
@@ -90,8 +78,41 @@ function persistState(state: WikiState) {
 }
 
 const MAX_READING_PROGRESS = 100;
+const _readingTimestamps: Record<string, number> = {};
 
 let _initPromise: Promise<void> | null = null;
+let _pollInterval: ReturnType<typeof setInterval> | null = null;
+let _lastEtag = '0';
+let _pollFetching = false;
+
+export function stopPolling() {
+  if (_pollInterval) {
+    clearInterval(_pollInterval);
+    _pollInterval = null;
+  }
+}
+
+function _startPolling() {
+  if (_pollInterval) return;
+  _pollInterval = setInterval(async () => {
+    if (document.hidden || _pollFetching) return;
+    _pollFetching = true;
+    try {
+      const newEtag = await fetchIndexEtag();
+      if (newEtag !== _lastEtag && _lastEtag !== '0') {
+        const data = await fetchGraphData();
+        initSearch(data.nodes);
+        useWikiStore.setState({ graphData: data });
+        saveGraphCache(data);
+      }
+      _lastEtag = newEtag;
+    } catch {
+      // Ignore polling errors
+    } finally {
+      _pollFetching = false;
+    }
+  }, 30000);
+}
 
 export const useWikiStore = create<WikiState>((set, get) => ({
   graphData: null,
@@ -105,6 +126,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   commandPaletteOpen: false,
 
   initialize: async () => {
+    stopPolling(); // Clean up any existing interval before re-initializing
     const { graphData } = get();
     if (graphData) return;
     if (_initPromise) return _initPromise;
@@ -125,6 +147,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           } catch {
             // Keep cached data on refresh failure
           }
+          _startPolling();
           return;
         }
 
@@ -134,6 +157,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
           initSearch(data.nodes);
           set({ graphData: data, loading: false });
           saveGraphCache(data);
+          _startPolling();
         } catch (err) {
           set({ error: (err as Error).message, loading: false });
         }
@@ -142,6 +166,10 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       }
     })();
     return _initPromise;
+  },
+
+  stopPolling: () => {
+    stopPolling();
   },
 
   refreshGraphData: async () => {
@@ -176,14 +204,18 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     return get().graphData?.nodes.find((n) => n.label === label);
   },
 
-  getBacklinks: (nodeId) => {
-    const { graphData } = get();
-    if (!graphData) return [];
-    const fromIds = new Set(
-      graphData.edges.filter((e) => e.to === nodeId).map((e) => e.from)
-    );
-    return graphData.nodes.filter((n) => fromIds.has(n.id));
-  },
+  getBacklinks: (() => {
+    // Stable empty array to avoid unnecessary re-renders when graphData is null
+    const EMPTY: GraphNode[] = [];
+    return (nodeId: string) => {
+      const { graphData } = get();
+      if (!graphData) return EMPTY;
+      const fromIds = new Set(
+        graphData.edges.filter((e) => e.to === nodeId).map((e) => e.from)
+      );
+      return fromIds.size === 0 ? EMPTY : graphData.nodes.filter((n) => fromIds.has(n.id));
+    };
+  })(),
 
   addRecentPage: (pageId) => {
     set((s) => {
@@ -207,12 +239,15 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   setReadingProgress: (pageId, progress) => {
     set((s) => {
       const readingProgress = { ...s.readingProgress, [pageId]: progress };
-      // LRU eviction: keep only the most recent MAX_READING_PROGRESS entries
+      _readingTimestamps[pageId] = Date.now();
       const keys = Object.keys(readingProgress);
       if (keys.length > MAX_READING_PROGRESS) {
-        const sorted = keys.sort((a, b) => (readingProgress[a] ?? 0) - (readingProgress[b] ?? 0));
+        const sorted = keys.sort((a, b) => (_readingTimestamps[a] ?? 0) - (_readingTimestamps[b] ?? 0));
         const toDelete = sorted.slice(0, keys.length - MAX_READING_PROGRESS);
-        for (const k of toDelete) delete readingProgress[k];
+        for (const k of toDelete) {
+          delete readingProgress[k];
+          delete _readingTimestamps[k];
+        }
       }
       return { readingProgress };
     });

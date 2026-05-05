@@ -47,7 +47,7 @@ export const ChatMessage = memo(function ChatMessage({
       <div
         className={`max-w-[85%] sm:max-w-[75%] px-4 py-3 relative group rounded-2xl ${
           entry.role === 'user'
-            ? 'bg-marshmallow-mint/20 border border-marshmallow-mint/30 text-[var(--text-primary)]'
+            ? 'bg-apple-blue/10 border border-apple-blue/20 text-[var(--text-primary)]'
             : 'bg-[var(--bg-secondary)] border border-[var(--border-default)]'
         }`}
       >
@@ -55,8 +55,9 @@ export const ChatMessage = memo(function ChatMessage({
         {entry.role === 'assistant' && entry.content && (
           <button
             onClick={() => onCopy(entry.content, index)}
-            className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)]"
+            className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)]"
             title={t('chat.copy')}
+            aria-label={t('chat.copy')}
           >
             {copiedIndex === index ? <Check size={12} className="text-apple-blue" /> : <Copy size={12} />}
           </button>
@@ -66,7 +67,7 @@ export const ChatMessage = memo(function ChatMessage({
           <>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.content}</p>
             {entry.timestamp && (
-              <p className="text-[10px] mt-1 opacity-60 text-right">{formatTime(entry.timestamp)}</p>
+              <p className="text-[10px] mt-1 text-[var(--text-secondary)] text-right">{formatTime(entry.timestamp)}</p>
             )}
           </>
         ) : (
@@ -102,8 +103,9 @@ export const ChatMessage = memo(function ChatMessage({
             <button
               onClick={onRegenerate}
               className="flex items-center gap-1 text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors px-1.5 py-0.5 hover:bg-[var(--bg-primary)]"
+              aria-label={t('chat.regenerate')}
             >
-              <RefreshCw size={10} />
+              <RefreshCw size={10} aria-hidden="true" />
               {t('chat.regenerate')}
             </button>
           </div>
@@ -120,6 +122,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <button
                   key={source.path}
                   onClick={() => onSourceClick(source.path)}
+                  role="link"
                   className="text-[10px] px-2 py-0.5 bg-[var(--bg-primary)] border border-apple-blue/20 text-apple-blue hover:underline truncate max-w-[200px] rounded-full"
                   title={source.path}
                 >
@@ -128,7 +131,7 @@ export const ChatMessage = memo(function ChatMessage({
               ))}
             </div>
           </div>
-        ) : entry.sources && entry.sources.length === 0 && entry.content ? (
+        ) : !streaming && entry.sources && entry.sources.length === 0 && entry.content ? (
           <div className="mt-3 pt-3 border-t border-[var(--border-default)]/50">
             <p className="text-[10px] text-[var(--text-tertiary)]">
               {t('chat.noSources')}

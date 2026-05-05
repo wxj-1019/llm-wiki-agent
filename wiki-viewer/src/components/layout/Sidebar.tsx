@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, LayoutDashboard, Network, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,9 @@ const navGroups: NavGroup[] = [
       { icon: Home, translationKey: 'nav.home', path: '/', matchPath: '/' },
       { icon: Compass, translationKey: 'nav.browse', path: '/browse', matchPath: '/browse' },
       { icon: GitBranch, translationKey: 'nav.graph', path: '/graph', matchPath: '/graph' },
+      { icon: LayoutDashboard, translationKey: 'nav.dashboard', path: '/dashboard', matchPath: '/dashboard' },
+      { icon: Network, translationKey: 'nav.mindmap', path: '/mindmap/overview', matchPath: '/mindmap' },
+      { icon: Clock, translationKey: 'nav.timeline', path: '/timeline', matchPath: '/timeline' },
     ],
   },
   {
@@ -54,11 +57,7 @@ export function Sidebar() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useWikiStore((s) => s.toggleSidebar);
   const location = useLocation();
-  const [disablePointerEvents, setDisablePointerEvents] = useState(false);
-
-  useEffect(() => {
-    setDisablePointerEvents(sidebarCollapsed);
-  }, [sidebarCollapsed]);
+  // disablePointerEvents removed — redundant with AnimatePresence exit animation
 
   const handleNavClick = () => {
     if (window.matchMedia('(max-width: 768px)').matches && !sidebarCollapsed) {
@@ -75,10 +74,10 @@ export function Sidebar() {
             key={item.path}
             to={item.path}
             onClick={handleNavClick}
-            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
               navActive
-                ? 'bg-apple-blue/10 text-apple-blue font-medium'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                ? 'bg-apple-blue/10 text-apple-blue font-medium border-l-2 border-apple-blue'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:translate-x-0.5'
             }`}
             title={t(item.translationKey as string)}
             aria-current={navActive ? 'page' : undefined}
@@ -164,9 +163,13 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={toggleSidebar}
+              role="button"
+              tabIndex={0}
+              aria-label={t('action.closeSidebar', 'Close sidebar')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') toggleSidebar(); }}
             />
             <motion.aside
-              className={`md:hidden fixed left-0 top-14 bottom-0 z-40 bg-[var(--bg-primary)] border-r border-[var(--border-default)] overflow-y-auto ${disablePointerEvents ? 'pointer-events-none' : ''}`}
+              className="md:hidden fixed left-0 top-14 bottom-0 z-40 bg-[var(--bg-primary)] border-r border-[var(--border-default)] overflow-y-auto"
               initial={{ x: -240 }}
               animate={{ x: 0 }}
               exit={{ x: -240 }}

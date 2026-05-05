@@ -17,8 +17,9 @@ export function ErrorBoundary() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="max-w-md w-full text-center"
+        role="alert"
       >
-        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-500/10 flex items-center justify-center">
           <AlertTriangle size={28} className="text-red-500" />
         </div>
 
@@ -32,7 +33,7 @@ export function ErrorBoundary() {
 
         {!isRouteError && (
           <div className="mb-6 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 text-left overflow-auto">
-            <code className="text-xs font-mono text-red-500 dark:text-red-400 whitespace-pre-wrap break-all">
+            <code className="text-xs font-mono text-red-500 whitespace-pre-wrap break-all">
               {message}
             </code>
           </div>

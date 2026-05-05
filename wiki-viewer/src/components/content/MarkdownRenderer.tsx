@@ -3,11 +3,23 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
-import { codeToHtml } from 'shiki';
-import DOMPurify from 'dompurify';
 import { WikiLink } from './WikiLink';
 import { parseFrontmatter } from '@/lib/frontmatter';
 import { useTranslation } from 'react-i18next';
+
+// Lazy-load heavy libraries
+let shikiModule: typeof import('shiki') | null = null;
+let dompurifyModule: typeof import('dompurify') | null = null;
+
+async function getShiki() {
+  if (!shikiModule) shikiModule = await import('shiki');
+  return shikiModule;
+}
+
+async function getDOMPurify() {
+  if (!dompurifyModule) dompurifyModule = await import('dompurify');
+  return dompurifyModule.default;
+}
 
 interface Props {
   content: string;
@@ -38,12 +50,28 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
   const theme = useThemeName();
   const [html, setHtml] = useState('');
   const [copied, setCopied] = useState(false);
+  const [safeHtml, setSafeHtml] = useState('');
 
   useEffect(() => {
     if (!lang) return;
+    let cancelled = false;
     const code = String(children).replace(/\n$/, '');
-    codeToHtml(code, { lang, theme }).then(setHtml);
+    getShiki().then(({ codeToHtml }) =>
+      codeToHtml(code, { lang, theme }).then((result) => {
+        if (!cancelled) setHtml(result);
+      })
+    );
+    return () => { cancelled = true; };
   }, [children, lang, theme]);
+
+  useEffect(() => {
+    if (!html) return;
+    let cancelled = false;
+    getDOMPurify().then((dp) => {
+      if (!cancelled) setSafeHtml(dp.sanitize(html));
+    });
+    return () => { cancelled = true; };
+  }, [html]);
 
   const handleCopy = async () => {
     try {
@@ -68,6 +96,7 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
       onClick={handleCopy}
       className="absolute top-2 right-2 p-1.5  text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors text-xs"
       title={t('common.copy')}
+      aria-label={t('common.copy')}
     >
       {copied ? t('common.copied') : t('common.copy')}
     </button>
@@ -87,7 +116,7 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
   return (
     <div className="relative my-4 rounded-xl overflow-x-auto text-sm">
       {CopyButton}
-      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />
+      <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
     </div>
   );
 });
@@ -226,28 +255,30 @@ export function MarkdownRenderer({ content, enableSourceCitations, onSourceClick
     });
   }, []);
 
+  const components = useMemo<Components>(() => ({
+    h1: H1,
+    h2: H2,
+    h3: H3,
+    p: P,
+    ul: UL,
+    ol: OL,
+    li: LI,
+    blockquote: Blockquote,
+    code: CodeBlock,
+    table: Table,
+    th: TH,
+    td: TD,
+    a: aComponent as Components['a'],
+    strong: Strong,
+    em: Em,
+    hr: HR,
+  }), [aComponent]);
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, { behavior: 'wrap' }]]}
-      components={{
-        h1: H1,
-        h2: H2,
-        h3: H3,
-        p: P,
-        ul: UL,
-        ol: OL,
-        li: LI,
-        blockquote: Blockquote,
-        code: CodeBlock,
-        table: Table,
-        th: TH,
-        td: TD,
-        a: aComponent as Components['a'],
-        strong: Strong,
-        em: Em,
-        hr: HR,
-      } as Components}
+      components={components}
     >
       {body}
     </ReactMarkdown>

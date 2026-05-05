@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { formatDistanceToNow } from '@/lib/dateUtils';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const iconMap = {
   success: CheckCircle,
@@ -22,6 +23,7 @@ export function NotificationDropdown() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
   const notifications = useNotificationStore((s) => s.notifications);
   const unreadCount = useNotificationStore((s) => s.unreadCount());
   const markRead = useNotificationStore((s) => s.markRead);
@@ -46,8 +48,11 @@ export function NotificationDropdown() {
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
         title={t('notifications.title', '通知')}
+        aria-label={t('notifications.title', '通知')}
+        aria-expanded={open}
+        aria-haspopup="true"
       >
-        <Bell size={16} />
+        <Bell size={16} aria-hidden="true" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -60,6 +65,7 @@ export function NotificationDropdown() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
             <motion.div
+              ref={trapRef}
               initial={{ opacity: 0, y: -8, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.96 }}
@@ -78,6 +84,7 @@ export function NotificationDropdown() {
                         onClick={markAllRead}
                         className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                         title={t('notifications.markAllRead', '全部已读')}
+                        aria-label={t('notifications.markAllRead', '全部已读')}
                       >
                         <CheckCheck size={14} />
                       </button>
@@ -85,6 +92,7 @@ export function NotificationDropdown() {
                         onClick={clearNotifications}
                         className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                         title={t('notifications.clearAll', '清空')}
+                        aria-label={t('notifications.clearAll', '清空')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -106,6 +114,7 @@ export function NotificationDropdown() {
                       <div
                         key={n.id}
                         onMouseEnter={() => !n.read && markRead(n.id)}
+                        onFocus={() => !n.read && markRead(n.id)}
                         className={`flex items-start gap-3 px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-default)] last:border-b-0 ${
                           !n.read ? 'bg-[var(--bg-secondary)]/40' : ''
                         }`}
@@ -120,6 +129,7 @@ export function NotificationDropdown() {
                         <button
                           onClick={() => removeNotification(n.id)}
                           className="p-1 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0"
+                          aria-label={t('notifications.dismiss', 'Dismiss')}
                         >
                           <X size={12} />
                         </button>

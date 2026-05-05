@@ -8,6 +8,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
 import { getPagePath } from '@/lib/wikilink';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
@@ -18,14 +19,17 @@ function LanguageSwitcher() {
       <button
         className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
         title={t('action.switchLanguage')}
+        aria-label={t('action.switchLanguage')}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         onClick={() => setOpen(!open)}
       >
-        <Globe size={16} />
+        <Globe size={16} aria-hidden="true" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 py-1 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[140px] z-50 shadow-lg">
+          <div className="absolute right-0 top-full mt-2 py-1 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[140px] z-50 shadow-lg" role="listbox" aria-label={t('action.switchLanguage')}>
             {SUPPORTED_LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
@@ -33,9 +37,11 @@ function LanguageSwitcher() {
                 className={`w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
                   i18n.language === lang.code ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
                 }`}
+                role="option"
+                aria-selected={i18n.language === lang.code}
               >
                 {lang.label}
-                {i18n.language === lang.code && <Check size={14} />}
+                {i18n.language === lang.code && <Check size={14} aria-hidden="true" />}
               </button>
             ))}
           </div>
@@ -58,6 +64,7 @@ export function Header() {
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trapRef = useFocusTrap<HTMLDivElement>(searchOpen);
   const navigate = useNavigate();
 
   const handleQueryChange = (value: string) => {
@@ -102,12 +109,14 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 z-50 h-14 backdrop-blur-md bg-[var(--bg-primary)]/80 border-b border-[var(--border-default)] flex items-center px-4 gap-3">
       <button
         onClick={toggleSidebar}
-        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center"
+        aria-label={sidebarCollapsed ? t('action.expandSidebar') : t('action.collapseSidebar')}
+        aria-expanded={!sidebarCollapsed}
       >
-        {sidebarCollapsed ? <Menu size={16} /> : <X size={16} />}
+        {sidebarCollapsed ? <Menu size={16} aria-hidden="true" /> : <X size={16} aria-hidden="true" />}
       </button>
 
-      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2">
+      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2" aria-label="LLM Wiki Viewer home">
         <span className="w-6 h-6 rounded-lg bg-apple-blue flex items-center justify-center text-white text-xs font-bold">W</span>
         <span className="hidden sm:inline">{t('brand.name')}</span>
       </Link>
@@ -118,8 +127,11 @@ export function Header() {
         <button
           onClick={() => setSearchOpen(!searchOpen)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)] hover:border-[var(--border-strong)] hover:shadow-sm"
+          aria-label={t('action.search')}
+          aria-expanded={searchOpen}
+          aria-haspopup="dialog"
         >
-          <Search size={14} />
+          <Search size={14} aria-hidden="true" />
           <span className="hidden sm:inline">{t('action.search')}</span>
           <kbd className="hidden md:inline-flex px-1.5 py-0.5 rounded-md text-[10px] bg-[var(--bg-primary)] border border-[var(--border-default)]">{t('shortcut.ctrlK')}</kbd>
         </button>
@@ -127,6 +139,7 @@ export function Header() {
         <AnimatePresence>
           {searchOpen && (
             <motion.div
+              ref={trapRef}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -139,6 +152,11 @@ export function Header() {
               onChange={(e) => handleQueryChange(e.target.value)}
               placeholder={t('header.searchPlaceholder')}
               className="apple-input w-full text-sm"
+              aria-label={t('action.search')}
+              role="combobox"
+              aria-controls="search-results"
+              aria-expanded={results.length > 0}
+              aria-activedescendant={selectedIdx >= 0 ? `search-result-${selectedIdx}` : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   setSearchOpen(false);
@@ -156,16 +174,19 @@ export function Header() {
               }}
             />
             {results.length > 0 && (
-              <div className="mt-2 space-y-0">
+              <div className="mt-2 space-y-0" id="search-results" role="listbox">
                 {results.map((r, idx) => (
                   <button
                     key={r.item.id}
+                    id={`search-result-${idx}`}
                     onClick={() => handleResultClick(r.item.id)}
                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                       idx === selectedIdx
                         ? 'bg-apple-blue/10 text-apple-blue'
                         : 'hover:bg-[var(--bg-secondary)]'
                     }`}
+                    role="option"
+                    aria-selected={idx === selectedIdx}
                   >
                     <div className="font-medium text-sm">{r.item.label}</div>
                     <div className="text-xs text-[var(--text-tertiary)] truncate">{r.item.preview}</div>
@@ -176,13 +197,15 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       <Link
         to="/graph"
-        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center"
         title={t('graph.tooltip')}
+        aria-label={t('graph.tooltip')}
       >
-        <Network size={16} />
+        <Network size={16} aria-hidden="true" />
       </Link>
 
       <NotificationDropdown />
@@ -193,20 +216,26 @@ export function Header() {
         <button
           onClick={() => setTheme('light')}
           className={`p-1.5 rounded-full transition-colors ${theme === 'light' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
+          aria-label={t('theme.light')}
+          aria-pressed={theme === 'light'}
         >
-          <Sun size={14} />
+          <Sun size={14} aria-hidden="true" />
         </button>
         <button
           onClick={() => setTheme('system')}
           className={`p-1.5 rounded-full transition-colors ${theme === 'system' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
+          aria-label={t('theme.system')}
+          aria-pressed={theme === 'system'}
         >
-          <Monitor size={14} />
+          <Monitor size={14} aria-hidden="true" />
         </button>
         <button
           onClick={() => setTheme('dark')}
           className={`p-1.5 rounded-full transition-colors ${theme === 'dark' ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm' : ''}`}
+          aria-label={t('theme.dark')}
+          aria-pressed={theme === 'dark'}
         >
-          <Moon size={14} />
+          <Moon size={14} aria-hidden="true" />
         </button>
       </div>
     </header>

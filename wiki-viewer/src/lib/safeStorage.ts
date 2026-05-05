@@ -19,11 +19,23 @@ export function safeGet<T>(key: string, validator: (v: unknown) => v is T, fallb
   }
 }
 
-export function safeSet(key: string, value: unknown): void {
+export class StorageQuotaError extends Error {
+  constructor() {
+    super('localStorage quota exceeded');
+    this.name = 'StorageQuotaError';
+  }
+}
+
+export function safeSet(key: string, value: unknown, throwOnQuota = false): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // localStorage may be full or disabled — ignore silently
+    return true;
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      if (throwOnQuota) throw new StorageQuotaError();
+    }
+    // localStorage may be full or disabled — ignore silently by default
+    return false;
   }
 }
 

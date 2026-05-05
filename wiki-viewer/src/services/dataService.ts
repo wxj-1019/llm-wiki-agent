@@ -133,3 +133,95 @@ export async function deleteRawFile(path: string): Promise<{ success: boolean }>
   }
   return res.json();
 }
+
+export interface FtsResult {
+  path: string;
+  title: string;
+  type: string;
+  rank: number;
+  excerpt: string;
+}
+
+export async function searchFts(query: string, limit = 20, semantic = false): Promise<FtsResult[]> {
+  const url = `/api/search/fts?q=${encodeURIComponent(query)}&limit=${limit}&semantic=${semantic}`;
+  const res = await fetchWithTimeout(url, { timeoutMs: semantic ? 30000 : 5000 });
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+  const data = await res.json();
+  return data.results || [];
+}
+
+export interface LogEntry {
+  date: string;
+  operation: string;
+  title: string;
+}
+
+export async function fetchLog(tail = 0): Promise<{ entries: LogEntry[]; markdown: string }> {
+  const url = tail > 0 ? `/api/log?tail=${tail}` : '/api/log';
+  const res = await fetchWithTimeout(url, { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Failed to fetch log: ${res.status}`);
+  const data = await res.json();
+  return { markdown: data.markdown || '', entries: parseLogEntries(data.markdown || '') };
+}
+
+function parseLogEntries(text: string): LogEntry[] {
+  const lines = text.split('\n');
+  const entries: LogEntry[] = [];
+  const re = /^## \[(\d{4}-\d{2}-\d{2})\]\s+(\w+)\s*\|\s*(.+)$/;
+  for (const line of lines) {
+    const m = line.match(re);
+    if (m) {
+      entries.push({ date: m[1], operation: m[2].toLowerCase(), title: m[3].trim() });
+    }
+  }
+  return entries.reverse();
+}
+
+export async function reindexEmbeddings(): Promise<{ success: boolean; message: string }> {
+  const res = await fetchWithTimeout('/api/search/reindex-embeddings', {
+    method: 'POST',
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`Reindex failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchIndexEtag(): Promise<string> {
+  try {
+    const res = await fetchWithTimeout('/api/index-etag', { timeoutMs: 5000 });
+    if (!res.ok) return '0';
+    return res.text();
+  } catch {
+    return '0';
+  }
+}
+
+export async function ingestImageFile(file: File): Promise<{ success: boolean; description: string; md_path: string; stdout: string; stderr: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetchWithTimeout('/api/multimodal/ingest', {
+    method: 'POST',
+    body: formData,
+    timeoutMs: 300000,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Image ingest failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function saveWikiPage(path: string, content: string): Promise<{ success: boolean; path: string }> {
+  if (!isValidFilePath(path)) throw new Error('Invalid file path');
+  const res = await fetchWithTimeout('/api/wiki/write', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, content }),
+    timeoutMs: 10000,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Save failed: ${res.status} ${err}`);
+  }
+  return res.json();
+}

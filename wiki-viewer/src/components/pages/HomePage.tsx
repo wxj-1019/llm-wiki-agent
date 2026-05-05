@@ -1,20 +1,23 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox } from 'lucide-react';
+import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { searchNodes } from '@/lib/search';
+import { stripMarkdown } from '@/lib/textUtils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
+  const loading = useWikiStore((s) => s.loading);
   const initialize = useWikiStore((s) => s.initialize);
   const recentPages = useWikiStore((s) => s.recentPages);
   const favorites = useWikiStore((s) => s.favorites);
@@ -177,6 +180,7 @@ export function HomePage() {
                   placeholder={t('home.searchPlaceholder')}
                   className="flex-1 bg-transparent outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
                   aria-label={t('home.searchPlaceholder')}
+                  aria-autocomplete="list"
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') {
                       setHomeQuery('');
@@ -222,7 +226,7 @@ export function HomePage() {
                         }`}
                       >
                         <div className="font-medium text-sm">{r.item.label}</div>
-                        <div className="text-xs text-[var(--text-tertiary)] truncate">{r.item.preview}</div>
+                        <div className="text-xs text-[var(--text-tertiary)] truncate">{stripMarkdown(r.item.preview)}</div>
                       </button>
                     ))}
                     <Link
@@ -245,22 +249,37 @@ export function HomePage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12"
         >
-          {[
-            { labelKey: 'stat.sources', count: sources.length, icon: BookOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10' },
-            { labelKey: 'stat.entities', count: entities.length, icon: Sparkles, color: 'text-apple-green', bg: 'bg-apple-green/10' },
-            { labelKey: 'stat.concepts', count: concepts.length, icon: Network, color: 'text-apple-purple', bg: 'bg-apple-purple/10' },
-            { labelKey: 'stat.syntheses', count: syntheses.length, icon: BookOpen, color: 'text-apple-orange', bg: 'bg-apple-orange/10' },
-          ].map((stat) => (
-            <div key={stat.labelKey} className="apple-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`${stat.color} ${stat.bg} p-1.5 rounded-lg`}>
-                  <stat.icon size={14} />
-                </div>
-                <span className="text-xs text-[var(--text-secondary)] font-medium">{t(stat.labelKey as string)}</span>
-              </div>
-              <div className="text-3xl font-bold tabular-nums">{stat.count}</div>
-            </div>
-          ))}
+          {(() => {
+            const total = nodes.length || 1;
+            const stats = [
+              { labelKey: 'stat.sources', count: sources.length, icon: BookOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10', bar: 'bg-apple-blue' },
+              { labelKey: 'stat.entities', count: entities.length, icon: Sparkles, color: 'text-apple-green', bg: 'bg-apple-green/10', bar: 'bg-apple-green' },
+              { labelKey: 'stat.concepts', count: concepts.length, icon: Network, color: 'text-apple-purple', bg: 'bg-apple-purple/10', bar: 'bg-apple-purple' },
+              { labelKey: 'stat.syntheses', count: syntheses.length, icon: Layers, color: 'text-apple-orange', bg: 'bg-apple-orange/10', bar: 'bg-apple-orange' },
+            ];
+            return stats.map((stat) => {
+              const pct = Math.round((stat.count / total) * 100);
+              return (
+                <Link
+                  key={stat.labelKey}
+                  to={`/browse?t=${stat.labelKey.replace('stat.', '')}`}
+                  className="apple-card p-4 block group"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`${stat.color} ${stat.bg} p-1.5 rounded-lg`}>
+                      <stat.icon size={14} />
+                    </div>
+                    <span className="text-xs text-[var(--text-secondary)] font-medium">{t(stat.labelKey as string)}</span>
+                  </div>
+                  <div className="text-3xl font-bold tabular-nums mb-2">{stat.count}</div>
+                  <div className="w-full h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                    <div className={`h-full ${stat.bar} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="text-[10px] text-[var(--text-tertiary)] mt-1">{pct}% of total</div>
+                </Link>
+              );
+            });
+          })()}
         </motion.div>
 
         {/* Favorites */}
@@ -286,8 +305,16 @@ export function HomePage() {
                   ))}
               </div>
             ) : (
-              <div className="apple-card p-6 text-center text-sm text-[var(--text-secondary)]">
-                {t('home.favorites.empty')}
+              <div className="apple-card p-8 text-center">
+                <Heart size={32} className="mx-auto mb-3 text-[var(--border-strong)]" />
+                <p className="text-sm text-[var(--text-secondary)] mb-3">{t('home.favorites.empty')}</p>
+                <Link
+                  to="/browse"
+                  className="inline-flex items-center gap-1.5 text-sm text-apple-blue hover:underline"
+                >
+                  {t('home.favorites.browseCta')}
+                  <ArrowRight size={14} />
+                </Link>
               </div>
             )}
           </motion.div>
@@ -413,7 +440,7 @@ function PageCard({ node }: { node: { id: string; label: string; type: string; p
     >
       <TypeBadge type={node.type} />
       <h3 className="font-bold mt-2 mb-1">{node.label}</h3>
-      <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{node.preview}</p>
+      <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{stripMarkdown(node.preview)}</p>
     </Link>
   );
 }

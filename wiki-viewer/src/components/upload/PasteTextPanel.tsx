@@ -35,13 +35,17 @@ export function PasteTextPanel({
         </h2>
       </div>
       <div className="p-5 space-y-3">
+        <label htmlFor="paste-title" className="sr-only">{t('upload.titlePlaceholder')}</label>
         <input
+          id="paste-title"
           value={pasteTitle}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder={t('upload.titlePlaceholder')}
           className="apple-input w-full"
         />
+        <label htmlFor="paste-content" className="sr-only">{t('upload.pastePlaceholder')}</label>
         <textarea
+          id="paste-content"
           value={pasteContent}
           onChange={(e) => onContentChange(e.target.value)}
           placeholder={t('upload.pastePlaceholder')}

@@ -24,18 +24,36 @@ interface NotificationState {
 
 let toastIdCounter = 0;
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let lastToastTime = 0;
+const TOAST_THROTTLE_MS = 300;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   toasts: [],
 
   addNotification: (message, type = 'info') => {
-    const id = `${Date.now()}-${++toastIdCounter}`;
+    const now = Date.now();
+    if (now - lastToastTime < TOAST_THROTTLE_MS) {
+      // Skip toast UI for rapid-fire notifications, but still log
+      set((state) => ({
+        notifications: [{
+          id: `${now}-${++toastIdCounter}`,
+          message,
+          type,
+          timestamp: now,
+          read: false,
+        }, ...state.notifications].slice(0, 50),
+      }));
+      return;
+    }
+    lastToastTime = now;
+
+    const id = `${now}-${++toastIdCounter}`;
     const notification: Notification = {
       id,
       message,
       type,
-      timestamp: Date.now(),
+      timestamp: now,
       read: false,
     };
 
@@ -54,10 +72,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     toastTimers.set(id, timer);
   },
 
-  removeNotification: (id) =>
+  removeNotification: (id) => {
+    const timer = toastTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      toastTimers.delete(id);
+    }
     set((state) => ({
       notifications: state.notifications.filter((n) => n.id !== id),
-    })),
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }));
+  },
 
   markRead: (id) =>
     set((state) => ({

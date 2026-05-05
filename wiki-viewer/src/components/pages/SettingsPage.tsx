@@ -147,7 +147,7 @@ export function SettingsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-[var(--bg-primary)] text-purple-600 dark:text-purple-400 shadow-sm'
+                ? 'bg-[var(--bg-primary)] text-apple-purple shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -181,10 +181,11 @@ export function SettingsPage() {
               {t('settings.github.tokenTitle')}
             </h3>
             <div className="space-y-3">
-              <label className="block text-sm text-[var(--text-secondary)]">
+              <label htmlFor="github-token" className="block text-sm text-[var(--text-secondary)]">
                 {t('settings.github.tokenLabel')}
               </label>
               <input
+                id="github-token"
                 type="password"
                 value={config.github.token}
                 onChange={(e) => updateGithub({ token: e.target.value })}
@@ -217,10 +218,11 @@ export function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                <label htmlFor="github-languages" className="block text-sm text-[var(--text-secondary)] mb-2">
                   {t('settings.github.languages')}
                 </label>
                 <input
+                  id="github-languages"
                   value={config.github.trending.languages.join(', ')}
                   onChange={(e) =>
                     updateTrending({
@@ -234,10 +236,11 @@ export function SettingsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                  <label htmlFor="github-since-days" className="block text-sm text-[var(--text-secondary)] mb-2">
                     {t('settings.github.sinceDays')}
                   </label>
                   <input
+                    id="github-since-days"
                     type="number"
                     min={1}
                     max={365}
@@ -247,10 +250,11 @@ export function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                  <label htmlFor="github-per-language" className="block text-sm text-[var(--text-secondary)] mb-2">
                     {t('settings.github.perLanguage')}
                   </label>
                   <input
+                    id="github-per-language"
                     type="number"
                     min={1}
                     max={50}
@@ -322,8 +326,9 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setRssFeeds(config.rss.feeds.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
+                    aria-label={t('settings.remove')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -391,8 +396,9 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setArxivQueries(config.arxiv.queries.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
+                    aria-label={t('settings.remove')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -430,10 +436,11 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                <label htmlFor="llm-provider" className="block text-sm text-[var(--text-secondary)] mb-2">
                   {t('settings.llm.provider')}
                 </label>
                 <select
+                  id="llm-provider"
                   value={llmProvider}
                   onChange={(e) => {
                     const p = e.target.value;
@@ -458,10 +465,11 @@ export function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                <label htmlFor="llm-model" className="block text-sm text-[var(--text-secondary)] mb-2">
                   {t('settings.llm.model')}
                 </label>
                 <input
+                  id="llm-model"
                   value={llmModel}
                   onChange={(e) => setLlmModel(e.target.value)}
                   placeholder={t('settings.llm.modelPlaceholder')}
@@ -473,10 +481,11 @@ export function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--text-secondary)] mb-2">
+                <label htmlFor="llm-model-fast" className="block text-sm text-[var(--text-secondary)] mb-2">
                   {t('settings.llm.modelFast')}
                 </label>
                 <input
+                  id="llm-model-fast"
                   value={llmModelFast}
                   onChange={(e) => setLlmModelFast(e.target.value)}
                   placeholder={t('settings.llm.modelFastPlaceholder')}
@@ -496,7 +505,7 @@ export function SettingsPage() {
                 <label className="block text-sm text-[var(--text-secondary)] mb-2 flex items-center gap-2">
                   <span>{t('settings.llm.apiKey')}</span>
                   {llmKeySet && (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full">
                       {t('settings.llm.keySet')}
                     </span>
                   )}
@@ -514,7 +523,7 @@ export function SettingsPage() {
               </div>
 
               {llmProvider === 'deepseek' && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 rounded-xl text-sm text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                <div className="p-3 bg-apple-blue/10 border border-apple-blue/20 rounded-xl text-sm text-apple-blue flex items-start gap-2">
                   <ExternalLink size={14} className="shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium">DeepSeek</p>

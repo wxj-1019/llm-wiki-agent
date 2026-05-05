@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Critique · LLM Wiki Viewer</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --accent: #0a84ff;
+    --border: rgba(0,0,0,0.08);
+    --radius: 1rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0a0a0c; --surface: #141418; --text: #f5f5f7; --text-secondary: #a0a0a5; --border: rgba(255,255,255,0.08); }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  header { margin-bottom: 2.5rem; }
+  header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+  header .meta { font-size: 0.875rem; color: var(--text-secondary); }
+  header .verdict { margin-top: 0.75rem; font-size: 1rem; color: var(--text-secondary); font-style: italic; }
+
+  .radar-wrap { display: flex; justify-content: center; margin-bottom: 2.5rem; }
+  .radar-wrap svg { width: 280px; height: 280px; }
+
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: 2.5rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+  .card .score-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .card .score { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .card .band { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+  .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .card p { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+  .card ul { font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1em; }
+  .card li { margin-bottom: 0.25rem; }
+
+  .actions { margin-bottom: 2rem; }
+  .actions h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+  .actions ul { list-style: none; padding: 0; font-size: 0.875rem; }
+  .actions li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.5rem;
+    display: flex; align-items: flex-start; gap: 0.5rem;
+  }
+  .actions li::before { content: attr(data-check); font-weight: 700; flex-shrink: 0; }
+  .keep li::before { content: '✓'; color: #30d158; }
+  .fix li::before { content: '▲'; color: #ff453a; }
+  .quick li::before { content: '⚡'; color: #ff9f0a; }
+
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; margin-left: auto; flex-shrink: 0; }
+  .badge-p0 { background: rgba(255,69,58,0.12); color: #ff453a; }
+  .badge-p1 { background: rgba(255,159,10,0.12); color: #ff9f0a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Critique · LLM Wiki Viewer</h1>
+  <div class="meta">Reviewer: OD · Critique skill &nbsp;|&nbsp; 2026-05-05</div>
+  <div class="verdict">A solid Apple-style knowledge dashboard with strong functional bones and emerging polish — hierarchy holds on desktop but frays on mobile; innovation potential is untapped.</div>
+</header>
+
+<div class="radar-wrap">
+  <svg viewBox="0 0 300 300" aria-label="Radar chart showing scores across 5 dimensions">
+    <defs>
+      <polygon id="grid5" points="150,30 261,110 222,240 78,240 39,110" fill="none" stroke="var(--border)" stroke-width="1"/>
+      <polygon id="grid4" points="150,54 237,117 205,212 95,212 63,117" fill="none" stroke="var(--border)" stroke-width="1"/>
+      <polygon id="grid3" points="150,78 213,124 188,184 112,184 87,124" fill="none" stroke="var(--border)" stroke-width="1"/>
+      <polygon id="grid2" points="150,102 189,131 171,156 129,156 111,131" fill="none" stroke="var(--border)" stroke-width="1"/>
+      <polygon id="grid1" points="150,126 165,138 159,150 141,150 135,138" fill="none" stroke="var(--border)" stroke-width="1"/>
+    </defs>
+    <use href="#grid5"/><use href="#grid4"/><use href="#grid3"/><use href="#grid2"/><use href="#grid1"/>
+    <line x1="150" y1="30" x2="150" y2="150" stroke="var(--border)" stroke-width="1"/>
+    <line x1="261" y1="110" x2="150" y2="150" stroke="var(--border)" stroke-width="1"/>
+    <line x1="222" y1="240" x2="150" y2="150" stroke="var(--border)" stroke-width="1"/>
+    <line x1="78" y1="240" x2="150" y2="150" stroke="var(--border)" stroke-width="1"/>
+    <line x1="39" y1="110" x2="150" y2="150" stroke="var(--border)" stroke-width="1"/>
+    <!-- Data: Philosophy 6, Hierarchy 7, Detail 7, Function 8, Innovation 6 -->
+    <polygon points="150,78 224,122 196,198 104,198 65,110" fill="rgba(10,132,255,0.18)" stroke="#0a84ff" stroke-width="2"/>
+    <circle cx="150" cy="78" r="3" fill="#0a84ff"/><text x="150" y="70" text-anchor="middle" font-size="10" fill="var(--text-secondary)">6</text>
+    <circle cx="224" cy="122" r="3" fill="#0a84ff"/><text x="236" y="122" text-anchor="start" font-size="10" fill="var(--text-secondary)">7</text>
+    <circle cx="196" cy="198" r="3" fill="#0a84ff"/><text x="208" y="202" text-anchor="start" font-size="10" fill="var(--text-secondary)">7</text>
+    <circle cx="104" cy="198" r="3" fill="#0a84ff"/><text x="92" y="202" text-anchor="end" font-size="10" fill="var(--text-secondary)">8</text>
+    <circle cx="65" cy="110" r="3" fill="#0a84ff"/><text x="53" y="110" text-anchor="end" font-size="10" fill="var(--text-secondary)">6</text>
+    <!-- Labels -->
+    <text x="150" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text)">Philosophy</text>
+    <text x="275" y="106" text-anchor="start" font-size="11" font-weight="600" fill="var(--text)">Hierarchy</text>
+    <text x="232" y="260" text-anchor="start" font-size="11" font-weight="600" fill="var(--text)">Detail</text>
+    <text x="68" y="260" text-anchor="end" font-size="11" font-weight="600" fill="var(--text)">Function</text>
+    <text x="25" y="106" text-anchor="end" font-size="11" font-weight="600" fill="var(--text)">Innovation</text>
+  </svg>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="score-row"><span class="score">6</span><span class="band">/ 10 &nbsp;·&nbsp; Functional</span></div>
+    <h3>Philosophy consistency</h3>
+    <p>The Apple-style direction is declared and mostly followed — capsule buttons, rounded-xl cards, blue accent (#0a84ff), SF Pro system font. But drift appears: ChatPage user bubbles use mint-green (A7F3D0) which clashes with the cool-blue thesis; GraphPage vis.js nodes use a separate hardcoded palette that ignores the design system; StatusPage panel headers mix purple/violet/pink/blue without a consistent semantic rule.</p>
+    <ul>
+      <li><strong>Keep:</strong> The capsule button + card vocabulary is coherent across 80% of pages.</li>
+      <li><strong>Fix:</strong> Unify Graph/Mindmap node colors with CSS variables (recently fixed).</li>
+      <li><strong>Quick win:</strong> Replace ChatPage mint bubble with a neutral/blue tint.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="score-row"><span class="score">7</span><span class="band">/ 10 &nbsp;·&nbsp; Strong</span></div>
+    <h3>Visual hierarchy</h3>
+    <p>Desktop hierarchy is clear: fixed header (z-50) → sidebar navigation → page title (text-3xl) → content grid. But mobile hierarchy frays: the onboarding overlay on GraphPage blocks the entire viewport without a clear dismiss affordance; PageDetailPage edit toolbar crowds the header on narrow screens; DashboardPage stat cards and charts compete for attention without size contrast.</p>
+    <ul>
+      <li><strong>Keep:</strong> Sidebar active state (border-l-2 + bg tint) provides excellent wayfinding.</li>
+      <li><strong>Fix:</strong> Graph onboarding should be a compact tooltip, not a full-screen modal.</li>
+      <li><strong>Quick win:</strong> Reduce DashboardPage chart titles from text-lg to text-sm to de-emphasize.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="score-row"><span class="score">7</span><span class="band">/ 10 &nbsp;·&nbsp; Strong</span></div>
+    <h3>Detail execution</h3>
+    <p>Page transitions (AnimatePresence) and card hover shadows are polished. The signal-strength bars on BrowsePage cards are a delightful micro-detail. But execution gaps remain: SettingsPage tab switch has no motion; TimelinePage event dots use bg-opacity-10 which is nearly invisible; ChatMessage streaming state shows a flash of "No sources" before sources arrive; reading progress bar on PageDetailPage takes up fixed space even at 0%.</p>
+    <ul>
+      <li><strong>Keep:</strong> Signal-strength bars and page fade transitions show craft.</li>
+      <li><strong>Fix:</strong> SettingsPage tabs need a sliding indicator or cross-fade.</li>
+      <li><strong>Quick win:</strong> Conditionally render reading progress bar only when > 0.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="score-row"><span class="score">8</span><span class="band">/ 10 &nbsp;·&nbsp; Strong</span></div>
+    <h3>Functionality</h3>
+    <p>Robust keyboard navigation (CommandPalette Cmd+K, "/" shortcut to focus chat, Escape handlers), focus traps on all dropdowns, skip link for screen readers, PWA offline banners, and responsive breakpoints (md/lg/xl). The recent accessibility sweep fixed 30+ aria-label issues. Remaining gaps: GraphPage edit mode is undiscoverable (no tooltip on the toggle); ChatPage session list lacks search/filter when sessions grow; no print styles for wiki pages.</p>
+    <ul>
+      <li><strong>Keep:</strong> Focus traps + skip link + keyboard shortcuts are production-grade.</li>
+      <li><strong>Fix:</strong> Add a tooltip or label to GraphPage "Edit mode" toggle.</li>
+      <li><strong>Quick win:</strong> Add `@media print` styles to hide sidebar/header and show full content.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="score-row"><span class="score">6</span><span class="band">/ 10 &nbsp;·&nbsp; Functional</span></div>
+    <h3>Innovation</h3>
+    <p>The knowledge graph visualization and signal-strength backlink indicators are the two memorable moments. Chat-with-wiki-context is a practical integration. But the app stays in safe territory: no micro-interactions (drag-to-reorder favorites, haptic feedback on save), no ambient intelligence (suggest related pages while reading), and the graph interaction is standard vis.js pan/zoom. There is room for one unexpected move that would make users lean in.</p>
+    <ul>
+      <li><strong>Keep:</strong> Signal-strength cards and graph are genuinely useful innovations.</li>
+      <li><strong>Fix:</strong> Consider a "related pages" inline suggestion panel on PageDetailPage.</li>
+      <li><strong>Quick win:</strong> Add a satisfying toast animation (slide + scale) instead of plain fade.</li>
+    </ul>
+  </div>
+</div>
+
+<section class="actions keep">
+  <h2>Keep</h2>
+  <ul>
+    <li>Capsule button + rounded card vocabulary — it is the app's recognizable silhouette.</li>
+    <li>Sidebar active state (border-l-2 + bg-apple-blue/10) — best-in-class wayfinding.</li>
+    <li>Page-level AnimatePresence transitions — they make navigation feel expensive.</li>
+    <li>Signal-strength backlink bars on BrowsePage cards — a delightful data-visualization micro-moment.</li>
+    <li>Keyboard shortcuts (Cmd+K, "/", Escape) — defensively engineered for power users.</li>
+  </ul>
+</section>
+
+<section class="actions fix">
+  <h2>Fix</h2>
+  <ul>
+    <li>GraphPage onboarding overlay is too heavy — replace with a compact 3-step tooltip tour. <span class="badge badge-p0">P0</span></li>
+    <li>ChatPage mint-green user bubble clashes with the cool-blue design thesis. <span class="badge badge-p0">P0</span></li>
+    <li>SettingsPage tabs need a sliding indicator or motion to reinforce selection. <span class="badge badge-p1">P1</span></li>
+    <li>GraphPage "Edit mode" toggle is undiscoverable — add a tooltip or label. <span class="badge badge-p1">P1</span></li>
+    <li>PageDetailPage reading progress bar renders at 0% wasting 2px of fixed space. <span class="badge badge-p1">P1</span></li>
+  </ul>
+</section>
+
+<section class="actions quick">
+  <h2>Quick wins</h2>
+  <ul>
+    <li>Add `@media print` styles to hide sidebar/header and expand content width.</li>
+    <li>Replace ChatMessage "No sources" flash with a skeleton dot or delayed render.</li>
+    <li>Add a toast entrance animation (slide + scale bounce) instead of plain x-translate.</li>
+    <li>TimelinePage event dots: increase bg opacity from 10% to 20% for visibility.</li>
+    <li>DashboardPage chart titles: reduce from text-lg to text-sm to improve hierarchy.</li>
+  </ul>
+</section>
+
+</body>
+</html>

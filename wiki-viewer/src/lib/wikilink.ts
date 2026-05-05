@@ -1,11 +1,7 @@
 import type { GraphNode } from '@/types/graph';
+import { PAGE_PREFIX_MAP } from '@/lib/constants';
 
-const prefixMap: Record<string, string> = {
-  source: 's',
-  entity: 'e',
-  concept: 'c',
-  synthesis: 'y',
-};
+const prefixMap = PAGE_PREFIX_MAP;
 
 /**
  * Resolve a [[wikilink]] target (label or slug) to a router path.

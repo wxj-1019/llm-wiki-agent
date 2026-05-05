@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { isValidFilePath } from '@/lib/validation';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -80,9 +81,25 @@ export async function* chatWithLLMStream(
       }
     }
   }
+  if (buffer.trim()) {
+    const trimmed = buffer.trim();
+    if (trimmed.startsWith('data: ')) {
+      const data = trimmed.slice(6);
+      if (data !== '[DONE]') {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.chunk) yield { chunk: parsed.chunk };
+          if (parsed.error) yield { error: parsed.error };
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
 }
 
 export async function readAgentKitFile(path: string): Promise<AgentKitFileContent> {
+  if (!isValidFilePath(path)) throw new Error('Invalid file path');
   const res = await fetchWithTimeout(`/api/agent-kit/read-file?path=${encodeURIComponent(path)}`, { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to read file: ${res.status}`);
   return res.json();
@@ -92,6 +109,7 @@ export async function saveAgentKitFile(
   path: string,
   content: string
 ): Promise<{ success: boolean; path: string }> {
+  if (!isValidFilePath(path)) throw new Error('Invalid file path');
   const res = await fetchWithTimeout('/api/agent-kit/save-file', { timeoutMs: 30000, 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

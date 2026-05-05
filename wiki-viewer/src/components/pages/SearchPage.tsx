@@ -1,13 +1,17 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, FileText, Users, Lightbulb, Layers } from 'lucide-react';
+import { Search, FileText, Users, Lightbulb, Layers, Loader2, BrainCircuit, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { searchNodes } from '@/lib/search';
+import { hybridSearch, getAllNodes } from '@/lib/search';
+import type { FuseResult } from 'fuse.js';
+import type { GraphNode } from '@/types/graph';
 import { motion } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
+import { reindexEmbeddings } from '@/services/dataService';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 const typeIcons: Record<string, React.ElementType> = {
   source: FileText,
@@ -45,10 +49,53 @@ export function SearchPage() {
   const userEditedRef = useRef(false);
 
   const debouncedQuery = useDebounce(query, 200);
-  const results = useMemo(() => {
-    if (!debouncedQuery.trim()) return [];
-    return searchNodes(debouncedQuery).slice(0, 50);
-  }, [debouncedQuery]);
+  const [results, setResults] = useState<FuseResult<GraphNode>[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [semantic, setSemantic] = useState(() => {
+    try { return localStorage.getItem('wiki-semantic-search') === 'true'; } catch { return false; }
+  });
+  const [reindexing, setReindexing] = useState(false);
+  const addNotification = useNotificationStore((s) => s.addNotification);
+
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    let cancelled = false;
+    hybridSearch(debouncedQuery, getAllNodes(), semantic)
+      .then((res) => {
+        if (!cancelled) setResults(res.slice(0, 50));
+      })
+      .catch(() => {
+        if (!cancelled) setResults([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
+    return () => { cancelled = true; };
+  }, [debouncedQuery, semantic]);
+
+  const handleToggleSemantic = useCallback(() => {
+    setSemantic((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('wiki-semantic-search', String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const handleReindex = useCallback(async () => {
+    setReindexing(true);
+    try {
+      const result = await reindexEmbeddings();
+      addNotification(result.message || t('search.reindexSuccess'), 'success');
+    } catch (e) {
+      addNotification(String(e), 'error');
+    } finally {
+      setReindexing(false);
+    }
+  }, [addNotification, t]);
 
   useDocumentTitle(t('search.title'));
 
@@ -69,12 +116,42 @@ export function SearchPage() {
           value={query}
           onChange={(e) => { setQuery(e.target.value); userEditedRef.current = true; }}
           placeholder={t('search.placeholder')}
+          aria-label={t('search.placeholder')}
           className="apple-input pl-9 text-lg"
         />
       </div>
 
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2 select-none">
+          <button
+            onClick={handleToggleSemantic}
+            className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-apple-blue/30 ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`}
+            aria-pressed={semantic}
+            aria-label={t('search.semantic')}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
+            />
+          </button>
+          <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
+            <BrainCircuit size={14} />
+            {t('search.semantic')}
+          </span>
+        </div>
+        <button
+          onClick={handleReindex}
+          disabled={reindexing}
+          className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-apple-blue transition-colors disabled:opacity-50"
+          title={t('search.reindex')}
+        >
+          {reindexing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+          {t('search.reindex')}
+        </button>
+      </div>
+
       {query && (
-        <div className="mb-4 text-sm text-[var(--text-secondary)]">
+        <div className="mb-4 text-sm text-[var(--text-secondary)] flex items-center gap-2" aria-live="polite">
+          {searching && <Loader2 size={14} className="animate-spin" />}
           {t('search.resultCount', { count: results.length, query })}
         </div>
       )}

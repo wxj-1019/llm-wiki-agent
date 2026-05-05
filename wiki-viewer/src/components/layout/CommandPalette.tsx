@@ -5,6 +5,7 @@ import { useWikiStore } from '@/stores/wikiStore';
 import { getPagePath } from '@/lib/wikilink';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface CommandItem {
   id: string;
@@ -22,6 +23,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
   const navigate = useNavigate();
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes ?? [];
@@ -197,6 +199,7 @@ export function CommandPalette() {
           onClick={() => setOpen(false)}
         >
           <motion.div
+            ref={trapRef}
             initial={{ opacity: 0, y: -20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.96 }}

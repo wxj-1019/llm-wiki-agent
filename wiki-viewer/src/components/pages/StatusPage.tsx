@@ -152,7 +152,7 @@ export function StatusPage() {
         {/* LLM Status */}
         <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+            <div className="w-8 h-8 rounded-xl bg-apple-purple/10 flex items-center justify-center text-apple-purple">
               <Bot size={16} />
             </div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.llm.title')}</h2>
@@ -171,7 +171,7 @@ export function StatusPage() {
         {/* Graph Status */}
         <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+            <div className="w-8 h-8 rounded-xl bg-apple-indigo/10 flex items-center justify-center text-apple-indigo">
               <Network size={16} />
             </div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.graph.title')}</h2>
@@ -190,7 +190,7 @@ export function StatusPage() {
         {/* Agent Kit */}
         <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500">
+            <div className="w-8 h-8 rounded-xl bg-apple-pink/10 flex items-center justify-center text-apple-pink">
               <Bot size={16} />
             </div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.agentKit.title')}</h2>
@@ -209,7 +209,7 @@ export function StatusPage() {
         {/* Server */}
         <div className="apple-card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+            <div className="w-8 h-8 rounded-xl bg-apple-blue/10 flex items-center justify-center text-apple-blue">
               <Server size={16} />
             </div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{t('status.server.title')}</h2>

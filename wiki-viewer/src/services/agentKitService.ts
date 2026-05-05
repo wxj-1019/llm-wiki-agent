@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
+import { isValidFilePath } from '@/lib/validation';
 
 export interface AgentKitStatus {
   generated: boolean;
@@ -50,6 +51,7 @@ export async function generateAgentKit(options: GenerateOptions): Promise<Genera
 }
 
 export async function fetchAgentKitFiles(path: string = '', recursive: boolean = false): Promise<AgentKitFilesResponse> {
+  if (path && !isValidFilePath(path)) throw new Error('Invalid file path');
   const params = new URLSearchParams();
   if (path) params.set('path', path);
   if (recursive) params.set('recursive', '1');
@@ -60,6 +62,7 @@ export async function fetchAgentKitFiles(path: string = '', recursive: boolean =
 }
 
 export function downloadAgentKitFile(path: string): void {
+  if (!isValidFilePath(path)) throw new Error('Invalid file path');
   const url = `/api/agent-kit/download?path=${encodeURIComponent(path)}`;
   const a = document.createElement('a');
   a.href = url;
@@ -84,5 +87,5 @@ export async function downloadAgentKitZip(paths: string[]): Promise<void> {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

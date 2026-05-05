@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
+import { stripMarkdown } from '@/lib/textUtils';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
 import { BrowseSkeleton } from '@/components/ui/Skeleton';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const typeIcons: Record<string, React.ElementType> = {
   source: FileText,
@@ -23,6 +25,21 @@ const typeColors: Record<string, string> = {
   concept: 'text-apple-purple bg-apple-purple/10',
   synthesis: 'text-apple-orange bg-apple-orange/10',
 };
+
+const typeHoverShadow: Record<string, string> = {
+  source: 'hover:shadow-blue-100/50',
+  entity: 'hover:shadow-green-100/50',
+  concept: 'hover:shadow-purple-100/50',
+  synthesis: 'hover:shadow-orange-100/50',
+};
+
+const tabs = [
+  { key: 'all', labelKey: 'browse.filterAll' },
+  { key: 'source', labelKey: 'type.source' },
+  { key: 'entity', labelKey: 'type.entity' },
+  { key: 'concept', labelKey: 'type.concept' },
+  { key: 'synthesis', labelKey: 'type.synthesis' },
+];
 
 export function BrowsePage() {
   const { t } = useTranslation();
@@ -40,6 +57,7 @@ export function BrowsePage() {
     setFilterType(typeParam || 'all');
   }, [typeParam]);
   const [sortOpen, setSortOpen] = useState(false);
+  const sortTrapRef = useFocusTrap<HTMLDivElement>(sortOpen);
   const graphData = useWikiStore((s) => s.graphData);
   const loading = useWikiStore((s) => s.loading);
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
@@ -68,13 +86,7 @@ export function BrowsePage() {
     return result;
   }, [nodes, filterType, debouncedQuery, sortBy, getBacklinks]);
 
-  const tabs = [
-    { key: 'all', labelKey: 'browse.filterAll' },
-    { key: 'source', labelKey: 'type.source' },
-    { key: 'entity', labelKey: 'type.entity' },
-    { key: 'concept', labelKey: 'type.concept' },
-    { key: 'synthesis', labelKey: 'type.synthesis' },
-  ];
+
 
   if (loading) {
     return <BrowseSkeleton />;
@@ -92,6 +104,7 @@ export function BrowsePage() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('browse.filterPlaceholder')}
           className="apple-input pl-9"
+          aria-label={t('browse.filterPlaceholder')}
         />
       </div>
 
@@ -117,6 +130,9 @@ export function BrowsePage() {
           <button
             onClick={() => setSortOpen(!sortOpen)}
             className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-xl"
+            aria-expanded={sortOpen}
+            aria-haspopup="listbox"
+            aria-label={t('browse.sort.label')}
           >
             <ArrowUpDown size={14} />
             <span className="hidden sm:inline">{t('browse.sort.label')}: {t(`browse.sort.${sortBy}`)}</span>
@@ -133,6 +149,7 @@ export function BrowsePage() {
                   onClick={() => setSortOpen(false)}
                 />
                 <motion.div
+                  ref={sortTrapRef}
                   initial={{ opacity: 0, scale: 0.95, y: -4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
@@ -158,13 +175,14 @@ export function BrowsePage() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((node, i) => {
           const useMotion = filtered.length <= 20;
-          const card = <PageCard node={node} backlinks={getBacklinks(node.id)} />;
+          const backlinkCount = getBacklinks(node.id).length;
+          const card = <PageCard node={node} backlinkCount={backlinkCount} />;
           if (!useMotion) {
             return (
-              <div key={node.id}>
+              <div key={node.id} className="group">
                 {card}
               </div>
             );
@@ -175,6 +193,7 @@ export function BrowsePage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.03 }}
+              className="group"
             >
               {card}
             </motion.div>
@@ -220,26 +239,19 @@ export function BrowsePage() {
   );
 }
 
-const PageCard = memo(function PageCard({ node, backlinks }: { node: { id: string; label: string; type: string; preview: string }; backlinks: { id: string; label: string; type: string; preview: string }[] }) {
+const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: string; label: string; type: string; preview: string }; backlinkCount: number }) {
   const { t } = useTranslation();
   const Icon = typeIcons[node.type] || FileText;
 
   const isFav = useWikiStore((s) => s.isFavorite(node.id));
 
   // Signal strength indicator based on backlink count
-  const signalStrength = backlinks.length >= 5 ? 3 : backlinks.length >= 2 ? 2 : 1;
-
-  const typeHoverShadow: Record<string, string> = {
-    source: 'hover:shadow-blue-100/50',
-    entity: 'hover:shadow-green-100/50',
-    concept: 'hover:shadow-purple-100/50',
-    synthesis: 'hover:shadow-orange-100/50',
-  };
+  const signalStrength = backlinkCount >= 5 ? 3 : backlinkCount >= 2 ? 2 : 1;
 
   return (
     <Link
       to={getPagePath(node)}
-      className={`apple-card p-5 block group ${typeHoverShadow[node.type] || 'hover:shadow-blue-100/50'}`}
+      className={`apple-card p-5 block group hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transition-all duration-200 ${typeHoverShadow[node.type] || 'hover:shadow-apple-blue/20'}`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-xl ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>
@@ -267,15 +279,15 @@ const PageCard = memo(function PageCard({ node, backlinks }: { node: { id: strin
         {node.label}
       </h3>
       <p className="text-sm text-[var(--text-secondary)] line-clamp-3 leading-relaxed mb-3">
-        {node.preview}
+        {stripMarkdown(node.preview)}
       </p>
       <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
         <div className="flex items-center gap-2 ml-auto">
           {isFav && <Heart size={12} className="text-apple-pink" fill="currentColor" />}
-          {backlinks.length > 0 && (
+          {backlinkCount > 0 && (
             <span className="flex items-center gap-0.5">
               <Link2 size={12} />
-              {t('browse.card.links', { count: backlinks.length })}
+              {t('browse.card.links', { count: backlinkCount })}
             </span>
           )}
         </div>
