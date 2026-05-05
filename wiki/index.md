@@ -43,3 +43,8 @@ This file is maintained by the LLM. Updated on every ingest.
 
 ## Syntheses
 - [Foundation Models Overview](syntheses/foundation-models-overview.md) — overview of large-scale AI foundation models and the Transformer era
+
+## Memory
+- [Decisions Log](memory/decisions.md) — cross-session agent decision ledger
+- [Decisions Log](memory/decisions.md) — cross-session agent decision ledger
+- [Context Pack: transformer-architecture](memory/context-packs/pack-transformer-architecture-20260505-043224.md) — context pack for transformer architecture
