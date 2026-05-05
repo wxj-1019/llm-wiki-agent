@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { DetailSkeleton } from '@/components/ui/Skeleton';
 import { AudioOverview } from '@/components/content/AudioOverview';
 
@@ -166,8 +167,8 @@ export function PageDetailPage({ type }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       {/* Reading Progress */}
@@ -437,7 +438,7 @@ export function PageDetailPage({ type }: Props) {
                   }}
                   disabled={saving}
                   aria-busy={saving}
-                  className="apple-button-primary flex items-center gap-2"
+                  className="apple-button flex items-center gap-2"
                 >
                   <Save size={14} />
                   {saving ? t('detail.saving') : t('detail.save')}
@@ -647,6 +648,7 @@ function TableOfContents({ content }: { content: string }) {
 }
 
 function MobileTocDrawer({ content, isOpen, onClose }: { content: string; isOpen: boolean; onClose: () => void }) {
+  useBodyScrollLock(isOpen);
   const { t } = useTranslation();
   const { headings, activeId, handleClick } = useToc(content);
 

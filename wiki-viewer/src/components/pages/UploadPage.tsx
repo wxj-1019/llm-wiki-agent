@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useTranslation } from 'react-i18next';
 import { CloudUpload, FolderOpen, HardDrive, CheckCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -250,6 +252,8 @@ export function UploadPage() {
 
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const deleteDialogRef = useFocusTrap<HTMLDivElement>(showBatchDeleteConfirm);
+  useBodyScrollLock(showBatchDeleteConfirm);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedPaths.size === 0) {
@@ -469,15 +473,20 @@ export function UploadPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"
             onClick={() => setShowBatchDeleteConfirm(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="batch-delete-title"
+            onKeyDown={(e) => { if (e.key === 'Escape') setShowBatchDeleteConfirm(false); }}
           >
             <motion.div
+              ref={deleteDialogRef}
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
               className="glass rounded-2xl p-6 w-full max-w-sm space-y-4"
             >
-              <h3 className="text-lg font-semibold">{t('upload.batchDeleteTitle', 'Batch Delete')}</h3>
+              <h3 id="batch-delete-title" className="text-lg font-semibold">{t('upload.batchDeleteTitle', 'Batch Delete')}</h3>
               <p className="text-sm text-[var(--text-secondary)]">
                 {t('upload.batchDeleteConfirm', { count: selectedPaths.size }, `Delete ${selectedPaths.size} file(s)? This cannot be undone.`)}
               </p>
@@ -485,7 +494,7 @@ export function UploadPage() {
                 <button onClick={() => setShowBatchDeleteConfirm(false)} className="btn-secondary px-4 py-2 text-sm">
                   {t('common.close', 'Cancel')}
                 </button>
-                <button onClick={confirmBatchDelete} className="btn-primary px-4 py-2 text-sm bg-red-500 hover:bg-red-600">
+                <button onClick={confirmBatchDelete} className="btn-primary px-4 py-2 text-sm bg-red-500 text-white hover:bg-red-600">
                   {t('upload.delete', 'Delete')}
                 </button>
               </div>

@@ -6,6 +6,7 @@ import { getPagePath } from '@/lib/wikilink';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface CommandItem {
   id: string;
@@ -24,6 +25,7 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const trapRef = useFocusTrap<HTMLDivElement>(open);
+  useBodyScrollLock(open);
   const navigate = useNavigate();
   const graphData = useWikiStore((s) => s.graphData);
   const nodes = graphData?.nodes ?? [];

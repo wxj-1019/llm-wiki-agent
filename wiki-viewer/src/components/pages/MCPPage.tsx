@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { Server, Play, Square, RotateCcw, Trash2, Plus, Terminal, Activity, X, Package, Globe, FolderOpen, Wand2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,6 +53,7 @@ function InstallWizard({
   onInstalled: () => void;
   t: (key: string, fallback: string) => string;
 }) {
+  useBodyScrollLock(open);
   const [form, setForm] = useState<InstallFormData>({ ...INITIAL_FORM });
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState('');
@@ -126,6 +128,7 @@ function InstallWizard({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
           <motion.div
@@ -221,15 +224,22 @@ function InstallWizard({
                   </div>
                   <div>
                     <label className="text-sm text-[var(--text-secondary)] mb-1 block">{t('mcp.install.category', '类别')}</label>
-                    <select
-                      value={form.templateCategory}
-                      onChange={(e) => setForm((f) => ({ ...f, templateCategory: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] focus:border-[var(--accent)] focus:outline-none text-sm"
-                    >
-                      <option value="rag">RAG</option>
-                      <option value="agent">Agent</option>
-                      <option value="utility">Utility</option>
-                    </select>
+                    <div className="flex gap-2">
+                      {(['rag', 'agent', 'utility'] as const).map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, templateCategory: cat }))}
+                          className={`flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                            form.templateCategory === cat
+                              ? 'bg-[var(--accent)] text-white shadow-sm'
+                              : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]'
+                          }`}
+                        >
+                          {cat === 'rag' ? 'RAG' : cat === 'agent' ? 'Agent' : 'Utility'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
