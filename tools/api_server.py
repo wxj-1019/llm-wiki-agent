@@ -2113,6 +2113,84 @@ async def graph_save_layout(payload: GraphLayoutPayload):
         raise HTTPException(status_code=500, detail=f"Failed to save layout: {e}")
 
 
+# ── Wiki Tools API (lint / heal / refresh / build-graph) ──
+
+class ToolRunPayload(BaseModel):
+    args: list[str] = Field(default_factory=list, description="Extra CLI arguments")
+
+
+def _run_tool_script(script_name: str, extra_args: list[str] | None = None) -> dict:
+    """Run a tool script via subprocess and return structured result."""
+    cmd = [sys.executable, str(REPO / "tools" / script_name)]
+    if extra_args:
+        cmd.extend(extra_args)
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout[-2000:] if result.stdout else "",
+            "stderr": result.stderr[-2000:] if result.stderr else "",
+            "returncode": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {"success": False, "stdout": "", "stderr": "Timed out after 5 minutes", "returncode": -1}
+    except Exception as e:
+        return {"success": False, "stdout": "", "stderr": str(e), "returncode": -1}
+
+
+@app.get("/api/tools/list")
+def tools_list():
+    """List available wiki maintenance tools."""
+    return {
+        "tools": [
+            {"name": "lint", "description": "Content quality checks (orphans, broken links, contradictions)", "endpoint": "/api/tools/lint", "method": "POST"},
+            {"name": "heal", "description": "Auto-heal missing entity pages from context", "endpoint": "/api/tools/heal", "method": "POST"},
+            {"name": "refresh", "description": "Refresh stale source pages via hash-based change detection", "endpoint": "/api/tools/refresh", "method": "POST"},
+            {"name": "build-graph", "description": "Rebuild the knowledge graph with Louvain clustering", "endpoint": "/api/tools/build-graph", "method": "POST"},
+        ]
+    }
+
+
+@app.post("/api/tools/lint")
+async def tools_lint(payload: ToolRunPayload | None = None):
+    """Run lint.py for content quality checks."""
+    args = payload.args if payload else []
+    if "--save" not in args:
+        args.append("--save")
+    result = await asyncio.to_thread(_run_tool_script, "lint.py", args)
+    return result
+
+
+@app.post("/api/tools/heal")
+async def tools_heal(payload: ToolRunPayload | None = None):
+    """Run heal.py to auto-generate missing entity pages."""
+    args = payload.args if payload else []
+    result = await asyncio.to_thread(_run_tool_script, "heal.py", args)
+    return result
+
+
+@app.post("/api/tools/refresh")
+async def tools_refresh(payload: ToolRunPayload | None = None):
+    """Run refresh.py to update stale source pages."""
+    args = payload.args if payload else []
+    result = await asyncio.to_thread(_run_tool_script, "refresh.py", args)
+    return result
+
+
+@app.post("/api/tools/build-graph")
+async def tools_build_graph(payload: ToolRunPayload | None = None):
+    """Run build_graph.py to rebuild the knowledge graph."""
+    args = payload.args if payload else []
+    result = await asyncio.to_thread(_run_tool_script, "build_graph.py", args)
+    return result
+
+
 # ── Collaborative Editing (R24) ──
 _collab_connections: dict[str, set[WebSocket]] = defaultdict(set)
 
