@@ -416,7 +416,7 @@ export function ChatPage() {
                       tabIndex={0}
                       onClick={() => handleSwitchSession(s.id)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchSession(s.id); }}
-                      className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors ${
+                      className={`group flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors ${
                         s.id === activeId
                           ? 'bg-apple-blue/10 text-apple-blue'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'

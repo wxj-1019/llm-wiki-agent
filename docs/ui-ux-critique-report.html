@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Critique · LLM Wiki Viewer</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#FAFAFA;--bg-card:#fff;--bg-hover:#F5F5F7;
+    --text:#1d1d1f;--text-sec:#6E6E73;--text-ter:#86868B;
+    --accent:#0A84FF;--accent-light:rgba(10,132,255,.08);
+    --green:#30B350;--purple:#A855F7;--orange:#D97706;--red:#E11D48;--teal:#38BDF8;
+    --border:#E5E5EA;--shadow:0 1px 3px rgba(0,0,0,.06);
+    --radius:16px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding:2rem 1rem}
+  .container{max-width:900px;margin:0 auto}
+
+  /* Header */
+  .header{text-align:center;padding:3rem 0 2rem;border-bottom:1px solid var(--border);margin-bottom:2.5rem}
+  .header h1{font-size:2rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem}
+  .header .verdict{font-size:1.05rem;color:var(--text-sec);max-width:600px;margin:0 auto .8rem}
+  .header .meta{font-size:.8rem;color:var(--text-ter);display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap}
+  .header .meta span{display:flex;align-items:center;gap:.35rem}
+
+  /* Radar */
+  .radar-section{display:flex;justify-content:center;padding:1.5rem 0 2.5rem}
+  .radar-wrap{position:relative;width:320px;height:320px}
+  .overall-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  .overall-badge .num{font-size:2.4rem;font-weight:800;color:var(--accent)}
+  .overall-badge .lbl{font-size:.7rem;color:var(--text-ter);text-transform:uppercase;letter-spacing:.08em}
+
+  /* Dimension Cards */
+  .dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:2.5rem}
+  @media(max-width:680px){.dim-grid{grid-template-columns:1fr}}
+  .dim-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);transition:transform .15s}
+  .dim-card:hover{transform:translateY(-2px)}
+  .dim-card.full{grid-column:1/-1}
+  .dim-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem}
+  .dim-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800;color:#fff;flex-shrink:0}
+  .dim-title{font-size:1rem;font-weight:700}
+  .dim-subtitle{font-size:.75rem;color:var(--text-ter)}
+  .dim-band{display:inline-block;font-size:.65rem;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:.5rem;vertical-align:middle}
+  .band-broken{background:#FEE2E2;color:#DC2626}
+  .band-functional{background:#FEF3C7;color:#D97706}
+  .band-strong{background:#D1FAE5;color:#059669}
+  .band-exceptional{background:#DBEAFE;color:#2563EB}
+  .dim-evidence{font-size:.875rem;color:var(--text-sec);line-height:1.65;margin:.75rem 0}
+  .dim-item{font-size:.8rem;padding:.5rem .75rem;border-radius:10px;margin-top:.5rem;display:flex;align-items:flex-start;gap:.5rem}
+  .item-keep{background:#ECFDF5;color:#065F46}
+  .item-fix{background:#FEF2F2;color:#991B1B}
+  .item-win{background:#EFF6FF;color:#1E40AF}
+  .dim-item .tag{font-weight:700;flex-shrink:0;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+
+  /* Action Lists */
+  .action-section{margin-bottom:2rem}
+  .action-section h2{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+  .action-list{list-style:none;display:grid;gap:.65rem}
+  .action-list li{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;font-size:.875rem;line-height:1.55;display:flex;align-items:flex-start;gap:.65rem;box-shadow:var(--shadow)}
+  .action-list li::before{content:'';width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:2px}
+  .list-keep li::before{background:#D1FAE5;border:2px solid #059669}
+  .list-fix li::before{background:#FEE2E2;border:2px solid #DC2626}
+  .list-win li::before{background:#DBEAFE;border:2px solid #2563EB}
+  .priority{font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:auto;flex-shrink:0;text-transform:uppercase}
+  .p0{background:#FEE2E2;color:#DC2626}
+  .p1{background:#FEF3C7;color:#D97706}
+  .qw{background:#DBEAFE;color:#2563EB}
+
+  /* Footer */
+  .footer{text-align:center;padding:2rem 0 1rem;border-top:1px solid var(--border);font-size:.75rem;color:var(--text-ter)}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>LLM Wiki Viewer · UI/UX Critique</h1>
+  <p class="verdict">整体完成度较高的 Apple 设计语言实现，功能性扎实，但缺少统一的设计哲学锚点和差异化记忆点，视觉层级在复杂页面上有竞争。</p>
+  <div class="meta">
+    <span>📋 Reviewer: OD · Critique Skill</span>
+    <span>📅 2026-05-06</span>
+    <span>📄 Pages: Home · Browse · Detail · Graph · Dashboard · Upload · Chat · Settings</span>
+  </div>
+</div>
+
+<!-- Radar Chart -->
+<div class="radar-section">
+  <div class="radar-wrap">
+    <svg viewBox="0 0 320 320" width="320" height="320">
+      <!-- Grid rings -->
+      <polygon points="160,48 266,112 226,228 94,228 54,112" fill="none" stroke="#E5E5EA" stroke-width="1"/>
+      <polygon points="160,76 244,128 213,216 107,216 76,128" fill="none" stroke="#E5E5EA" stroke-width="1"/>
+      <polygon points="160,104 222,144 200,204 120,204 98,144" fill="none" stroke="#E5E5EA" stroke-width="1"/>
+      <polygon points="160,132 200,160 187,192 133,192 120,160" fill="none" stroke="#E5E5EA" stroke-width="1"/>
+      <!-- Axes -->
+      <line x1="160" y1="160" x2="160" y2="48" stroke="#E5E5EA" stroke-width="1"/>
+      <line x1="160" y1="160" x2="266" y2="112" stroke="#E5E5EA" stroke-width="1"/>
+      <line x1="160" y1="160" x2="226" y2="228" stroke="#E5E5EA" stroke-width="1"/>
+      <line x1="160" y1="160" x2="94" y2="228" stroke="#E5E5EA" stroke-width="1"/>
+      <line x1="160" y1="160" x2="54" y2="112" stroke="#E5E5EA" stroke-width="1"/>
+      <!-- Data: Philosophy=7, Hierarchy=6, Detail=7, Function=8, Innovation=6 -->
+      <!-- Points: top(160,48) top-right(266,112) bottom-right(226,228) bottom-left(94,228) top-left(54,112) -->
+      <!-- Scale: 0 at center(160,160), 10 at ring -->
+      <!-- Philosophy(7): 160 + 0.7*(160-160)=160, 160 + 0.7*(48-160)=81.6 → 160,82 -->
+      <!-- Hierarchy(6): 160 + 0.6*(266-160)=223.6, 160 + 0.6*(112-160)=131.2 → 224,131 -->
+      <!-- Detail(7): 160 + 0.7*(226-160)=206.2, 160 + 0.7*(228-160)=207.6 → 206,208 -->
+      <!-- Function(8): 160 + 0.8*(94-160)=107.2, 160 + 0.8*(228-160)=214.4 → 107,214 -->
+      <!-- Innovation(6): 160 + 0.6*(54-160)=96.4, 160 + 0.6*(112-160)=131.2 → 96,131 -->
+      <polygon points="160,82 224,131 206,208 107,214 96,131" fill="rgba(10,132,255,.15)" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+      <!-- Dots -->
+      <circle cx="160" cy="82" r="4" fill="var(--accent)"/>
+      <circle cx="224" cy="131" r="4" fill="var(--accent)"/>
+      <circle cx="206" cy="208" r="4" fill="var(--accent)"/>
+      <circle cx="107" cy="214" r="4" fill="var(--accent)"/>
+      <circle cx="96" cy="131" r="4" fill="var(--accent)"/>
+      <!-- Labels -->
+      <text x="160" y="36" text-anchor="middle" font-size="12" font-weight="600" fill="#1d1d1f">哲学一致性</text>
+      <text x="280" y="110" text-anchor="start" font-size="12" font-weight="600" fill="#1d1d1f">视觉层级</text>
+      <text x="236" y="244" text-anchor="start" font-size="12" font-weight="600" fill="#1d1d1f">细节执行</text>
+      <text x="84" y="244" text-anchor="end" font-size="12" font-weight="600" fill="#1d1d1f">功能性</text>
+      <text x="40" y="110" text-anchor="end" font-size="12" font-weight="600" fill="#1d1d1f">创新性</text>
+      <!-- Score labels -->
+      <text x="160" y="72" text-anchor="middle" font-size="11" font-weight="800" fill="var(--accent)">7</text>
+      <text x="232" y="126" text-anchor="middle" font-size="11" font-weight="800" fill="var(--accent)">6</text>
+      <text x="214" y="204" text-anchor="middle" font-size="11" font-weight="800" fill="var(--accent)">7</text>
+      <text x="100" y="210" text-anchor="middle" font-size="11" font-weight="800" fill="var(--accent)">8</text>
+      <text x="88" y="126" text-anchor="middle" font-size="11" font-weight="800" fill="var(--accent)">6</text>
+    </svg>
+    <div class="overall-badge">
+      <div class="num">6.8</div>
+      <div class="lbl">Overall</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dimension Cards -->
+<div class="dim-grid">
+
+  <!-- 1. Philosophy -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div class="dim-num" style="background:linear-gradient(135deg,var(--accent),#5856D6)">1</div>
+      <div>
+        <div class="dim-title">哲学一致性 <span class="dim-band band-strong">Strong</span></div>
+        <div class="dim-subtitle">Philosophy Consistency · 7 / 10</div>
+      </div>
+    </div>
+    <div class="dim-evidence">
+      全局设计系统（<code>index.css</code>）建立了完整的 Apple 设计语言：统一的 <code>--apple-*</code> 色彩变量、glass morphism（<code>.glass</code> + <code>backdrop-filter: blur(20px)</code>）、<code>apple-card</code> / <code>apple-button</code> 组件体系。圆角半径（<code>rounded-2xl</code> = 16px、<code>rounded-xl</code> = 12px）在所有页面保持一致。深浅色主题通过 CSS 变量无缝切换。Marshmallow 色系（mint/blush/cream/sky/lavender/peach）作为辅助调色盘统一使用。<br><br>
+      <strong>不一致点：</strong>SettingsPage 的 Tab 使用 <code>bg-[var(--bg-secondary)]</code> 分段控制器，而 BrowsePage 的 Tab 使用独立药丸样式（无统一容器背景）。GraphPage 底部控制栏的密度和布局模式与其他页面差异较大。UploadPage 的 stats 卡片用 <code>bg-apple-blue/8</code>，Dashboard 用 <code>bg-apple-blue/10</code>，opacity 不统一。
+    </div>
+    <div class="dim-item item-keep"><span class="tag">Keep</span> Apple 设计 token 体系 + glass morphism + marshmallow 色板是很好的方向，不要动摇</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> 统一所有页面 Tab 组件的容器样式（选 segmented control 或 pill 二选一）</div>
+    <div class="dim-item item-win"><span class="tag">QW</span> 将 <code>/8</code> → <code>/10</code> 和 <code>font-bold</code> → <code>font-semibold</code> 全局对齐，5 分钟搞定</div>
+  </div>
+
+  <!-- 2. Hierarchy -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div class="dim-num" style="background:linear-gradient(135deg,var(--green),#059669)">2</div>
+      <div>
+        <div class="dim-title">视觉层级 <span class="dim-band band-functional">Functional</span></div>
+        <div class="dim-subtitle">Visual Hierarchy · 6 / 10</div>
+      </div>
+    </div>
+    <div class="dim-evidence">
+      每个页面有清晰的 <code>h1</code>（<code>text-3xl font-semibold</code>）作为主锚点。HomePage 的时间问候语 → 搜索框 → 统计卡片 → 内容区域的阅读动线合理。PageDetailPage 的面包屑 → 标题 → 类型徽章 → 内容层级清晰。<br><br>
+      <strong>问题：</strong>BrowsePage 的卡片网格中，每张卡片视觉权重相同——没有"重要/最近更新"的差异化呈现，用户无法快速区分优先级。DashboardPage 有 8 张统计卡片（两行 × 四列），视觉噪音大，核心指标（Health Score）被淹没在同等大小的卡片中。GraphPage 的 NodePanel（右侧详情）与底部控制栏同时出现时，信息密度超出舒适区。
+    </div>
+    <div class="dim-item item-keep"><span class="tag">Keep</span> h1 标题 + 语义色彩 + 渐进入场动画的三层层级框架</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> Dashboard 合并为 4 张核心卡片，将 secondary stats 下沉为小型 inline 指标</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> BrowsePage 卡片增加"最近更新"高亮（如左边框色条或角标），区分新鲜度</div>
+    <div class="dim-item item-win"><span class="tag">QW</span> Dashboard Health Score 卡片加粗/放大字号，使其成为视觉焦点</div>
+  </div>
+
+  <!-- 3. Detail -->
+  <div class="dim-card full">
+    <div class="dim-header">
+      <div class="dim-num" style="background:linear-gradient(135deg,var(--purple),#7C3AED)">3</div>
+      <div>
+        <div class="dim-title">细节执行 <span class="dim-band band-strong">Strong</span></div>
+        <div class="dim-subtitle">Detail Execution · 7 / 10</div>
+      </div>
+    </div>
+    <div class="dim-evidence">
+      Glass morphism 实现精致——<code>backdrop-filter: blur(20px)</code> 搭配半透明背景和细边框在浅色/深色下都表现良好。按钮的 hover（<code>translateY(-1px)</code>）、focus-visible（蓝色描边 + offset）、active 状态都经过设计。自定义滚动条（6px 宽、<code>var(--text-tertiary)</code> 颜色）匹配主题。Markdown 渲染的排版（<code>.markdown-body</code>）覆盖了标题、引用、代码块、表格等完整样式。<br><br>
+      <strong>粗糙处：</strong>GraphPage 底部控制栏在移动端 <code>gap-1</code> 使按钮间距过于紧凑（<1px 视觉间距）。UploadPage stats 的 icon 背景色使用 <code>bg-[var(--bg-primary)]</code>，而 Dashboard 用 <code>bg-apple-blue/10</code> 模式——同一设计意图，两种实现方式。ChatPage 的 session dropdown 的删除按钮只有 <code>opacity-0 group-hover:opacity-100</code>，但父元素没有 <code>group</code> class，导致删除按钮永远不可见（需修复）。<code>prefers-reduced-motion</code> 只在 <code>.ambient-blob</code> 上做了适配，其他 framer-motion 动画未降级。
+    </div>
+    <div class="dim-item item-keep"><span class="tag">Keep</span> Glass morphism + 自定义滚动条 + Markdown 排版的细节水准</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> ChatPage session 列表项加 <code>group</code> class 使删除按钮可见</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> 统一 icon 背景色模式：全部用 <code>bg-apple-{color}/10</code></div>
+    <div class="dim-item item-win"><span class="tag">QW</span> 为 framer-motion 动画添加 <code>prefers-reduced-motion</code> 全局降级</div>
+  </div>
+
+  <!-- 4. Functionality -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div class="dim-num" style="background:linear-gradient(135deg,var(--orange),#B45309)">4</div>
+      <div>
+        <div class="dim-title">功能性 <span class="dim-band band-strong">Strong</span></div>
+        <div class="dim-subtitle">Functionality · 8 / 10</div>
+      </div>
+    </div>
+    <div class="dim-evidence">
+      功能完整性是最大亮点：搜索框支持键盘导航（↑↓ Enter Escape），ChatPage 支持 SSE 流式对话 + 多会话管理 + 导出 Markdown，UploadPage 支持拖放/粘贴/批量操作/进度条，PageDetailPage 支持编辑/预览/分栏 + TOC 移动端抽屉。Focus trap（模态对话框）、body scroll lock、skip link 等无障碍措施到位。<br><br>
+      <strong>不足：</strong>GraphPage 的 vis.js 在移动设备上无法正常缩放/拖拽（触控手势被页面滚动劫持）。社区筛选下拉缺少键盘导航（Tab/Enter）。BrowsePage 的排序下拉用原生 <code>select</code>，与整体设计语言不协调。
+    </div>
+    <div class="dim-item item-keep"><span class="tag">Keep</span> 搜索键盘导航、Chat 流式、Upload 批量操作——这些是核心竞争力</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> GraphPage 移动端添加 <code>touch-action: none</code> 防止手势冲突</div>
+    <div class="dim-item item-win"><span class="tag">QW</span> BrowsePage 排序下拉替换为自定义 Select 组件（风格统一）</div>
+  </div>
+
+  <!-- 5. Innovation -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div class="dim-num" style="background:linear-gradient(135deg,var(--teal),#0891B2)">5</div>
+      <div>
+        <div class="dim-title">创新性 <span class="dim-band band-functional">Functional</span></div>
+        <div class="dim-subtitle">Innovation · 6 / 10</div>
+      </div>
+    </div>
+    <div class="dim-evidence">
+      知识图谱 + 社区检测（Louvain 算法）的可视化是差异化亮点。Dashboard 的五维雷达图（Completeness/Consistency/Connectivity/Freshness/Diversity）比常见 dashboard 的纯数字展示更有洞察力。HomePage 的"随机发现"卡片和"继续阅读"功能提升了内容发现的趣味性。ChatPage 的"关于此页面提问"从详情页跳转并携带上下文参数，是很好的跨功能串联。<br><br>
+      <strong>缺失：</strong>视觉语言完全在 Apple 设计手册的安全区内——没有一个"签名式"元素让人一眼记住这是 LLM Wiki Viewer。背景的 ambient blob 动画只在 HomePage 出现，其他页面回归纯色背景，丢失了氛围感。没有 micro-interaction 的惊喜（如收藏时的心跳动画已有但太短暂）。
+    </div>
+    <div class="dim-item item-keep"><span class="tag">Keep</span> 雷达图 + 知识图谱社区 + 随机发现 + 跨页面上下文提问</div>
+    <div class="dim-item item-fix"><span class="tag">Fix</span> 设计一个可复用的品牌元素（如知识连线的抽象图形）应用到空白状态和加载态</div>
+    <div class="dim-item item-win"><span class="tag">QW</span> Ambient blob 动画扩展到所有页面的 <code>body::before</code>，统一氛围</div>
+  </div>
+
+</div>
+
+<!-- Action Lists -->
+<div class="action-section">
+  <h2>✅ Keep — 不要动的东西</h2>
+  <ul class="action-list list-keep">
+    <li>Apple 设计 token 体系（<code>--apple-*</code> 色彩 + <code>--bg/text/border</code> 语义变量）+ 深浅色双主题——这是架构级决策，改了会全盘崩</li>
+    <li>Glass morphism 组件（<code>.glass</code>, <code>.apple-card</code>）的 backdrop-filter + border + shadow 三角组合</li>
+    <li>搜索框的键盘导航模式（↑↓/Enter/Escape）+ 搜索结果分类标签</li>
+    <li>ChatPage 的 SSE 流式对话 + 多会话持久化 + Markdown 导出</li>
+    <li>PageDetailPage 的"关于此页面提问"跳转 Chat 带 context 参数——跨功能串联典范</li>
+    <li>Dashboard 五维健康雷达图——比纯数字 dashboard 有洞察力得多</li>
+  </ul>
+</div>
+
+<div class="action-section">
+  <h2>🔧 Fix — 必须修复（按视觉收益/时间成本排序）</h2>
+  <ul class="action-list list-fix">
+    <li>
+      <strong>P0</strong> ChatPage session 列表的删除按钮（<code>X</code>）因父元素缺少 <code>group</code> class 永远不可见——用户无法删除会话
+      <span class="priority p0">P0</span>
+    </li>
+    <li>
+      <strong>P0</strong> Dashboard 8 张统计卡片视觉噪音过大——合并为 4 张核心卡（Sources/Entities/Concepts/Health Score），其余下沉为 inline 指标
+      <span class="priority p0">P0</span>
+    </li>
+    <li>
+      <strong>P1</strong> BrowsePage 卡片无差异化——所有卡片等权等色，增加"最近 7 天更新"左边框色条或角标区分新鲜度
+      <span class="priority p1">P1</span>
+    </li>
+    <li>
+      <strong>P1</strong> Tab 组件样式不统一——SettingsPage 用 segmented control，BrowsePage 用 pill tabs，选其一全局复用
+      <span class="priority p1">P1</span>
+    </li>
+    <li>
+      <strong>P1</strong> GraphPage 移动端触控手势被页面滚动劫持——canvas 容器加 <code>touch-action: none</code> + 手势说明
+      <span class="priority p1">P1</span>
+    </li>
+    <li>
+      <strong>P1</strong> <code>prefers-reduced-motion</code> 只覆盖了 ambient blob，framer-motion 的入场/过渡动画未降级——对前庭障碍用户是障碍
+      <span class="priority p1">P1</span>
+    </li>
+    <li>
+      <strong>P1</strong> Icon 背景色模式不统一（<code>bg-[var(--bg-primary)]</code> vs <code>bg-apple-blue/10</code>）——全局对齐为后者
+      <span class="priority p1">P1</span>
+    </li>
+  </ul>
+</div>
+
+<div class="action-section">
+  <h2>⚡ Quick Wins — 5-15 分钟，收益大</h2>
+  <ul class="action-list list-win">
+    <li>
+      <code>bg-apple-blue/8</code> → <code>/10</code>，<code>font-bold</code> → <code>font-semibold</code>——全局搜索替换，统一视觉密度
+      <span class="priority qw">5min</span>
+    </li>
+    <li>
+      Ambient blob 动画从 HomePage 提取为 <code>body::before</code> 伪元素，所有页面共享氛围背景
+      <span class="priority qw">10min</span>
+    </li>
+    <li>
+      BrowsePage 排序下拉替换为自定义 <code>&lt;select&gt;</code> 组件（与 <code>apple-input</code> 风格匹配）
+      <span class="priority qw">15min</span>
+    </li>
+    <li>
+      GraphPage NodePanel 增加键盘 Escape 关闭 + 底部控制栏移动端 <code>gap-2</code>（当前 <code>gap-1</code> 太紧）
+      <span class="priority qw">5min</span>
+    </li>
+    <li>
+      Dashboard Health Score 卡片字号从 <code>text-2xl</code> 改为 <code>text-3xl</code>，颜色加粗——让它成为视觉锚点
+      <span class="priority qw">3min</span>
+    </li>
+  </ul>
+</div>
+
+<div class="footer">
+  <p>OD · Critique Skill · LLM Wiki Viewer Design Review · 2026-05-06</p>
+  <p style="margin-top:.25rem">Based on 5-dimension framework: Philosophy · Hierarchy · Detail · Function · Innovation</p>
+</div>
+
+</div>
+</body>
+</html>
