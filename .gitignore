@@ -64,3 +64,9 @@ raw/uploads/
 # Playwright
 playwright-report/
 test-results/
+
+# Runtime state
+state/
+
+# Temp output
+.od-temp/

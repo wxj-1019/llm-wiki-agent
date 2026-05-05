@@ -6,3 +6,12 @@ networkx~=3.6.1
 # Agent Kit: auto-generate MCP Server & Kimi Skill from wiki
 mcp>=1.2.0
 jinja2>=3.1.0
+
+# File watcher for auto-ingest
+watchdog>=3.0.0
+
+# API server (not in pyproject.toml because it's optional headless usage)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+pyyaml>=6.0.0
