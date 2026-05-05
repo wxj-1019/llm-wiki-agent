@@ -30,9 +30,14 @@ PYTHON = sys.executable
 def _run(*cmds: list[str]) -> None:
     for cmd in cmds:
         print(f"[scheduler] Running: {' '.join(cmd)}")
-        result = subprocess.run(cmd, cwd=str(REPO_ROOT))
-        if result.returncode != 0:
-            print(f"[scheduler] Warning: '{' '.join(cmd)}' exited with {result.returncode}")
+        try:
+            result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+            if result.returncode != 0:
+                print(f"[scheduler] Warning: '{' '.join(cmd)}' exited with {result.returncode}")
+        except FileNotFoundError:
+            print(f"[scheduler] Error: command not found: {cmd[0]}")
+        except Exception as e:
+            print(f"[scheduler] Error running '{' '.join(cmd)}': {e}")
 
 
 def fetch_rss() -> None:

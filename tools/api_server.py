@@ -358,10 +358,11 @@ def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200
         except Exception:
             continue
         if q_clean in content.lower():
+            preview_raw = content[:200].replace("<", "&lt;").replace(">", "&gt;")
             results.append({
                 "id": p.relative_to(WIKI).as_posix().replace(".md", ""),
                 "path": str(p.relative_to(REPO)),
-                "preview": content[:200],
+                "preview": preview_raw,
             })
             if len(results) >= limit:
                 break
@@ -568,15 +569,17 @@ async def upload_file(file: UploadFile = File(...)):
         for chunk in chunks:
             f.write(chunk)
 
-    # Try markitdown conversion for non-text files
     converted = None
     if suffix.lower() not in (".md", ".txt"):
         try:
-            from markitdown import MarkItDown
-            md = MarkItDown(enable_plugins=False)
-            result = md.convert(str(target))
-            converted_path = target.with_suffix(".md")
-            converted_path.write_text(result.text_content, encoding="utf-8")
+            def _do_convert():
+                from markitdown import MarkItDown
+                md = MarkItDown(enable_plugins=False)
+                result = md.convert(str(target))
+                cp = target.with_suffix(".md")
+                cp.write_text(result.text_content, encoding="utf-8")
+                return cp
+            converted_path = await asyncio.to_thread(_do_convert)
             converted = converted_path.relative_to(REPO).as_posix()
         except Exception:
             pass
@@ -840,7 +843,11 @@ source_url: "{safe_url}"
 ---
 
 """
-    raw_path.write_text(header + text, encoding="utf-8")
+    try:
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text(header + text, encoding="utf-8")
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
     # Trigger ingest
     try:

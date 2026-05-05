@@ -113,7 +113,7 @@ SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
 
 
 def sha256(text: str) -> str:
-    return hashlib.sha256(text.encode()).hexdigest()[:16]
+    return hashlib.sha256(text.encode()).hexdigest()[:32]
 
 
 # ── Shared path safety (with inline fallback) ──
@@ -249,6 +249,8 @@ except ImportError:
             write_file(LOG_FILE, LOG_HEADER + "\n" + entry_text + "\n")
             return
         existing = read_file(LOG_FILE).strip()
+        if entry_text in existing:
+            return
         if existing.startswith("# Wiki Log"):
             parts = existing.split("\n---\n", 1)
             if len(parts) == 2:

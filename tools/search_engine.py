@@ -168,16 +168,28 @@ class WikiSearchEngine:
         q = query.strip()
         fts_query = self._build_fts_query(q)
         with self._lock:
-            cursor = self._conn.execute(
-                """
-                SELECT path, title, type, rank, content
-                FROM wiki_pages
-                WHERE wiki_pages MATCH ?
-                ORDER BY rank
-                LIMIT ?
-                """,
-                (fts_query, limit),
-            )
+            try:
+                cursor = self._conn.execute(
+                    """
+                    SELECT path, title, type, rank, content
+                    FROM wiki_pages
+                    WHERE wiki_pages MATCH ?
+                    ORDER BY rank
+                    LIMIT ?
+                    """,
+                    (fts_query, limit),
+                )
+            except Exception:
+                cursor = self._conn.execute(
+                    """
+                    SELECT path, title, type, rank, content
+                    FROM wiki_pages
+                    WHERE wiki_pages MATCH ?
+                    ORDER BY rank
+                    LIMIT ?
+                    """,
+                    (q.replace('"', '""'), limit),
+                )
             results = []
             for row in cursor.fetchall():
                 path, title, page_type, rank, content = row

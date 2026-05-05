@@ -254,7 +254,7 @@ export function GraphPage() {
     if (!networkRef.current || !graphData) return;
 
     const nodeIds = new Set(
-      nodes.filter((n) => filterTypes.has(n.type)).map((n) => n.id)
+      nodes.filter((n) => filterTypes.has(n.type) && (!filterCommunities || filterCommunities.has(n.group ?? 0))).map((n) => n.id)
     );
 
     // Update nodes: hide filtered-out types
@@ -270,7 +270,7 @@ export function GraphPage() {
       hidden: !nodeIds.has(e.from) || !nodeIds.has(e.to),
     }));
     edgesDataSetRef.current?.update(edgeUpdates);
-  }, [filterTypes, graphData, nodes, edges]);
+  }, [filterTypes, filterCommunities, graphData, nodes, edges]);
 
   const selectedNodeData = selectedNode ? nodes.find((n) => n.id === selectedNode) : null;
 

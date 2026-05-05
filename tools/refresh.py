@@ -34,7 +34,10 @@ def sha256(text: str) -> str:
 
 
 def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+    try:
+        return path.read_text(encoding="utf-8") if path.exists() else ""
+    except UnicodeDecodeError:
+        return ""
 
 
 def load_refresh_cache() -> dict:
