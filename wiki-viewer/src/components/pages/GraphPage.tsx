@@ -366,6 +366,7 @@ export function GraphPage() {
           </button>
         ))}
         <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        {communities.length > 1 && (
         <div className="relative" data-community-filter>
           <button
             onClick={() => setShowCommunityFilter((v) => !v)}
@@ -429,7 +430,7 @@ export function GraphPage() {
                       style={{ background: getAppleNodeColor(c.id) }}
                     />
                     <span className="flex-1 text-left">
-                      {t('graph.communityLabel', 'Community')} {c.id}
+                      {t('graph.communityLabel', 'Group')} {String.fromCharCode(65 + (c.id % 26))}
                     </span>
                     <span className="text-[10px] text-[var(--text-tertiary)]">{c.count}</span>
                   </button>
@@ -438,6 +439,7 @@ export function GraphPage() {
             </motion.div>
           )}
         </div>
+        )}
         <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
         <button
           onClick={() => setIsEditing((v) => !v)}

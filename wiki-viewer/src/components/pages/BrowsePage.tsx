@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox, Clock } from 'lucide-react';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { zhCN, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
@@ -32,6 +35,22 @@ const typeHoverShadow: Record<string, string> = {
   concept: 'hover:shadow-purple-100/50',
   synthesis: 'hover:shadow-orange-100/50',
 };
+
+const tagColorMap: Record<string, string> = {
+  source: 'bg-apple-blue/10 text-apple-blue',
+  entity: 'bg-apple-green/10 text-apple-green',
+  concept: 'bg-apple-purple/10 text-apple-purple',
+  synthesis: 'bg-apple-orange/10 text-apple-orange',
+};
+
+function formatRelative(dateStr: string): string {
+  try {
+    const locale = i18n.language === 'zh-CN' ? zhCN : enUS;
+    return formatDistanceToNow(parseISO(dateStr), { addSuffix: true, locale });
+  } catch {
+    return dateStr;
+  }
+}
 
 const tabs = [
   { key: 'all', labelKey: 'browse.filterAll' },
@@ -293,21 +312,21 @@ const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: s
           {node.tags.slice(0, 2).map((tag) => (
             <span
               key={tag}
-              className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-apple-blue/10 text-apple-blue font-medium"
+              className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium ${tagColorMap[node.type] || 'bg-apple-blue/10 text-apple-blue'}`}
             >
               {tag}
             </span>
           ))}
           {node.tags.length > 2 && (
-            <span className="text-[11px] text-[var(--text-tertiary)]">+{node.tags.length - 2}</span>
+            <span className="text-[11px] text-[var(--text-tertiary)]" title={node.tags.slice(2).join(', ')}>+{node.tags.length - 2}</span>
           )}
         </div>
       )}
       <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
         {node.last_updated && (
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1" title={node.last_updated}>
             <Clock size={10} />
-            {node.last_updated}
+            {formatRelative(node.last_updated)}
           </span>
         )}
         <div className="flex items-center gap-2 ml-auto">
