@@ -22,6 +22,7 @@ interface Props {
   ingestingPaths: Set<string>;
   deletingPaths: Set<string>;
   batchIngesting: boolean;
+  batchDeleting: boolean;
   hoveredPath: string | null;
   onSearchChange: (value: string) => void;
   onSortModeChange: (mode: 'newest' | 'name' | 'size') => void;
@@ -29,6 +30,7 @@ interface Props {
   onToggleSelect: (path: string) => void;
   onToggleSelectAll: () => void;
   onBatchIngest: () => void;
+  onBatchDelete: () => void;
   onClearSelection: () => void;
   onPreview: (file: RawFile) => void;
   onIngest: (file: RawFile) => void;
@@ -170,6 +172,7 @@ export function FileList({
   ingestingPaths,
   deletingPaths,
   batchIngesting,
+  batchDeleting,
   hoveredPath,
   onSearchChange,
   onSortModeChange,
@@ -177,6 +180,7 @@ export function FileList({
   onToggleSelect,
   onToggleSelectAll,
   onBatchIngest,
+  onBatchDelete,
   onClearSelection,
   onPreview,
   onIngest,
@@ -296,6 +300,14 @@ export function FileList({
                     >
                       {batchIngesting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
                       {t('upload.ingestSelected', { count: selectedPaths.size })}
+                    </button>
+                    <button
+                      onClick={onBatchDelete}
+                      disabled={batchDeleting}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition-colors disabled:opacity-50"
+                    >
+                      {batchDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      {t('upload.batchDelete', { count: selectedPaths.size }, `Delete ${selectedPaths.size}`)}
                     </button>
                     <button
                       onClick={onClearSelection}

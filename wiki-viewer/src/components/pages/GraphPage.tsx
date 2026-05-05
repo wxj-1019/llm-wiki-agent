@@ -43,7 +43,7 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 import type { Network } from 'vis-network';
-import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Plus } from 'lucide-react';
+import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Plus, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -67,6 +67,8 @@ export function GraphPage() {
   useDocumentTitle(t('nav.graph'));
 
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set(['source', 'entity', 'concept', 'synthesis']));
+  const [filterCommunities, setFilterCommunities] = useState<Set<number> | null>(null); // null = all
+  const [showCommunityFilter, setShowCommunityFilter] = useState(false);
   const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
   const [isEditing, setIsEditing] = useState(false);
   const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
@@ -84,8 +86,32 @@ export function GraphPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [showOnboard]);
 
+  // Close community filter on outside click
+  useEffect(() => {
+    if (!showCommunityFilter) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-community-filter]')) {
+        setShowCommunityFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCommunityFilter]);
+
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const edges = useMemo(() => graphData?.edges || [], [graphData]);
+
+  const communities = useMemo(() => {
+    const map = new Map<number, number>();
+    nodes.forEach((n) => {
+      const g = n.group ?? 0;
+      map.set(g, (map.get(g) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, count]) => ({ id, count }));
+  }, [nodes]);
 
   // Get rid of stale state when graphData changes (nodes may have been added/removed)
   useEffect(() => {
@@ -109,7 +135,7 @@ export function GraphPage() {
 
     const themeColors = getThemeColors();
     const visNodes = nodes
-      .filter((n) => filterTypes.has(n.type))
+      .filter((n) => filterTypes.has(n.type) && (!filterCommunities || filterCommunities.has(n.group ?? 0)))
       .map((n) => {
         const ic = themeColors[n.type] || getAppleNodeColor(n.group);
         return {
@@ -197,7 +223,7 @@ export function GraphPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphData, isEditing]); // Re-run when edit mode changes
+  }, [graphData, isEditing, filterTypes, filterCommunities]); // Re-run when filters change
 
   // Update node colors when theme changes
   useEffect(() => {
@@ -339,6 +365,79 @@ export function GraphPage() {
             <span className="sm:hidden uppercase text-[10px]">{tf.key[0]}</span>
           </button>
         ))}
+        <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        <div className="relative" data-community-filter>
+          <button
+            onClick={() => setShowCommunityFilter((v) => !v)}
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl ${
+              filterCommunities !== null
+                ? 'bg-apple-purple/10 text-apple-purple'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+            title={t('graph.communityFilter', 'Community Filter')}
+          >
+            <Layers size={14} />
+            <span className="hidden sm:inline">
+              {filterCommunities !== null
+                ? `${filterCommunities.size} ${t('graph.communities', 'communities')}`
+                : t('graph.communityFilter', 'Communities')}
+            </span>
+          </button>
+          {showCommunityFilter && communities.length > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="absolute bottom-full mb-2 left-0 glass rounded-xl p-3 min-w-[200px] max-h-60 overflow-y-auto z-50 space-y-1.5"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                  {t('graph.communityFilter', 'Communities')}
+                </span>
+                <button
+                  onClick={() => setFilterCommunities(null)}
+                  className="text-[10px] text-apple-blue hover:underline"
+                >
+                  {t('graph.showAll', 'Show All')}
+                </button>
+              </div>
+              {communities.map((c) => {
+                const active = filterCommunities === null || filterCommunities.has(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setFilterCommunities((prev) => {
+                        if (prev === null) {
+                          return new Set([c.id]);
+                        }
+                        const next = new Set(prev);
+                        if (next.has(c.id)) {
+                          next.delete(c.id);
+                        } else {
+                          next.add(c.id);
+                        }
+                        return next.size === 0 ? null : next;
+                      });
+                    }}
+                    className={`flex items-center gap-2 w-full px-2 py-1 rounded-lg text-xs transition-colors ${
+                      active ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] opacity-50'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: getAppleNodeColor(c.id) }}
+                    />
+                    <span className="flex-1 text-left">
+                      {t('graph.communityLabel', 'Community')} {c.id}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-tertiary)]">{c.count}</span>
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </div>
         <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
         <button
           onClick={() => setIsEditing((v) => !v)}

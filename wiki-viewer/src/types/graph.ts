@@ -8,6 +8,8 @@ export interface GraphNode {
   preview: string;
   group: number;
   value: number;
+  tags?: string[];
+  last_updated?: string;
 }
 
 export interface GraphEdge {

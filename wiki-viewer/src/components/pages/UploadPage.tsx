@@ -248,6 +248,41 @@ export function UploadPage() {
     refreshGraphData();
   }, [selectedPaths, showToast, t, refreshGraphData]);
 
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedPaths.size === 0) {
+      showToast(t('upload.nothingSelected'), 'error');
+      return;
+    }
+    setShowBatchDeleteConfirm(true);
+  }, [selectedPaths.size, showToast, t]);
+
+  const confirmBatchDelete = useCallback(async () => {
+    setShowBatchDeleteConfirm(false);
+    setBatchDeleting(true);
+    let successCount = 0;
+    const failed: string[] = [];
+    for (const path of selectedPaths) {
+      try {
+        await deleteRawFile(path);
+        successCount++;
+      } catch (e) {
+        failed.push(path);
+      }
+    }
+    const total = selectedPaths.size;
+    if (failed.length > 0) {
+      showToast(`${successCount}/${total} ${t('upload.delete')} (${failed.length} failed)`, successCount > 0 ? 'success' : 'error');
+    } else {
+      showToast(`${successCount}/${total} ${t('upload.delete')}`, 'success');
+    }
+    setSelectedPaths(new Set());
+    setBatchDeleting(false);
+    await loadFiles();
+  }, [selectedPaths, showToast, t, loadFiles]);
+
   const toggleSelect = useCallback((path: string) => {
     setSelectedPaths((prev) => {
       const n = new Set(prev);
@@ -409,6 +444,7 @@ export function UploadPage() {
         ingestingPaths={ingestingPaths}
         deletingPaths={deletingPaths}
         batchIngesting={batchIngesting}
+        batchDeleting={batchDeleting}
         hoveredPath={hoveredPath}
         onSearchChange={setSearchQuery}
         onSortModeChange={setSortMode}
@@ -416,6 +452,7 @@ export function UploadPage() {
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}
         onBatchIngest={handleBatchIngest}
+        onBatchDelete={handleBatchDelete}
         onClearSelection={() => setSelectedPaths(new Set())}
         onPreview={handlePreview}
         onIngest={handleIngest}
@@ -423,6 +460,39 @@ export function UploadPage() {
         onHover={setHoveredPath}
         onTriggerFileInput={() => fileInputRef.current?.click()}
       />
+
+      <AnimatePresence>
+        {showBatchDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"
+            onClick={() => setShowBatchDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass rounded-2xl p-6 w-full max-w-sm space-y-4"
+            >
+              <h3 className="text-lg font-semibold">{t('upload.batchDeleteTitle', 'Batch Delete')}</h3>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {t('upload.batchDeleteConfirm', { count: selectedPaths.size }, `Delete ${selectedPaths.size} file(s)? This cannot be undone.`)}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowBatchDeleteConfirm(false)} className="btn-secondary px-4 py-2 text-sm">
+                  {t('common.close', 'Cancel')}
+                </button>
+                <button onClick={confirmBatchDelete} className="btn-primary px-4 py-2 text-sm bg-red-500 hover:bg-red-600">
+                  {t('upload.delete', 'Delete')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

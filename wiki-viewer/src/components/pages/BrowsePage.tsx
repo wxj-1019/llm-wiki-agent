@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox } from 'lucide-react';
+import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,7 +50,7 @@ export function BrowsePage() {
 
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 200);
-  const [sortBy, setSortBy] = useState<'default' | 'name' | 'connected'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'name' | 'connected' | 'updated'>('default');
 
   const typeParam = searchParams.get('t');
   useEffect(() => {
@@ -73,7 +73,8 @@ export function BrowsePage() {
       result = result.filter(
         (n) =>
           n.label.toLowerCase().includes(q) ||
-          n.preview.toLowerCase().includes(q)
+          n.preview.toLowerCase().includes(q) ||
+          (n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
       );
     }
     if (sortBy === 'name') {
@@ -82,6 +83,12 @@ export function BrowsePage() {
       const countMap = new Map<string, number>();
       result.forEach((n) => countMap.set(n.id, getBacklinks(n.id).length));
       result = [...result].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
+    } else if (sortBy === 'updated') {
+      result = [...result].sort((a, b) => {
+        const da = a.last_updated || '';
+        const db = b.last_updated || '';
+        return db.localeCompare(da);
+      });
     }
     return result;
   }, [nodes, filterType, debouncedQuery, sortBy, getBacklinks]);
@@ -156,7 +163,7 @@ export function BrowsePage() {
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 py-1 bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[160px] z-50 origin-top-right rounded-xl"
                 >
-              {(['default', 'name', 'connected'] as const).map((key) => (
+              {(['default', 'name', 'connected', 'updated'] as const).map((key) => (
                 <button
                   key={key}
                   onClick={() => setSortBy(key)}
@@ -239,7 +246,7 @@ export function BrowsePage() {
   );
 }
 
-const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: string; label: string; type: string; preview: string }; backlinkCount: number }) {
+const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: string; label: string; type: string; preview: string; tags?: string[]; last_updated?: string }; backlinkCount: number }) {
   const { t } = useTranslation();
   const Icon = typeIcons[node.type] || FileText;
 
@@ -281,7 +288,28 @@ const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: s
       <p className="text-sm text-[var(--text-secondary)] line-clamp-3 leading-relaxed mb-3">
         {stripMarkdown(node.preview)}
       </p>
+      {node.tags && node.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {node.tags.slice(0, 2).map((tag) => (
+            <span
+              key={tag}
+              className="inline-block text-[11px] px-2 py-0.5 rounded-full bg-apple-blue/10 text-apple-blue font-medium"
+            >
+              {tag}
+            </span>
+          ))}
+          {node.tags.length > 2 && (
+            <span className="text-[11px] text-[var(--text-tertiary)]">+{node.tags.length - 2}</span>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)]">
+        {node.last_updated && (
+          <span className="flex items-center gap-1">
+            <Clock size={10} />
+            {node.last_updated}
+          </span>
+        )}
         <div className="flex items-center gap-2 ml-auto">
           {isFav && <Heart size={12} className="text-apple-pink" fill="currentColor" />}
           {backlinkCount > 0 && (
