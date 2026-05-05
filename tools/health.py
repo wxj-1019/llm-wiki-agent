@@ -287,6 +287,7 @@ def fix_index_sync(pages: list[Path]) -> list[str]:
                 index_content = index_content.replace(
                     section_header + "\n",
                     section_header + "\n" + entry + "\n",
+                    1,
                 )
                 actions.append(f"Added {rel_path} to ## {section}")
         else:

@@ -3,14 +3,20 @@ from __future__ import annotations
 
 """Lightweight API server for LLM Wiki Agent."""
 
+import asyncio
+import hmac
+import io
 import json
 import logging
 import os
 import re
 import sys
+import tempfile
 import time
 import socket
 import subprocess
+import urllib.parse
+from contextlib import asynccontextmanager
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -19,7 +25,7 @@ try:
     import yaml
 except ImportError:
     yaml = None
-from fastapi import FastAPI, Query, Request, UploadFile, File
+from fastapi import FastAPI, Query, Request, UploadFile, File, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -55,6 +61,18 @@ ALLOWED_EXTENSIONS = {
     ".yaml", ".yml", ".tsv",
 }
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024
+MAX_LLM_MESSAGES = 20
+MAX_LLM_CONTENT_SIZE = 50 * 1024  # 50KB
+
+# ── Webhook auth (optional) ──
+_WEBHOOK_TOKEN = os.environ.get("WIKI_WEBHOOK_TOKEN", "").strip()
+
+async def _require_webhook_token(request: Request) -> None:
+    if not _WEBHOOK_TOKEN:
+        raise HTTPException(status_code=401, detail="Webhook token not configured")
+    provided = request.headers.get("X-Webhook-Token", "")
+    if not hmac.compare_digest(provided, _WEBHOOK_TOKEN):
+        raise HTTPException(status_code=401, detail="Invalid or missing webhook token")
 
 # ── Structured logging setup ──
 logging.basicConfig(
@@ -64,7 +82,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("wiki_api")
 
-app = FastAPI(title="LLM Wiki API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    # Shutdown: close search engine connection
+    global _search_engine
+    if _search_engine:
+        _search_engine.close()
+        _search_engine = None
+
+app = FastAPI(title="LLM Wiki API", lifespan=lifespan)
 
 # ── Pydantic request models (must be defined before route handlers) ──
 class UploadTextPayload(BaseModel):
@@ -73,6 +100,15 @@ class UploadTextPayload(BaseModel):
 
 class IngestPayload(BaseModel):
     path: str = Field(..., min_length=1, description="Path to raw file to ingest")
+
+class WebhookClipPayload(BaseModel):
+    url: str = Field(..., min_length=1, description="URL to clip and ingest")
+    title: str = Field(default="", description="Optional title override")
+    tags: list[str] = Field(default_factory=list)
+
+class WebhookIngestPayload(BaseModel):
+    path: str = Field(..., min_length=1, description="Path to file within raw/")
+    source: str = Field(default="webhook", description="Source identifier")
 
 class AgentKitGeneratePayload(BaseModel):
     target: str = Field(default="all", pattern="^(all|mcp|skill)$")
@@ -131,6 +167,15 @@ async def rate_limit(request: Request, call_next):
     _rate_limit_store[client].append(now)
     return await call_next(request)
 
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+    return response
+
+
 # ── Global exception handler ──
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -149,9 +194,16 @@ async def spa_fallback_handler(request: Request, exc: StarletteHTTPException):
         path = request.url.path
         # Don't fallback for API, docs, or openapi routes
         if not path.startswith("/api/") and not path.startswith("/docs") and path not in ("/openapi.json",):
+            # Don't fallback for static assets — return 404 so the browser
+            # can reload and pick up the new hashed filename
+            _static_exts = {".js", ".css", ".svg", ".png", ".jpg", ".ico", ".woff", ".woff2", ".map"}
+            import posixpath
+            ext = posixpath.splitext(path)[1].lower()
+            if ext in _static_exts:
+                return JSONResponse({"detail": "Not Found"}, status_code=404)
             index_path = FRONTEND_DIST / "index.html"
             if index_path.exists():
-                return FileResponse(str(index_path))
+                return FileResponse(str(index_path), headers={"Cache-Control": "no-cache"})
     # Re-raise as JSON for API routes or other status codes
     return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
@@ -167,7 +219,7 @@ app.add_middleware(
 def get_graph():
     graph_path = GRAPH / "graph.json"
     if not graph_path.exists():
-        return {"error": "Graph not found"}
+        raise HTTPException(status_code=404, detail="Graph not found. Run build_graph first.")
     try:
         data = graph_path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
@@ -196,24 +248,100 @@ def get_page(page_type: str, slug: str):
 
 @app.get("/api/index")
 def get_index():
+    """Return the full content of wiki/index.md."""
     path = WIKI / "index.md"
     if not path.exists():
         return {"markdown": ""}
     return {"markdown": path.read_text(encoding="utf-8")}
 
 @app.get("/api/log")
-def get_log():
+def get_log(tail: int = Query(0, ge=0, description="Return only the last N log entries. 0 = all.")):
+    """Return the full or tail-truncated content of wiki/log.md."""
     path = WIKI / "log.md"
     if not path.exists():
         return {"markdown": ""}
-    return {"markdown": path.read_text(encoding="utf-8")}
+    content = path.read_text(encoding="utf-8")
+    if tail > 0:
+        lines = content.splitlines()
+        entry_indices = [i for i, line in enumerate(lines) if line.startswith("## [")]
+        start_idx = entry_indices[-tail] if len(entry_indices) > tail else 0
+        content = "\n".join(lines[start_idx:])
+    return {"markdown": content}
 
 @app.get("/api/overview")
 def get_overview():
+    """Return the full content of wiki/overview.md."""
     path = WIKI / "overview.md"
     if not path.exists():
         return {"markdown": ""}
     return {"markdown": path.read_text(encoding="utf-8")}
+
+# ── FTS5 Search ────────────────────────────────────────────────────
+
+# Lazy-initialized search engine singleton
+_search_engine = None
+_search_engine_lock = __import__('threading').Lock()
+
+def _get_search_engine():
+    global _search_engine
+    if _search_engine is None:
+        with _search_engine_lock:
+            if _search_engine is None:
+                from tools.search_engine import WikiSearchEngine
+                _search_engine = WikiSearchEngine()
+    return _search_engine
+
+
+@app.get("/api/search/fts")
+def search_fts(q: str = Query("", min_length=1), limit: int = Query(20, ge=1, le=100), semantic: bool = Query(False)):
+    """Full-text search via SQLite FTS5. Returns ranked results with excerpts."""
+    if not q or len(q.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
+    try:
+        engine = _get_search_engine()
+        results = engine.search(q.strip(), limit, semantic=semantic)
+        return {"results": results, "count": len(results)}
+    except Exception as e:
+        logging.warning("Search failed: %s", e)
+        # Degrade to plain substring search
+        return {"results": _fallback_search(q.strip(), limit), "count": 0, "degraded": True}
+
+
+@app.post("/api/search/reindex-embeddings")
+async def reindex_embeddings():
+    """Rebuild semantic embeddings for all wiki pages."""
+    try:
+        engine = _get_search_engine()
+        await asyncio.to_thread(engine.rebuild_embeddings)
+        return {"success": True}
+    except Exception as e:
+        logging.warning("Embedding reindex failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Reindex failed: {e}")
+
+
+def _fallback_search(query: str, limit: int) -> list[dict]:
+    """Fallback substring search when FTS5 is unavailable."""
+    q_clean = query.lower()
+    results = []
+    for p in WIKI.rglob("*.md"):
+        if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
+            continue
+        try:
+            content = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        if q_clean in content.lower():
+            results.append({
+                "path": str(p.relative_to(REPO)),
+                "title": p.stem,
+                "type": "unknown",
+                "rank": 0,
+                "excerpt": content[:300].replace("\n", " "),
+            })
+        if len(results) >= limit:
+            break
+    return results
+
 
 @app.get("/api/search")
 def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200)):
@@ -247,6 +375,16 @@ def health():
         "graph_ready": graph_exists,
         "litellm_available": LITELLM_AVAILABLE,
     }
+
+
+@app.get("/api/index-etag")
+def index_etag():
+    """Return an ETag based on wiki/index.md mtime for frontend polling."""
+    index_path = WIKI / "index.md"
+    if index_path.exists():
+        mtime = index_path.stat().st_mtime
+        return str(int(mtime))
+    return "0"
 
 
 @app.get("/api/config/llm")
@@ -301,7 +439,7 @@ def get_system_status():
         },
         "graph": {
             "ready": graph_exists,
-            "path": str(GRAPH / "graph.json") if graph_exists else None,
+            "path": "graph/graph.json" if graph_exists else None,
         },
         "raw": {
             "files": len(raw_files),
@@ -357,6 +495,9 @@ def get_raw_file_content(path: str = Query(..., min_length=1)):
         raise HTTPException(status_code=404, detail="File not found")
     if not target.is_file():
         raise HTTPException(status_code=400, detail="Not a file")
+    MAX_RAW_FILE_SIZE = 10 * 1024 * 1024
+    if target.stat().st_size > MAX_RAW_FILE_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_RAW_FILE_SIZE // (1024*1024)}MB)")
     try:
         content = target.read_text(encoding="utf-8")
     except UnicodeDecodeError:
@@ -377,6 +518,29 @@ async def upload_file(file: UploadFile = File(...)):
             detail=f"File type not allowed. Supported: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
         )
 
+    # Validate Content-Type against extension
+    content_type = file.content_type or ""
+    expected_types = {
+        ".md": ["text/markdown", "text/plain"],
+        ".txt": ["text/plain"],
+        ".pdf": ["application/pdf"],
+        ".docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+        ".pptx": ["application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+        ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+        ".html": ["text/html"],
+        ".csv": ["text/csv"],
+        ".json": ["application/json"],
+        ".xml": ["application/xml", "text/xml"],
+        ".yaml": ["application/yaml", "text/yaml"],
+        ".yml": ["application/yaml", "text/yaml"],
+    }
+    allowed = expected_types.get(suffix, [])
+    if allowed and content_type and not any(content_type.startswith(a) for a in allowed):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Content-Type '{content_type}' does not match extension '{suffix}'"
+        )
+
     uploads_dir = REPO / "raw" / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
 
@@ -389,15 +553,18 @@ async def upload_file(file: UploadFile = File(...)):
         counter += 1
 
     total_size = 0
+    chunks = []
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+        chunks.append(chunk)
+
     with open(target, "wb") as f:
-        while True:
-            chunk = await file.read(1024 * 1024)
-            if not chunk:
-                break
-            total_size += len(chunk)
-            if total_size > MAX_UPLOAD_SIZE:
-                target.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail="File too large (max 20MB)")
+        for chunk in chunks:
             f.write(chunk)
 
     # Try markitdown conversion for non-text files
@@ -451,6 +618,105 @@ async def upload_text(payload: UploadTextPayload):
     }
 
 
+# ── Multimodal Ingest (R22) ──
+
+@app.post("/api/multimodal/describe")
+async def multimodal_describe(file: UploadFile = File(...)):
+    """Accept an image upload, describe it via multimodal_ingest, and return the description."""
+    content_type = file.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_SIZE // (1024 * 1024)}MB)")
+
+    suffix = Path(file.filename or "image").suffix or ".jpg"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(data)
+        tmp_path = tmp.name
+
+    try:
+        from tools.multimodal_ingest import describe_image
+        description = describe_image(tmp_path)
+        if not description:
+            raise HTTPException(
+                status_code=503,
+                detail="No vision backend available. Set GEMINI_API_KEY or OLLAMA_URL.",
+            )
+        return {"description": description, "saved_path": tmp_path}
+    finally:
+        # Keep temp file for potential debugging; cleanup is OS responsibility
+        pass
+
+
+@app.post("/api/multimodal/ingest")
+async def multimodal_ingest_image(file: UploadFile = File(...)):
+    """Accept an image upload, save to raw/, generate description, save as .md, and trigger ingest."""
+    content_type = file.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_SIZE // (1024 * 1024)}MB)")
+
+    safe_name = Path(file.filename or "unnamed").name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    raw_dir = REPO / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    image_path = raw_dir / safe_name
+    counter = 1
+    stem = image_path.stem
+    suffix = image_path.suffix
+    while image_path.exists():
+        image_path = raw_dir / f"{stem}_{counter}{suffix}"
+        counter += 1
+
+    image_path.write_bytes(data)
+
+    # Validate the resolved path stays within raw/
+    try:
+        image_path.resolve().relative_to(raw_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+    from tools.multimodal_ingest import describe_image, save_description
+
+    description = describe_image(str(image_path))
+    if not description:
+        raise HTTPException(
+            status_code=503,
+            detail="No vision backend available. Set GEMINI_API_KEY or OLLAMA_URL.",
+        )
+
+    md_path = save_description(str(image_path), description)
+
+    # Trigger ingest of the description
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, str(REPO / "tools" / "ingest.py"), str(md_path)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "description": description,
+            "md_path": str(md_path.relative_to(REPO)),
+            "stdout": result.stdout[-500:] if result.stdout else "",
+            "stderr": result.stderr[-500:] if result.stderr else "",
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
 @app.delete("/api/raw-files/{path:path}")
 def delete_raw_file(path: str):
     """Delete a file from raw/uploads directory. Returns 400 if path escapes raw/."""
@@ -488,7 +754,8 @@ async def api_ingest(payload: IngestPayload):
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
-        result = subprocess.run(
+        result = await asyncio.to_thread(
+            subprocess.run,
             [sys.executable, str(REPO / "tools" / "ingest.py"), str(target)],
             capture_output=True,
             text=True,
@@ -505,6 +772,186 @@ async def api_ingest(payload: IngestPayload):
         raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
+# ── Webhook endpoints (P1-2 URL Clip + P1-6 Automation) ──
+
+@app.post("/api/webhook/clip")
+async def webhook_clip(payload: WebhookClipPayload, _=Depends(_require_webhook_token)):
+    """Clip a URL via Jina Reader, save to raw/, and trigger ingest."""
+    import urllib.request
+    import urllib.error
+
+    target_url = payload.url.strip()
+    parsed = urllib.parse.urlparse(target_url)
+    if not parsed.scheme:
+        target_url = "https://" + target_url
+        parsed = urllib.parse.urlparse(target_url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="URL scheme must be http or https")
+    hostname = parsed.hostname or ""
+    import ipaddress
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            raise HTTPException(status_code=400, detail="Private/internal URLs are not allowed")
+    except ValueError:
+        lower_host = hostname.lower()
+        if lower_host in ("localhost",) or lower_host.endswith(".local"):
+            raise HTTPException(status_code=400, detail="Private/internal URLs are not allowed")
+    jina_api = f"https://r.jina.ai/{target_url}"
+
+    def _fetch_jina():
+        req = urllib.request.Request(
+            jina_api,
+            headers={"User-Agent": "LLM-Wiki-Agent/1.0"},
+            timeout=30,
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.read().decode("utf-8")
+
+    try:
+        text = await asyncio.to_thread(_fetch_jina)
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Jina Reader failed: {e.code}")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch URL: {e}")
+
+    if not text or len(text) < 100:
+        raise HTTPException(status_code=502, detail="Jina Reader returned empty or too short content")
+
+    # Save to raw/
+    slug = re.sub(r"[^\w\s-]", "", payload.title or payload.url).strip().replace(" ", "-")[:60]
+    if not slug:
+        slug = "clipped"
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"{slug}-{timestamp}.md"
+    raw_path = REPO / "raw" / filename
+
+    safe_title = (payload.title or payload.url).replace("\\", "\\\\").replace('"', '\\"')
+    safe_url = payload.url.replace("\\", "\\\\").replace('"', '\\"')
+    header = f"""---
+title: "{safe_title}"
+type: source
+tags: {json.dumps(payload.tags)}
+date: {datetime.now().strftime('%Y-%m-%d')}
+source_url: "{safe_url}"
+---
+
+"""
+    raw_path.write_text(header + text, encoding="utf-8")
+
+    # Trigger ingest
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, str(REPO / "tools" / "ingest.py"), str(raw_path)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "filename": filename,
+            "path": str(raw_path.relative_to(REPO)),
+            "chars": len(text),
+            "stdout": result.stdout[-500:] if result.stdout else "",
+            "stderr": result.stderr[-500:] if result.stderr else "",
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "filename": filename,
+            "path": str(raw_path.relative_to(REPO)),
+            "chars": len(text),
+            "error": "Ingest timed out after 5 minutes",
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "filename": filename,
+            "path": str(raw_path.relative_to(REPO)),
+            "chars": len(text),
+            "error": str(e),
+        }
+
+
+@app.post("/api/webhook/ingest")
+async def webhook_ingest(payload: WebhookIngestPayload, _=Depends(_require_webhook_token)):
+    """Generic webhook to trigger ingest of a raw file."""
+    target = (REPO / payload.path).resolve()
+    raw_dir = (REPO / "raw").resolve()
+    try:
+        target.relative_to(raw_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path must be within raw/")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, str(REPO / "tools" / "ingest.py"), str(target)],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "source": payload.source,
+            "stdout": result.stdout[-500:] if result.stdout else "",
+            "stderr": result.stderr[-500:] if result.stderr else "",
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
+@app.post("/api/webhook/github")
+async def webhook_github(request: Request, _=Depends(_require_webhook_token)):
+    import hmac
+    import hashlib
+
+    body = await request.body()
+    event = request.headers.get("X-GitHub-Event", "")
+
+    github_secret = os.environ.get("GITHUB_WEBHOOK_SECRET", "").strip()
+    if github_secret:
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        if not signature:
+            raise HTTPException(status_code=401, detail="Missing X-Hub-Signature-256 header")
+        expected = "sha256=" + hmac.new(github_secret.encode(), body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise HTTPException(status_code=401, detail="Invalid HMAC signature")
+
+    if event not in ("push", "ping"):
+        raise HTTPException(status_code=400, detail=f"Unsupported event: {event}")
+
+    if event == "ping":
+        return {"success": True, "message": "pong"}
+
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, str(REPO / "tools" / "refresh.py")],
+            capture_output=True,
+            text=True,
+            cwd=str(REPO),
+            timeout=300,
+        )
+        return {
+            "success": result.returncode == 0,
+            "event": event,
+            "stdout": result.stdout[-500:] if result.stdout else "",
+            "stderr": result.stderr[-500:] if result.stderr else "",
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Refresh timed out after 5 minutes")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Refresh failed: {e}")
 
 
 @app.get("/api/config/{name}")
@@ -524,7 +971,7 @@ def get_config(name: str):
     return {"name": safe_name, "content": path.read_text(encoding="utf-8")}
 
 
-ALLOWED_CONFIG_NAMES = {"llm", "github", "app", "search"}
+ALLOWED_CONFIG_NAMES = {"llm", "github", "app", "search", "github_sources", "rss_sources", "arxiv_sources"}
 
 @app.post("/api/config/{name}")
 async def save_config(name: str, request: Request):
@@ -546,7 +993,7 @@ async def save_config(name: str, request: Request):
         except yaml.YAMLError:
             raise HTTPException(status_code=400, detail="Invalid YAML content")
     path.write_text(body.decode("utf-8"), encoding="utf-8")
-    return {"ok": True, "path": str(path)}
+    return {"success": True, "path": str(path)}
 
 
 # ── Agent Kit ──
@@ -590,7 +1037,8 @@ async def agent_kit_generate(payload: AgentKitGeneratePayload):
         cmd.append("--skip-diagrams")
 
     try:
-        result = subprocess.run(
+        result = await asyncio.to_thread(
+            subprocess.run,
             cmd,
             capture_output=True,
             text=True,
@@ -764,6 +1212,12 @@ async def agent_kit_llm_chat(request: Request):
     messages = body.get("messages", [])
     system_prompt = body.get("system_prompt", "")
 
+    if len(messages) > MAX_LLM_MESSAGES:
+        raise HTTPException(status_code=400, detail=f"Too many messages (max {MAX_LLM_MESSAGES})")
+    total_size = sum(len(str(m.get("content", ""))) for m in messages) + len(system_prompt)
+    if total_size > MAX_LLM_CONTENT_SIZE:
+        raise HTTPException(status_code=400, detail=f"Total content too large (max {MAX_LLM_CONTENT_SIZE // 1024}KB)")
+
     full_messages = []
     if system_prompt:
         full_messages.append({"role": "system", "content": system_prompt})
@@ -777,10 +1231,10 @@ async def agent_kit_llm_chat(request: Request):
         kwargs["api_key"] = api_key
     try:
         from litellm import completion
-        response = completion(**kwargs)
+        response = await asyncio.to_thread(completion, **kwargs)
         content = response.choices[0].message.content
         return {"content": content}
-    except Exception as e:
+    except (ImportError, ConnectionError, TimeoutError, OSError, ValueError) as e:
         raise HTTPException(status_code=500, detail=f"LLM error: {e}")
 
 
@@ -793,6 +1247,12 @@ async def agent_kit_llm_chat_stream(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
     system_prompt = body.get("system_prompt", "")
+
+    if len(messages) > MAX_LLM_MESSAGES:
+        raise HTTPException(status_code=400, detail=f"Too many messages (max {MAX_LLM_MESSAGES})")
+    total_size = sum(len(str(m.get("content", ""))) for m in messages) + len(system_prompt)
+    if total_size > MAX_LLM_CONTENT_SIZE:
+        raise HTTPException(status_code=400, detail=f"Total content too large (max {MAX_LLM_CONTENT_SIZE // 1024}KB)")
 
     full_messages = []
     if system_prompt:
@@ -811,7 +1271,10 @@ async def agent_kit_llm_chat_stream(request: Request):
             from litellm import acompletion
             response = await acompletion(**kwargs)
             async for chunk in response:
-                delta = chunk.choices[0].delta.content or ""
+                try:
+                    delta = chunk.choices[0].delta.content or ""
+                except (IndexError, AttributeError):
+                    continue
                 if delta:
                     yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
@@ -851,7 +1314,9 @@ async def wiki_chat(payload: WikiChatRequest):
     if payload.context_pages:
         for wiki_path in payload.context_pages:
             path = (WIKI / wiki_path).resolve()
-            if not str(path).startswith(str(WIKI.resolve())):
+            try:
+                path.relative_to(WIKI.resolve())
+            except ValueError:
                 continue
             if path.exists() and path.suffix == '.md':
                 try:
@@ -902,7 +1367,10 @@ async def wiki_chat(payload: WikiChatRequest):
         try:
             response = await acompletion(**kwargs)
             async for chunk in response:
-                delta = chunk.choices[0].delta.content or ""
+                try:
+                    delta = chunk.choices[0].delta.content or ""
+                except (IndexError, AttributeError):
+                    continue
                 if delta:
                     yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
@@ -920,11 +1388,31 @@ MAX_SOURCES = 5
 
 
 def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
-    """Search wiki pages by keyword relevance. Supports multi-word queries."""
     q_lower = query.strip().lower()
     if not q_lower:
         return []
-    # Split query into individual words (min length 2) for OR-style matching
+    try:
+        engine = _get_search_engine()
+        fts_results = engine.search(query, limit=max_results)
+        results = []
+        for r in fts_results:
+            p = REPO / r["path"]
+            if not p.exists():
+                continue
+            try:
+                content = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            results.append({
+                "path": str(p.relative_to(REPO)),
+                "wiki_path": str(p.relative_to(WIKI)),
+                "score": r.get("rank", 0),
+                "content": content,
+            })
+        if results:
+            return results
+    except Exception:
+        pass
     q_words = [w for w in q_lower.split() if len(w) >= 2]
     if not q_words:
         q_words = [q_lower]
@@ -937,11 +1425,9 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
         except (OSError, UnicodeDecodeError):
             continue
         text_lower = content.lower()
-        # Simple relevance: sum occurrences of each query word
         score = 0
         for w in q_words:
             score += text_lower.count(w)
-        # Also check title match
         title = p.stem.replace("-", " ").replace("_", " ").lower()
         for w in q_words:
             if w in title:
@@ -1066,9 +1552,9 @@ async def agent_kit_generate_from_knowledge(request: Request):
 
     try:
         from litellm import completion
-        response = completion(**kwargs)
+        response = await asyncio.to_thread(completion, **kwargs)
         raw_content = response.choices[0].message.content or ""
-    except Exception as e:
+    except (ImportError, ConnectionError, TimeoutError, OSError, ValueError) as e:
         raise HTTPException(status_code=500, detail=f"LLM error: {e}")
 
     # Parse code block and explanation
@@ -1134,20 +1620,15 @@ async def agent_kit_save_file(request: Request):
 
 @app.get("/api/llm-config")
 def get_llm_config():
-    """Return LLM config (api_key is never exposed)."""
-    if not yaml or not LLM_CONFIG_PATH.exists():
-        return {"model": os.getenv("LLM_MODEL", "anthropic/claude-3-5-sonnet-latest"), "model_fast": os.getenv("LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest"), "provider": "anthropic", "api_key_set": False}
-    try:
-        cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    except Exception:
-        cfg = {}
+    cfg = _load_llm_config()
     provider = cfg.get("provider", "anthropic")
     key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
-    api_key_set = bool(
-        (LLM_API_KEY_PATH.exists() and LLM_API_KEY_PATH.read_text(encoding="utf-8").strip())
-        or cfg.get("api_key")
-        or os.getenv(key_env)
-    )
+    api_key_set = bool(cfg.get("api_key") or os.getenv(key_env))
+    if not api_key_set and LLM_API_KEY_PATH.exists():
+        try:
+            api_key_set = bool(LLM_API_KEY_PATH.read_text(encoding="utf-8").strip())
+        except OSError:
+            pass
     return {
         "model": cfg.get("model", os.getenv("LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")),
         "model_fast": cfg.get("model_fast", os.getenv("LLM_MODEL_FAST", "anthropic/claude-3-5-haiku-latest")),
@@ -1183,7 +1664,7 @@ async def save_llm_config(payload: LLMConfigPayload):
     LLM_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     LLM_CONFIG_PATH.write_text(yaml.safe_dump(cfg, default_flow_style=False, sort_keys=False), encoding="utf-8")
     _load_llm_config()
-    return {"ok": True}
+    return {"success": True}
 
 
 # ── MCP Management API ──
@@ -1469,7 +1950,10 @@ async def skills_execute(name: str, payload: SkillExecuteRequest):
             from litellm import acompletion
             response = await acompletion(**kwargs)
             async for chunk in response:
-                delta = chunk.choices[0].delta.content or ""
+                try:
+                    delta = chunk.choices[0].delta.content or ""
+                except (IndexError, AttributeError):
+                    continue
                 if delta:
                     yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
@@ -1550,9 +2034,162 @@ async def skills_save(name: str, request: Request):
     return result
 
 
+# ── Wiki Page Edit API (P1-3 Markdown Editor) ──
+
+class WikiWritePayload(BaseModel):
+    path: str = Field(..., min_length=1, description="Repo-relative path to wiki page")
+    content: str = Field(..., min_length=1, description="Full markdown content")
+
+
+@app.post("/api/wiki/write")
+async def wiki_write(payload: WikiWritePayload):
+    """Create or overwrite a wiki page. Path must be within wiki/ and end with .md."""
+    if not payload.path.endswith(".md"):
+        raise HTTPException(status_code=400, detail="Path must end with .md")
+    target = (REPO / payload.path).resolve()
+    try:
+        target.relative_to(WIKI.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path must be within wiki/ directory")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(payload.content, encoding="utf-8")
+        return {"success": True, "path": payload.path, "bytes": len(payload.content.encode("utf-8"))}
+    except (OSError, UnicodeEncodeError) as e:
+        raise HTTPException(status_code=500, detail=f"Write failed: {e}")
+
+
+# ── Graph Layout Save (P1-4 Graph Visualization Editing) ──
+
+class GraphLayoutPayload(BaseModel):
+    positions: dict = Field(default_factory=dict, description="Node ID → {x, y} positions")
+
+
+@app.post("/api/graph/save-layout")
+async def graph_save_layout(payload: GraphLayoutPayload):
+    """Save node positions back to graph.json so layout persists across sessions."""
+    graph_path = GRAPH / "graph.json"
+    if not graph_path.exists():
+        raise HTTPException(status_code=404, detail="graph.json not found")
+    try:
+        data = json.loads(graph_path.read_text(encoding="utf-8"))
+        nodes = data.get("nodes", [])
+        for node in nodes:
+            nid = node.get("id")
+            pos = payload.positions.get(nid)
+            if pos and isinstance(pos, dict):
+                node["x"] = pos.get("x")
+                node["y"] = pos.get("y")
+        data["nodes"] = nodes
+        data["layout_saved"] = datetime.now().isoformat()
+        graph_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return {"success": True, "nodes_updated": len([n for n in nodes if "x" in n])}
+    except (json.JSONDecodeError, OSError) as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save layout: {e}")
+
+
+# ── Collaborative Editing (R24) ──
+_collab_connections: dict[str, set[WebSocket]] = defaultdict(set)
+
+
+def _validate_collab_doc_id(doc_id: str) -> Path:
+    """Validate doc_id resolves to a path within wiki/ and ends with .md."""
+    if not doc_id or ".." in doc_id or doc_id.startswith("/"):
+        raise ValueError("Invalid doc_id")
+    if not doc_id.endswith(".md"):
+        raise ValueError("doc_id must end with .md")
+    target = (REPO / doc_id).resolve()
+    try:
+        target.relative_to(WIKI.resolve())
+    except ValueError:
+        raise ValueError("doc_id must be within wiki/")
+    return target
+
+
+async def _broadcast_to_room(doc_id: str, message: dict, exclude: WebSocket | None = None) -> None:
+    """Broadcast a JSON message to all connected clients in a doc room."""
+    dead: list[WebSocket] = []
+    for ws in _collab_connections.get(doc_id, set()):
+        if ws is exclude:
+            continue
+        try:
+            await ws.send_json(message)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        _collab_connections[doc_id].discard(ws)
+
+
+async def _broadcast_presence(doc_id: str) -> None:
+    """Broadcast current user count to all clients in a doc room."""
+    count = len(_collab_connections.get(doc_id, set()))
+    await _broadcast_to_room(doc_id, {"type": "presence", "count": count})
+
+
+@app.websocket("/api/ws/collab/{doc_id:path}")
+async def collab_websocket(websocket: WebSocket, doc_id: str):
+    """WebSocket endpoint for single-document collaborative editing.
+
+    Protocol (JSON):
+      Client -> Server: {"type": "update", "content": str, "cursor": int}
+      Server -> Client: {"type": "update", "content": str, "cursor": int}
+      Server -> Client: {"type": "presence", "count": int}
+    """
+    await websocket.accept()
+    try:
+        _validate_collab_doc_id(doc_id)
+    except ValueError as e:
+        await websocket.send_json({"type": "error", "message": str(e)})
+        await websocket.close(code=4000)
+        return
+
+    room = _collab_connections[doc_id]
+    room.add(websocket)
+
+    # Announce presence to all in room (including self so client knows count)
+    await _broadcast_presence(doc_id)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+            if msg_type == "update":
+                broadcast = {
+                    "type": "update",
+                    "content": data.get("content", ""),
+                    "cursor": data.get("cursor", 0),
+                }
+                await _broadcast_to_room(doc_id, broadcast, exclude=websocket)
+            elif msg_type == "cursor":
+                broadcast = {
+                    "type": "cursor",
+                    "cursor": data.get("cursor", 0),
+                }
+                await _broadcast_to_room(doc_id, broadcast, exclude=websocket)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        room.discard(websocket)
+        if not room:
+            _collab_connections.pop(doc_id, None)
+        else:
+            await _broadcast_presence(doc_id)
+
+
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="spa")
+    for _sub in ("assets", "fonts", "locales", "data"):
+        _dir = FRONTEND_DIST / _sub
+        if _dir.is_dir():
+            app.mount(f"/{_sub}", StaticFiles(directory=str(_dir)), name=f"static-{_sub}")
+
+    @app.get("/{full_path:path}")
+    async def spa_index(full_path: str):
+        """Serve SPA index.html for all non-API, non-asset routes."""
+        file_path = FRONTEND_DIST / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path), headers={"Cache-Control": "no-cache"})
+        return FileResponse(str(FRONTEND_DIST / "index.html"), headers={"Cache-Control": "no-cache"})
 
 
 def _check_port_available(host: str, port: int) -> bool:

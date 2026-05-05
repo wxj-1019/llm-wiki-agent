@@ -37,6 +37,10 @@ from datetime import date
 
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
+
+
+class IngestError(Exception):
+    """Raised when ingest encounters an unrecoverable error."""
 LOG_FILE = WIKI_DIR / "log.md"
 INDEX_FILE = WIKI_DIR / "index.md"
 OVERVIEW_FILE = WIKI_DIR / "overview.md"
@@ -140,7 +144,7 @@ except ImportError:
             from litellm import completion
         except ImportError:
             print("Error: litellm not installed. Run: pip install litellm")
-            sys.exit(1)
+            raise IngestError("litellm not installed")
 
         cfg = _load_llm_config()
         model = cfg.get("model") or os.getenv(model_env, default_model)
@@ -331,14 +335,14 @@ def convert_to_md(source: Path) -> Path:
     except ImportError:
         print("Error: markitdown not installed (needed to convert non-.md files).")
         print("  Install with: pip install markitdown")
-        sys.exit(1)
+        raise IngestError("markitdown not installed")
 
     md = MarkItDown(enable_plugins=False)
     try:
         result = md.convert(str(source))
     except Exception as e:
         print(f"Error: failed to convert '{source.name}': {e}")
-        sys.exit(1)
+        raise IngestError(f"Conversion failed: {e}")
 
     # Write converted output next to source as <name>.md
     output = source.with_suffix(".md")
@@ -378,7 +382,7 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
     source = Path(source_path)
     if not source.exists():
         print(f"Error: file not found: {source_path}")
-        sys.exit(1)
+        raise IngestError(f"File not found: {source_path}")
 
     # Auto-convert non-markdown files
     converted_path = None
@@ -457,14 +461,14 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
         debug_path = Path(tempfile.gettempdir()) / "ingest_debug.txt"
         debug_path.write_text(raw, encoding="utf-8")
         print(f"Raw response saved to {debug_path}")
-        sys.exit(1)
+        raise IngestError(f"JSON parse error: {e}")
 
     # Validate required keys
     required_keys = ["slug", "source_page", "index_entry", "log_entry"]
     missing_keys = [k for k in required_keys if k not in data]
     if missing_keys:
         print(f"Error: LLM response missing required keys: {missing_keys}")
-        sys.exit(1)
+        raise IngestError(f"Missing required keys: {missing_keys}")
 
     # Write source page
     slug = data["slug"]
@@ -472,7 +476,7 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
     safe_slug = Path(slug).name
     if not safe_slug or safe_slug == "." or safe_slug == "..":
         print(f"Error: invalid slug from LLM: {slug!r}")
-        sys.exit(1)
+        raise IngestError(f"Invalid slug: {slug!r}")
     write_file(WIKI_DIR / "sources" / f"{safe_slug}.md", data["source_page"])
 
     # Write entity pages
@@ -646,11 +650,9 @@ if __name__ == "__main__":
                 success_count += 1
             else:
                 fail_count += 1
-        except SystemExit:
-            # Re-raise clean exits (e.g. validation failures inside ingest)
+        except IngestError as e:
             fail_count += 1
-            # Don't exit the whole batch — save checkpoint and continue
-            print(f"  ❌ Failed: {p.name}")
+            print(f"  ❌ Failed: {p.name} ({e})")
             checkpoint[str(p.resolve())] = {
                 "hash": _file_hash(p),
                 "status": "failed",
