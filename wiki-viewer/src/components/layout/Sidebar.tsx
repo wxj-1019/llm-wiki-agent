@@ -76,7 +76,9 @@ export function Sidebar() {
             onClick={handleNavClick}
             className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
               navActive
-                ? 'bg-apple-blue/10 text-apple-blue font-medium border-l-2 border-apple-blue'
+                ? sidebarCollapsed
+                  ? 'bg-apple-blue/15 text-apple-blue font-medium'
+                  : 'bg-apple-blue/10 text-apple-blue font-medium border-l-2 border-apple-blue'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:translate-x-0.5'
             }`}
             title={t(item.translationKey as string)}

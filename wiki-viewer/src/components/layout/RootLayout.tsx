@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
@@ -23,10 +23,25 @@ export function RootLayout() {
   const isOnline = useNetworkStatus();
   const { canInstall, install } = usePWAInstall();
   const { updateAvailable, applyUpdate } = useSWUpdate();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const [bannerHeight, setBannerHeight] = useState(0);
+
+  const measureBanner = useCallback(() => {
+    if (bannerRef.current) {
+      setBannerHeight(bannerRef.current.offsetHeight);
+    }
+  }, []);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    measureBanner();
+    const observer = new ResizeObserver(measureBanner);
+    if (bannerRef.current) observer.observe(bannerRef.current);
+    return () => observer.disconnect();
+  }, [measureBanner, isOnline, updateAvailable, canInstall]);
 
   // Scroll to top on route change, but skip detail pages (they restore scroll position)
   useEffect(() => {
@@ -47,31 +62,33 @@ export function RootLayout() {
       <Header />
       <ToastContainer />
       <CommandPalette />
-      {!isOnline && (
-        <div className="fixed top-14 left-0 right-0 z-[45] bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue" role="alert">
-          <WifiOff size={14} aria-hidden="true" />
-          <span>{t('error.offline')}</span>
-        </div>
-      )}
-      {updateAvailable && (
-        <div className="fixed top-14 left-0 right-0 z-[45] bg-apple-green/10 border-b border-apple-green/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-green" role="alert">
-          <Sparkles size={14} aria-hidden="true" />
-          <span>{t('pwa.updateAvailable')}</span>
-          <button onClick={applyUpdate} className="font-semibold underline hover:no-underline">
-            {t('pwa.updateNow')}
-          </button>
-        </div>
-      )}
-      {canInstall && isOnline && !updateAvailable && (
-        <div className="fixed top-14 left-0 right-0 z-[45] bg-apple-purple/10 border-b border-apple-purple/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-purple" role="alert">
-          <Download size={14} aria-hidden="true" />
-          <span>{t('pwa.installPrompt')}</span>
-          <button onClick={install} className="font-semibold underline hover:no-underline">
-            {t('pwa.install')}
-          </button>
-        </div>
-      )}
-      <div className={`flex flex-1 overflow-hidden ${!isOnline || updateAvailable || canInstall ? 'pt-[6.5rem]' : 'pt-14'}`}>
+      <div ref={bannerRef} className="fixed top-14 left-0 right-0 z-[45]">
+        {!isOnline && (
+          <div className="bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue" role="alert">
+            <WifiOff size={14} aria-hidden="true" />
+            <span>{t('error.offline')}</span>
+          </div>
+        )}
+        {updateAvailable && (
+          <div className="bg-apple-green/10 border-b border-apple-green/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-green" role="alert">
+            <Sparkles size={14} aria-hidden="true" />
+            <span>{t('pwa.updateAvailable')}</span>
+            <button onClick={applyUpdate} className="font-semibold underline hover:no-underline">
+              {t('pwa.updateNow')}
+            </button>
+          </div>
+        )}
+        {canInstall && isOnline && !updateAvailable && (
+          <div className="bg-apple-purple/10 border-b border-apple-purple/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-purple" role="alert">
+            <Download size={14} aria-hidden="true" />
+            <span>{t('pwa.installPrompt')}</span>
+            <button onClick={install} className="font-semibold underline hover:no-underline">
+              {t('pwa.install')}
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 overflow-hidden" style={{ paddingTop: `${56 + bannerHeight}px` }}>
         <Sidebar />
         {/*
           Desktop: margin-left matches sidebar (240px expanded, 56px collapsed).

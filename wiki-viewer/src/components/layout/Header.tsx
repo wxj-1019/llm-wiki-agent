@@ -144,7 +144,7 @@ export function Header() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg"
+              className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg"
             >
             <input
               autoFocus
