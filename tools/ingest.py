@@ -535,7 +535,13 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
 
     validation = validate_ingest(created_pages)
 
-
+    # --- Post-ingest reflection ---
+    try:
+        from tools.reflect import run_reflection
+        print("\n  🔄 Running post-ingest reflection...")
+        run_reflection(last_n=1, suggest_skills=False, dry_run=False)
+    except Exception as exc:
+        print(f"  ⚠  Reflection skipped: {exc}")
 
     # Update checkpoint on success
     result["success"] = True
