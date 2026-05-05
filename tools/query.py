@@ -245,7 +245,7 @@ def query(question: str, save_path: str | None = None):
     pages_context = ""
     for p in relevant_pages:
         rel = p.relative_to(REPO_ROOT)
-        pages_context += f"\n\n### {rel}\n{p.read_text(encoding='utf-8')}"
+        pages_context += f"\n\n### {rel}\n{p.read_text(encoding='utf-8')[:4000]}"
 
     if not pages_context:
         pages_context = f"\n\n### wiki/index.md\n{index_content}"
@@ -289,9 +289,9 @@ Write a well-structured markdown answer with headers, bullets, and [[wikilink]] 
 
         full_save_path = sanitize_wiki_path(save_path, WIKI_DIR)
         # Escape quotes in the question to avoid breaking YAML frontmatter
-        safe_title = question[:80].replace('"', '\\"')
+        safe_title = question[:80]
         frontmatter = f"""---
-title: "{safe_title}"
+title: {json.dumps(safe_title)}
 type: synthesis
 tags: []
 sources: []

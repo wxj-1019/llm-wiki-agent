@@ -363,8 +363,11 @@ def convert_to_md(source: Path) -> Path:
         output.write_text(result.text_content, encoding="utf-8")
     except OSError:
         # Fallback: source directory may be read-only
-        tmp = Path(tempfile.mkdtemp()) / f"{source.stem}.md"
+        tmpdir = Path(tempfile.mkdtemp())
+        tmp = tmpdir / f"{source.stem}.md"
         tmp.write_text(result.text_content, encoding="utf-8")
+        import atexit, shutil
+        atexit.register(shutil.rmtree, str(tmpdir), ignore_errors=True)
         output = tmp
 
     print(f"  ✓ Converted {source.name} → {output.name}")
@@ -535,6 +538,14 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
         updated_pages.append("overview.md")
 
     validation = validate_ingest(created_pages)
+    if validation.get("broken_links"):
+        print(f"  ⚠  Found {len(validation['broken_links'])} broken wikilinks:")
+        for page, link in validation["broken_links"][:10]:
+            print(f"      wiki/{page} → [[{link}]]")
+        if len(validation["broken_links"]) > 10:
+            print(f"      ... and {len(validation['broken_links']) - 10} more")
+    if validation.get("unindexed"):
+        print(f"  ⚠  Found {len(validation['unindexed'])} unindexed pages: {validation['unindexed']}")
 
     # --- Post-ingest reflection ---
     try:

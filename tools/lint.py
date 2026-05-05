@@ -415,6 +415,14 @@ Be specific — name the exact pages and claims involved.
             "> Structural checks above completed successfully.\n"
             "> Install with: `pip install litellm` to enable semantic analysis."
         )
+    except Exception as exc:
+        print(f"  ⚠  Semantic lint failed: {exc}")
+        semantic_report = (
+            f"## Semantic Checks (error)\n\n"
+            f"> [!warning]\n"
+            f"> Semantic linting failed: `{exc}`.\n"
+            f"> Structural checks above completed successfully."
+        )
 
     # Compose full report
     report_lines = [
