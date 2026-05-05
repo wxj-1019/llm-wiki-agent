@@ -37,6 +37,7 @@ from datetime import date
 
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
+AGENT_DIR = WIKI_DIR / ".agent"
 
 
 class IngestError(Exception):
@@ -84,6 +85,19 @@ def _file_hash(path: Path) -> str:
     except OSError:
         return ""
     return h.hexdigest()
+
+
+def _load_agent_context() -> str:
+    """Load agent memory (MEMORY.md + USER.md) as system context string."""
+    parts = []
+    for name in ("MEMORY.md", "USER.md"):
+        path = AGENT_DIR / name
+        if path.exists():
+            content = path.read_text(encoding="utf-8").strip()
+            if content:
+                parts.append(content)
+    return "\n\n---\n\n".join(parts) if parts else ""
+
 
 # File extensions that can be auto-converted to markdown via markitdown.
 # .md files are ingested directly without conversion.
@@ -418,11 +432,14 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
 
     wiki_context = build_wiki_context()
     schema = read_file(SCHEMA_FILE)
+    agent_context = _load_agent_context()
 
     prompt = f"""You are maintaining an LLM Wiki. Process this source document and integrate its knowledge into the wiki.
 
 Schema and conventions:
 {schema}
+
+{f"Agent memory and user preferences:\n{agent_context}" if agent_context else ""}
 
 Current wiki state (index + recent pages):
 {wiki_context if wiki_context else "(wiki is empty — this is the first source)"}

@@ -195,6 +195,23 @@ def save_cache(cache: dict):
     CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def extract_frontmatter_tags(content: str) -> list[str]:
+    m = re.search(r'^tags:\s*\[([^\]]*)\]', content, re.MULTILINE)
+    if m:
+        return [t.strip().strip('"').strip("'") for t in m.group(1).split(',') if t.strip()]
+    m2 = re.search(r'^tags:\s*$', content, re.MULTILINE)
+    if m2:
+        rest = content[m2.end():]
+        items = re.findall(r'^\s*-\s*(.+)', rest, re.MULTILINE)
+        return [i.strip().strip('"').strip("'") for i in items]
+    return []
+
+
+def extract_frontmatter_field(content: str, field: str) -> str | None:
+    m = re.search(rf'^{field}:\s*"?([^"\n]+)"?', content, re.MULTILINE)
+    return m.group(1).strip() if m else None
+
+
 def build_nodes(pages: list[Path]) -> list[dict]:
     nodes = []
     for p in pages:
@@ -205,14 +222,21 @@ def build_nodes(pages: list[Path]) -> list[dict]:
         body = strip_frontmatter(content)
         preview_lines = [line.strip() for line in body.splitlines() if line.strip()]
         preview = " ".join(preview_lines[:3])[:220]
-        nodes.append({
+        tags = extract_frontmatter_tags(content)
+        last_updated = extract_frontmatter_field(content, "last_updated") or extract_frontmatter_field(content, "date")
+        node = {
             "id": page_id(p),
             "label": label,
             "type": node_type,
             "color": TYPE_COLORS.get(node_type, TYPE_COLORS["unknown"]),
             "path": p.relative_to(REPO_ROOT).as_posix(),
             "preview": preview,
-        })
+        }
+        if tags:
+            node["tags"] = tags
+        if last_updated:
+            node["last_updated"] = last_updated
+        nodes.append(node)
     return nodes
 
 

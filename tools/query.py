@@ -26,6 +26,7 @@ WIKI_DIR = REPO_ROOT / "wiki"
 INDEX_FILE = WIKI_DIR / "index.md"
 LOG_FILE = WIKI_DIR / "log.md"
 SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
+AGENT_DIR = WIKI_DIR / ".agent"
 
 
 # ── Shared utilities (with inline fallback) ─────────────────────────
@@ -100,6 +101,18 @@ except ImportError:
 
         response = completion(**kwargs)
         return response.choices[0].message.content
+
+
+def _load_agent_context() -> str:
+    """Load agent memory (MEMORY.md + USER.md) as system context string."""
+    parts = []
+    for name in ("MEMORY.md", "USER.md"):
+        path = AGENT_DIR / name
+        if path.exists():
+            content = path.read_text(encoding="utf-8").strip()
+            if content:
+                parts.append(content)
+    return "\n\n---\n\n".join(parts) if parts else ""
 
 
 def find_relevant_pages(question: str, index_content: str) -> list[Path]:
@@ -230,6 +243,7 @@ def query(question: str, save_path: str | None = None):
         pages_context = f"\n\n### wiki/index.md\n{index_content}"
 
     schema = read_file(SCHEMA_FILE)
+    agent_context = _load_agent_context()
 
     # Step 4: Synthesize answer
     print(f"  synthesizing answer from {len(relevant_pages)} pages...")
@@ -237,6 +251,8 @@ def query(question: str, save_path: str | None = None):
 
 Schema:
 {schema}
+
+{f"Agent memory and user preferences:\n{agent_context}" if agent_context else ""}
 
 Wiki pages:
 {pages_context}
