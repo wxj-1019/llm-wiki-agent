@@ -1,0 +1,20 @@
+{
+  "name": "critique",
+  "description": "Run a 5-dimension expert design review on any HTML artifact — Philosophy / Visual hierarchy / Detail / Functionality / Innovation, each scored 0–10. Outputs a single self-contained HTML report with a radar chart, evidence-backed scores, and three lists: Keep / Fix / Quick-wins.",
+  "triggers": [
+    "critique",
+    "design review",
+    "design audit",
+    "5 维度评审",
+    "5-dim review",
+    "audit my design",
+    "review my deck",
+    "review my landing page",
+    "评审",
+    "复盘"
+  ],
+  "priority": 10,
+  "parameters": {
+    "max_context_pages": 5
+  }
+}

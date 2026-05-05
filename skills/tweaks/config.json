@@ -1,0 +1,19 @@
+{
+  "name": "tweaks",
+  "description": "Wrap any HTML artifact with a side panel of live, parameterized controls — accent color, type scale, density, motion, theme — that rewrite CSS custom properties in real time and persist to localStorage.",
+  "triggers": [
+    "tweaks",
+    "variants",
+    "tweak panel",
+    "live controls",
+    "adjust on the fly",
+    "实时调参",
+    "可调参数面板",
+    "side panel",
+    "knobs"
+  ],
+  "priority": 10,
+  "parameters": {
+    "max_context_pages": 3
+  }
+}

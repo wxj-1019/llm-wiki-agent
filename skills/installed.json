@@ -44,6 +44,28 @@
       "updated_at": "2026-05-02T17:00:00",
       "usage_count": 0,
       "last_used": null
+    },
+    {
+      "name": "critique",
+      "version": "1.0.0",
+      "description": "Run a 5-dimension expert design review on any HTML artifact — Philosophy / Visual hierarchy / Detail / Functionality / Innovation, each scored 0–10.",
+      "source": "open-design",
+      "enabled": true,
+      "installed_at": "2026-05-05T20:38:00",
+      "updated_at": "2026-05-05T20:38:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "tweaks",
+      "version": "1.0.0",
+      "description": "Wrap any HTML artifact with a side panel of live, parameterized controls that rewrite CSS custom properties in real time.",
+      "source": "open-design",
+      "enabled": true,
+      "installed_at": "2026-05-05T20:38:00",
+      "updated_at": "2026-05-05T20:38:00",
+      "usage_count": 0,
+      "last_used": null
     }
   ]
 }
