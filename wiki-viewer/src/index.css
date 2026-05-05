@@ -36,6 +36,8 @@
     --text-tertiary: #767676;
     --border-default: rgba(0, 0, 0, 0.08);
     --border-strong: rgba(0, 0, 0, 0.16);
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --accent: #0a84ff;
     --apple-blue: #0a84ff;
     --apple-blue-hover: #0077ed;
     --apple-green: #30d158;
@@ -61,6 +63,8 @@
     --text-tertiary: #8e8e93;
     --border-default: rgba(255, 255, 255, 0.12);
     --border-strong: rgba(255, 255, 255, 0.20);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --accent: #2997ff;
     --apple-blue: #2997ff;
     --apple-blue-hover: #0a84ff;
     --apple-green: #30d158;
@@ -206,6 +210,37 @@
     background-color: var(--bg-secondary);
   }
   .apple-button-ghost:active {
+    box-shadow: none;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+  }
+  .btn-secondary:active {
     box-shadow: none;
   }
 
