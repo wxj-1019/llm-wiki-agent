@@ -1,0 +1,51 @@
+services:
+  wiki-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: llm-wiki-agent:latest
+    container_name: llm-wiki-api
+    ports:
+      - "${WIKI_PORT:-8000}:8000"
+    volumes:
+      # Live data directories — changes persist on host
+      - ./wiki:/app/wiki
+      - ./raw:/app/raw
+      - ./graph:/app/graph
+      - ./state:/app/state
+      # Optional: mount tools for development without rebuild
+      # - ./tools:/app/tools
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-claude-3-5-sonnet-latest}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  wiki-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    image: llm-wiki-agent:watcher
+    container_name: llm-wiki-watcher
+    volumes:
+      - ./wiki:/app/wiki
+      - ./raw:/app/raw
+      - ./state:/app/state
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-claude-3-5-sonnet-latest}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    command: ["python", "tools/watcher.py", "--poll"]
+    depends_on:
+      wiki-api:
+        condition: service_healthy
+    restart: unless-stopped

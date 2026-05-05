@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Node
+wiki-viewer/node_modules
+wiki-viewer/dist
+wiki-viewer/.vite
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+.pytest_cache
+.mypy_cache
+
+# Data & State (mounted as volumes)
+state/
+*.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Screenshots
+screenshot-*.png
+
+# Cache
+.cache
+.playwright-mcp
+
+# Logs
+*.log
