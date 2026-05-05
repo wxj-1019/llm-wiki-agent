@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, X, CheckCheck, ScrollText, Trash2, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Bell, X, CheckCheck, ScrollText, Trash2, CheckCircle, XCircle, Info, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -11,12 +11,14 @@ const iconMap = {
   success: CheckCircle,
   error: XCircle,
   info: Info,
+  progress: Loader2,
 };
 
 const colorMap = {
   success: 'text-emerald-500',
   error: 'text-red-500',
   info: 'text-apple-blue',
+  progress: 'text-apple-purple',
 };
 
 export function NotificationDropdown() {

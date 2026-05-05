@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type NotificationType = 'success' | 'error' | 'info';
+export type NotificationType = 'success' | 'error' | 'info' | 'progress';
 
 export interface Notification {
   id: string;
@@ -8,12 +8,14 @@ export interface Notification {
   type: NotificationType;
   timestamp: number;
   read: boolean;
+  progress?: number; // 0-100 for progress notifications
 }
 
 interface NotificationState {
   notifications: Notification[];
   toasts: Notification[];
-  addNotification: (message: string, type?: NotificationType) => void;
+  addNotification: (message: string, type?: NotificationType, progress?: number) => void;
+  updateProgress: (id: string, progress: number) => void;
   removeNotification: (id: string) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
@@ -31,9 +33,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   toasts: [],
 
-  addNotification: (message, type = 'info') => {
+  addNotification: (message, type = 'info', progress) => {
     const now = Date.now();
-    if (now - lastToastTime < TOAST_THROTTLE_MS) {
+    if (now - lastToastTime < TOAST_THROTTLE_MS && type !== 'progress') {
       // Skip toast UI for rapid-fire notifications, but still log
       set((state) => ({
         notifications: [{
@@ -42,9 +44,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           type,
           timestamp: now,
           read: false,
+          progress,
         }, ...state.notifications].slice(0, 50),
       }));
-      return;
+      return `${now}-${toastIdCounter}`;
     }
     lastToastTime = now;
 
@@ -55,21 +58,38 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       type,
       timestamp: now,
       read: false,
+      progress,
     };
 
     set((state) => ({
       notifications: [notification, ...state.notifications].slice(0, 50),
-      toasts: [notification, ...state.toasts].slice(0, 5),
+      toasts: type === 'progress' 
+        ? [notification, ...state.toasts.filter((t) => t.type !== 'progress')].slice(0, 5)
+        : [notification, ...state.toasts].slice(0, 5),
     }));
 
-    // Auto-dismiss toast after 4 seconds
-    const timer = setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id),
-      }));
-      toastTimers.delete(id);
-    }, 4000);
-    toastTimers.set(id, timer);
+    // Auto-dismiss toast after 4 seconds (except progress)
+    if (type !== 'progress') {
+      const timer = setTimeout(() => {
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id),
+        }));
+        toastTimers.delete(id);
+      }, 4000);
+      toastTimers.set(id, timer);
+    }
+    return id;
+  },
+
+  updateProgress: (id, progress) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, progress } : n
+      ),
+      toasts: state.toasts.map((t) =>
+        t.id === id ? { ...t, progress } : t
+      ),
+    }));
   },
 
   removeNotification: (id) => {

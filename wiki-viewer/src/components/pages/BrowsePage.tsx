@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox, Clock } from 'lucide-react';
+import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +82,9 @@ export function BrowsePage() {
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const getBacklinks = useWikiStore((s) => s.getBacklinks);
 
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 24;
+
   const filtered = useMemo(() => {
     let result = nodes;
     if (filterType !== 'all') {
@@ -112,6 +115,16 @@ export function BrowsePage() {
     return result;
   }, [nodes, filterType, debouncedQuery, sortBy, getBacklinks]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [filterType, debouncedQuery, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
 
 
   if (loading) {
@@ -119,7 +132,7 @@ export function BrowsePage() {
   }
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-semibold mb-6">{t('browse.title')}</h1>
 
       {/* Search */}
@@ -202,7 +215,7 @@ export function BrowsePage() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((node, i) => {
+        {paginated.map((node, i) => {
           const useMotion = filtered.length <= 20;
           const backlinkCount = getBacklinks(node.id).length;
           const card = <PageCard node={node} backlinkCount={backlinkCount} />;
@@ -226,6 +239,31 @@ export function BrowsePage() {
           );
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-sm text-[var(--text-secondary)] px-3">
+            {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next page"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="empty-state-warm mt-12">
@@ -261,7 +299,7 @@ export function BrowsePage() {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
