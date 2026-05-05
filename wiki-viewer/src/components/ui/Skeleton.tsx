@@ -146,7 +146,7 @@ export function DashboardSkeleton() {
           <div className="apple-card p-6 space-y-4">
             <Skeleton className="w-40 h-6 rounded-xl" />
             <div className="flex justify-center">
-              <Skeleton className="w-[200px] h-[200px] rounded-full" />
+              <Skeleton className="w-[200px] h-[200px] rounded-xl" />
             </div>
             <Skeleton className="w-32 h-4 mx-auto rounded-xl" />
           </div>
