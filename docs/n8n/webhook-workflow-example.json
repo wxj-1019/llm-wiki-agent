@@ -1,0 +1,70 @@
+{
+  "name": "LLM Wiki Agent — Auto Ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wiki-ingest",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-node",
+      "name": "Wiki Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wiki-ingest"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://wiki-api:8000/api/webhook/ingest",
+        "headers": {
+          "X-Webhook-Token": "={{ $env.WIKI_WEBHOOK_TOKEN }}"
+        },
+        "body": {
+          "path": "={{ $json.body.path }}",
+          "source": "n8n"
+        }
+      },
+      "id": "http-request-node",
+      "name": "Call Wiki API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Wiki Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call Wiki API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Wiki API": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -23,6 +23,8 @@ Users drop source documents into `raw/` and tell the agent to "ingest" them. The
 | **Package Manager** | Poetry (`pyproject.toml`) |
 | **Core Dependencies** | `markitdown[all]` (auto-conversion of 20+ formats), `tqdm` (progress bars) |
 | **LLM Gateway** | `litellm` (~1.83.10) — universal API for Claude, OpenAI, Gemini, etc. |
+| **MCP Server** | `mcp` (~1.2.0) — FastMCP stdio server for Claude/Cursor/VS Code |
+| **File Watch** | `watchdog` (~3.0.0) — native file system events + polling fallback |
 | **Graph Analysis** | `networkx` (~3.6.1) — Louvain community detection |
 | **Visualization** | Self-contained HTML with vis.js (CDN-loaded, no server needed) |
 
@@ -86,6 +88,13 @@ All scripts in `tools/` are standalone and can be run directly. They require `li
 | `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
 | `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
 | `api_server.py` | Optional local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
+| `mcp_server.py` | MCP stdio server for Claude/Cursor/VS Code | No | `python tools/mcp_server.py` — exposes `wiki_search`, `wiki_read`, `wiki_write`, `wiki_list`, `wiki_ingest` |
+| `search_engine.py` | SQLite FTS5 full-text search engine | No | Imported by `api_server.py` and `mcp_server.py`; auto-indexes `wiki/**/*.md` |
+| `watcher.py` | File system watcher for `raw/` auto-ingest | No | `python tools/watcher.py [--poll]` — watchdog + polling fallback, 5s debounce |
+| `memory.py` | Agent Memory Ledger | No | `python tools/memory.py start|update|finish|resume|list` — persistent task memory |
+| `context.py` | Context Pack Builder | No | `python tools/context.py build "<goal>" [--target <path>] [--budget 8000]` — token-bounded context packs |
+| `test_api.py` | API smoke tests | No | `python tools/test_api.py` — verify endpoints (needs running server) |
+| `test_p1_acceptance.py` | P1 acceptance tests | No | `python tools/test_p1_acceptance.py` — full P1 feature verification |
 
 **Design Boundary (health vs lint):**
 - `health.py` = structural integrity, deterministic, **zero LLM calls**, run every session
@@ -132,6 +141,15 @@ python tools/heal.py
 
 # Refresh stale sources
 python tools/refresh.py
+
+# Start MCP server (configure in Claude Desktop / Cursor)
+python tools/mcp_server.py
+
+# Start file watcher for auto-ingest
+python tools/watcher.py
+
+# Test FTS5 search
+python -c "from tools.search_engine import WikiSearchEngine; e=WikiSearchEngine(); print(e.search('transformer')); e.close()"
 ```
 
 ---
