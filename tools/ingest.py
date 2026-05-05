@@ -122,14 +122,14 @@ try:
 except ImportError:
     def sanitize_wiki_path(path_str: str, base_dir: Path) -> Path:
         if not path_str or path_str in (".", ".."):
-            raise ValueError(f"Invalid path: {path_str!r}")
+            raise ValueError("Invalid path")
         path_str = path_str.lstrip("/\\")
         target = (base_dir / path_str).resolve()
         base = base_dir.resolve()
         try:
             target.relative_to(base)
         except ValueError:
-            raise ValueError(f"Path traversal blocked: {path_str!r}")
+            raise ValueError("Path traversal blocked")
         return target
 
 
@@ -225,7 +225,14 @@ def update_index(new_entry: str, section: str = "Sources"):
         return
     section_header = f"## {section}"
     if section_header in content:
-        content = content.replace(section_header + "\n", section_header + "\n" + new_entry + "\n")
+        idx = content.index(section_header)
+        insert_pos = idx + len(section_header)
+        # Find the end of the header line
+        newline_pos = content.find("\n", insert_pos)
+        if newline_pos == -1:
+            content = content.rstrip() + "\n" + new_entry + "\n"
+        else:
+            content = content[:newline_pos + 1] + new_entry + "\n" + content[newline_pos + 1:]
     else:
         content += f"\n{section_header}\n{new_entry}\n"
     write_file(INDEX_FILE, content)
@@ -461,7 +468,7 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
 }}
 """
 
-    print(f"  calling API (model: {os.getenv('LLM_MODEL', 'claude-3-5-sonnet-latest')})")
+    print(f"  calling API (model: {os.getenv('LLM_MODEL', 'anthropic/claude-3-5-sonnet-latest')})")
     raw = call_llm(prompt, max_tokens=8192)
     if not raw:
         raise IngestError("LLM returned empty response")

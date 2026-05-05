@@ -125,8 +125,9 @@ except ImportError:
     def all_wiki_pages():
         exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
         for p in WIKI_DIR.rglob("*.md"):
-            if p.name not in exclude:
-                yield p
+            if ".agent" in p.parts or p.name in exclude:
+                continue
+            yield p
 
     def extract_wikilinks(content: str) -> list[str]:
         return list(set(re.findall(r'\[\[([^\]]+)\]\]', content)))
@@ -405,6 +406,9 @@ Rules:
         valid_rels = []
         try:
             raw = call_llm(prompt, "LLM_MODEL_FAST", "claude-3-5-haiku-latest", max_tokens=1024)
+            if not raw:
+                print("⚠  Empty LLM response")
+                continue
             raw = raw.strip()
 
             match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", raw)
