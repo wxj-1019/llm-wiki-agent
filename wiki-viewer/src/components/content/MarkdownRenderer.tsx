@@ -91,32 +91,23 @@ const CodeBlock = memo(function CodeBlock(props: { className?: string; children?
     );
   }
 
-  const CopyButton = (
-    <button
-      onClick={handleCopy}
-      className="absolute top-2 right-2 p-1.5  text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors text-xs"
-      title={t('common.copy')}
-      aria-label={t('common.copy')}
-    >
-      {copied ? t('common.copied') : t('common.copy')}
-    </button>
-  );
-
-  if (!html) {
-    return (
-      <div className="relative my-4">
-        {CopyButton}
+  return (
+    <div className="relative my-4">
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors text-xs z-10"
+        title={t('common.copy')}
+        aria-label={t('common.copy')}
+      >
+        {copied ? t('common.copied') : t('common.copy')}
+      </button>
+      {!html ? (
         <pre className="bg-[var(--bg-secondary)] rounded-xl p-4 overflow-x-auto text-sm font-mono">
           <code className={className}>{children}</code>
         </pre>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative my-4 rounded-xl overflow-x-auto text-sm">
-      {CopyButton}
-      <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
+      ) : (
+        <div className="rounded-xl overflow-x-auto text-sm" dangerouslySetInnerHTML={{ __html: safeHtml }} />
+      )}
     </div>
   );
 });
