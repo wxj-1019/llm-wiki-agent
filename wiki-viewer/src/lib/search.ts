@@ -5,6 +5,7 @@ import { searchFts } from '@/services/dataService';
 
 let fuse: Fuse<GraphNode> | null = null;
 let contentFuse: Fuse<GraphNode> | null = null;
+let contentFuseNodes: GraphNode[] = [];
 let allNodes: GraphNode[] = [];
 
 export function initSearch(nodes: GraphNode[]) {
@@ -22,6 +23,7 @@ export function initSearch(nodes: GraphNode[]) {
     minMatchCharLength: 2,
   });
   contentFuse = null; // Reset content fuse when nodes change
+  contentFuseNodes = [];
 }
 
 export function getAllNodes(): GraphNode[] {
@@ -104,7 +106,8 @@ export async function hybridSearch(
 
   // 2. If FTS returned < 5 results, supplement with Fuse.js
   if (ftsMatches.length < 5) {
-    if (!contentFuse) {
+    // Rebuild contentFuse if nodes have changed since last creation
+    if (!contentFuse || contentFuseNodes.length !== nodes.length || contentFuseNodes[0]?.path !== nodes[0]?.path) {
       contentFuse = new Fuse(nodes, {
         keys: [
           { name: 'label', weight: 0.4 },
@@ -121,6 +124,7 @@ export async function hybridSearch(
         ignoreLocation: true,
         minMatchCharLength: 3,
       });
+      contentFuseNodes = nodes;
     }
     const fuseResults = contentFuse.search(query);
     const seen = new Set(ftsMatches.map((m) => m.item.path));

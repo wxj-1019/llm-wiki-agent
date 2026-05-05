@@ -34,7 +34,7 @@ export async function fetchGraphData(): Promise<GraphData> {
     }
 
     // Fallback: static graph.json for production build without API server
-    const res = await fetch(`${import.meta.env.BASE_URL}data/graph.json`);
+    const res = await fetchWithTimeout(`${import.meta.env.BASE_URL}data/graph.json`, { timeoutMs: 10000 });
     if (!res.ok) throw new Error(`Failed to load graph data: ${res.status}`);
     return res.json();
   });

@@ -145,6 +145,8 @@ export const useWikiStore = create<WikiState>((set, get) => ({
             initSearch(data.nodes);
             set({ graphData: data, loading: false });
             saveGraphCache(data);
+            const etag = await fetchIndexEtag();
+            if (etag !== '0') _lastEtag = etag;
           } catch {
             // Keep cached data on refresh failure
           }

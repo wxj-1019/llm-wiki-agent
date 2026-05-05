@@ -7,16 +7,20 @@ import { registerSW } from 'virtual:pwa-register';
 import './i18n';
 import './index.css';
 
+let swUpdateInterval: ReturnType<typeof setInterval> | null = null;
 if ('serviceWorker' in navigator) {
   registerSW({
     immediate: true,
     onRegisteredSW(_swUrl, registration) {
       if (registration) {
-        setInterval(() => registration.update(), 60 * 60 * 1000);
+        swUpdateInterval = setInterval(() => registration.update(), 60 * 60 * 1000);
       }
     },
   });
 }
+window.addEventListener('beforeunload', () => {
+  if (swUpdateInterval) clearInterval(swUpdateInterval);
+});
 
 // Cleanup ETag polling on page unload
 window.addEventListener('beforeunload', stopPolling);
