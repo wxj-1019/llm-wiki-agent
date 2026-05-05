@@ -1,10 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { BarChart3, FileText, Users, Lightbulb, Layers, Link2, Calendar, Activity, RefreshCw, Frown } from 'lucide-react';
+import { BarChart3, FileText, Users, Lightbulb, Layers, Link2, Calendar, Activity, RefreshCw, Frown, ScrollText } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { DashboardSkeleton, Skeleton } from '@/components/ui/Skeleton';
+import { fetchLog, type LogEntry } from '@/services/dataService';
+import { useNotificationStore } from '@/stores/notificationStore';
 import type { GraphEdge } from '@/types/graph';
 
 interface SystemStatus {
@@ -246,6 +249,101 @@ function RadarChart({ values }: { values: number[] }) {
 }
 
 /** Simple bar chart for page type distribution */
+const opColors: Record<string, string> = {
+  ingest: 'bg-apple-blue/10 text-apple-blue',
+  query: 'bg-apple-purple/10 text-apple-purple',
+  lint: 'bg-apple-orange/10 text-apple-orange',
+  health: 'bg-apple-green/10 text-apple-green',
+  graph: 'bg-apple-teal/10 text-apple-teal',
+  heal: 'bg-apple-pink/10 text-apple-pink',
+  report: 'bg-apple-yellow/10 text-apple-yellow',
+};
+
+function RecentActivity() {
+  const { t } = useTranslation();
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const addNotification = useNotificationStore((s) => s.addNotification);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLog(5)
+      .then(({ entries }) => {
+        if (!cancelled) setEntries(entries);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          addNotification(err instanceof Error ? err.message : 'Failed to load recent activity', 'error');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [addNotification]);
+
+  if (loading) {
+    return (
+      <div className="apple-card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton className="w-5 h-5 rounded-lg" />
+          <Skeleton className="w-32 h-5 rounded-xl" />
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <Skeleton className="w-8 h-8 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-24 h-4 rounded-xl" />
+                <Skeleton className="w-16 h-4 rounded-xl" />
+              </div>
+              <Skeleton className="w-20 h-3 rounded-xl" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="apple-card p-6">
+      <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+        <ScrollText size={18} />
+        {t('dashboard.recentActivity', 'Recent Activity')}
+      </h2>
+      <div className="space-y-3">
+        {entries.map((entry, i) => (
+          <motion.div
+            key={`${entry.date}-${entry.operation}-${entry.title || i}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.05 }}
+            className="flex items-center gap-3"
+          >
+            <div className={`p-2 rounded-lg ${opColors[entry.operation] || 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}>
+              <ScrollText size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm truncate">{entry.title}</span>
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${opColors[entry.operation] || 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'}`}>
+                  {entry.operation}
+                </span>
+              </div>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5">{entry.date}</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+      <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
+        <Link to="/log" className="text-sm text-apple-blue hover:underline flex items-center gap-1">
+          {t('dashboard.viewAll', 'View all')}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function TypeBarChart({ stats }: { stats: WikiStats }) {
   const { t } = useTranslation();
   const data = [
@@ -383,6 +481,9 @@ export function DashboardPage() {
           {t('dashboard.linkDensityHint', 'Edges per page ratio. Higher means better connected knowledge.')}
         </p>
       </div>
+
+      {/* Recent Activity */}
+      <RecentActivity />
     </motion.div>
   );
 }

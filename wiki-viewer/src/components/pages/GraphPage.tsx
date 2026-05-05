@@ -46,6 +46,7 @@ import type { Network } from 'vis-network';
 import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Plus, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -72,6 +73,8 @@ export function GraphPage() {
   const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
   const [isEditing, setIsEditing] = useState(false);
   const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
+  const [rebuilding, setRebuilding] = useState(false);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   // Close onboarding on Escape
   useEffect(() => {
@@ -506,6 +509,36 @@ export function GraphPage() {
         {saveLayoutMsg && (
           <span className="text-xs text-[var(--text-secondary)]">{saveLayoutMsg}</span>
         )}
+        <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        <button
+          onClick={async () => {
+            setRebuilding(true);
+            try {
+              const res = await fetch('/api/tools/build-graph', { method: 'POST' });
+              if (res.ok) {
+                addNotification('Graph rebuilt successfully', 'success');
+                initialize();
+              } else {
+                addNotification('Failed to rebuild graph', 'error');
+              }
+            } catch {
+              addNotification('Failed to rebuild graph', 'error');
+            } finally {
+              setRebuilding(false);
+            }
+          }}
+          disabled={rebuilding}
+          className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl ${
+            rebuilding
+              ? 'bg-apple-green/10 text-apple-green'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+          title="Rebuild graph"
+          aria-label="Rebuild graph"
+        >
+          <RefreshCw size={14} className={rebuilding ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline">Rebuild</span>
+        </button>
         <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
         <button
           onClick={() => {

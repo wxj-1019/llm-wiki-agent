@@ -104,16 +104,29 @@ export function TimelinePage() {
     loadEvents();
   }, [loadEvents]);
 
+  // Filter by type
+  const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set());
+  const allTypes = useMemo(() => {
+    const types = new Set<string>();
+    events.forEach((e) => types.add(e.type));
+    return Array.from(types);
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    if (filterTypes.size === 0) return events;
+    return events.filter((e) => filterTypes.has(e.type));
+  }, [events, filterTypes]);
+
   // Group by month
   const grouped = useMemo(() => {
     const groups: Record<string, TimelineEvent[]> = {};
-    for (const e of events) {
+    for (const e of filteredEvents) {
       const month = e.date.slice(0, 7);
       if (!groups[month]) groups[month] = [];
       groups[month].push(e);
     }
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [events]);
+  }, [filteredEvents]);
 
   if (loading) {
     return <TimelineSkeleton />;
@@ -159,6 +172,43 @@ export function TimelinePage() {
           <span className="hidden sm:inline">{t('timeline.refresh', 'Refresh')}</span>
         </button>
       </div>
+
+      {/* Type filters */}
+      {allTypes.length > 1 && (
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <span className="text-xs text-[var(--text-tertiary)]">{t('timeline.filterByType', 'Filter')}:</span>
+          {allTypes.map((type) => {
+            const active = filterTypes.has(type);
+            const color = TYPE_COLORS[type] || 'bg-gray-400';
+            return (
+              <button
+                key={type}
+                onClick={() => {
+                  setFilterTypes((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(type)) next.delete(type);
+                    else next.add(type);
+                    return next;
+                  });
+                }}
+                className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                  active ? `${color} text-white` : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]'
+                }`}
+              >
+                {type}
+              </button>
+            );
+          })}
+          {filterTypes.size > 0 && (
+            <button
+              onClick={() => setFilterTypes(new Set())}
+              className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline"
+            >
+              {t('timeline.clearFilters', 'Clear')}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="relative">
         {/* Vertical line */}
