@@ -102,7 +102,7 @@ export function LogPage() {
   }, [tailLimit, t]);
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-semibold mb-6">{t('log.title')}</h1>
 
       {!loading && !error && entries.length > 0 && (
@@ -232,7 +232,7 @@ export function LogPage() {
           })}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

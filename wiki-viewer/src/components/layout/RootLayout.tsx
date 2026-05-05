@@ -12,6 +12,7 @@ import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useSWUpdate } from '@/hooks/useSWUpdate';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export function RootLayout() {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export function RootLayout() {
   const isOnline = useNetworkStatus();
   const { canInstall, install } = usePWAInstall();
   const { updateAvailable, applyUpdate } = useSWUpdate();
+  useKeyboardShortcuts();
   const bannerRef = useRef<HTMLDivElement>(null);
   const [bannerHeight, setBannerHeight] = useState(0);
 

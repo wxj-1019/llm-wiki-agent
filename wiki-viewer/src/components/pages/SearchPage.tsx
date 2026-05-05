@@ -106,7 +106,7 @@ export function SearchPage() {
   }, [initialQuery]);
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-semibold mb-6">{t('search.title')}</h1>
 
       <div className="relative mb-8">
@@ -204,6 +204,6 @@ export function SearchPage() {
           <p className="text-sm text-[var(--text-secondary)]">{t('search.empty.description')}</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

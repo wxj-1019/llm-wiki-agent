@@ -88,7 +88,12 @@ export function HomePage() {
   const greetingKey = hour < 12 ? 'greeting.morning' : hour < 18 ? 'greeting.afternoon' : 'greeting.evening';
 
   return (
-    <div className="relative">
+    <motion.div
+      className="relative"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="absolute -top-20 -left-20 w-80 h-80 bg-marshmallow-peach rounded-full ambient-blob" />
       <div className="absolute top-40 -right-20 w-96 h-96 bg-marshmallow-lavender rounded-full ambient-blob" style={{ animationDelay: '3s' }} />
       <div className="relative z-10">
@@ -439,7 +444,7 @@ export function HomePage() {
           </motion.div>
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

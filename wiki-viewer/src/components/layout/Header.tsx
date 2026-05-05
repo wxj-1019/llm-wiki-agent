@@ -67,6 +67,12 @@ export function Header() {
   const trapRef = useFocusTrap<HTMLDivElement>(searchOpen);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const handler = () => setSearchOpen(true);
+    window.addEventListener('wiki:focus-search', handler);
+    return () => window.removeEventListener('wiki:focus-search', handler);
+  }, []);
+
   const handleQueryChange = (value: string) => {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);

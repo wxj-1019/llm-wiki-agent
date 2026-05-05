@@ -124,7 +124,7 @@ export function SettingsPage() {
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold flex items-center gap-3">
