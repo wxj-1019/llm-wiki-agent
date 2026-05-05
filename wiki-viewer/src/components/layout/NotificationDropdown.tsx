@@ -15,8 +15,8 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: 'text-emerald-500',
-  error: 'text-red-500',
+  success: 'text-apple-green',
+  error: 'text-apple-red',
   info: 'text-apple-blue',
   progress: 'text-apple-purple',
 };
@@ -56,7 +56,7 @@ export function NotificationDropdown() {
       >
         <Bell size={16} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-apple-red text-white text-[10px] font-bold flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

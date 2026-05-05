@@ -109,7 +109,7 @@ const FileListItem = memo(function FileListItem({
           <span className="text-sm font-medium truncate">{file.name}</span>
           <span className={`text-[10px] px-1.5 py-0.5 font-medium rounded-full shrink-0 ${
             category === 'document' ? 'bg-blue-500/10 text-blue-600' :
-            category === 'spreadsheet' ? 'bg-emerald-500/10 text-emerald-600' :
+            category === 'spreadsheet' ? 'bg-apple-green/10 text-apple-green' :
             category === 'code' ? 'bg-amber-500/10 text-amber-600' :
             'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]'
           }`}>
@@ -150,7 +150,7 @@ const FileListItem = memo(function FileListItem({
         <button
           onClick={() => onDelete(file)}
           disabled={isDeleting}
-          className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-tertiary)] hover:text-red-500 transition-colors disabled:opacity-50"
+          className="p-2 rounded-lg hover:bg-apple-red/10 text-[var(--text-tertiary)] hover:text-apple-red transition-colors disabled:opacity-50"
           title={t('upload.delete')}
           aria-label={t('upload.delete')}
         >
@@ -304,14 +304,14 @@ export function FileList({
                     <button
                       onClick={onBatchDelete}
                       disabled={batchDeleting}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-apple-red/10 text-apple-red hover:bg-apple-red/20 rounded-xl transition-colors disabled:opacity-50"
                     >
                       {batchDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                       {t('upload.batchDelete', { count: selectedPaths.size })}
                     </button>
                     <button
                       onClick={onClearSelection}
-                      className="text-xs text-[var(--text-tertiary)] hover:text-red-500 transition-colors rounded-lg p-1"
+                      className="text-xs text-[var(--text-tertiary)] hover:text-apple-red transition-colors rounded-lg p-1"
                     >
                       <X size={14} />
                     </button>

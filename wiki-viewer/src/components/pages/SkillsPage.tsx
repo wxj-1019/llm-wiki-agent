@@ -172,7 +172,7 @@ export function SkillsPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>
+        <div className="p-3 bg-apple-red/10 text-apple-red rounded-xl text-sm">{error}</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,7 +215,7 @@ export function SkillsPage() {
                   disabled={loading}
                   className={`p-2 rounded-xl transition-colors ${
                     s.enabled
-                      ? 'hover:bg-red-500/10 hover:text-red-500'
+                      ? 'hover:bg-apple-red/10 hover:text-apple-red'
                       : 'hover:bg-green-500/10 hover:text-green-500'
                   }`}
                   title={s.enabled ? t('skills.disable', '禁用') : t('skills.enable', '启用')}
@@ -232,7 +232,7 @@ export function SkillsPage() {
                 <button
                   onClick={() => action(`/api/skills/uninstall/${s.name}`, 'DELETE', s.name)}
                   disabled={loading}
-                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors"
+                  className="p-2 hover:bg-apple-red/10 hover:text-apple-red rounded-xl transition-colors"
                   title={t('skills.uninstall', '卸载')}
                 >
                   <Trash2 size={14} />

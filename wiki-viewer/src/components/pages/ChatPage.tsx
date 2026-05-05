@@ -426,7 +426,7 @@ export function ChatPage() {
                       {sessions.length > 1 && (
                         <button
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className="p-1 hover:bg-red-500/10 hover:text-red-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                          className="p-1 hover:bg-apple-red/10 hover:text-apple-red opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
                           aria-label={t('chat.deleteSession', 'Delete session')}
                         >
                           <X size={10} />
@@ -451,7 +451,7 @@ export function ChatPage() {
           {!isEmpty && (
             <button
               onClick={handleClear}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-red-500 hover:bg-red-500/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-apple-red hover:bg-apple-red/10 transition-colors"
               aria-label={t('chat.clear')}
             >
               <Trash2 size={13} aria-hidden="true" />
@@ -546,7 +546,7 @@ export function ChatPage() {
             disabled={!streaming && !input.trim()}
             className={`shrink-0 p-2.5 transition-colors ${
               streaming
-                ? 'rounded-full bg-transparent text-red-500 border border-red-200 hover:border-red-500'
+                ? 'rounded-full bg-transparent text-apple-red border border-red-200 hover:border-apple-red'
                 : 'apple-button disabled:opacity-40 disabled:cursor-not-allowed'
             }`}
             aria-label={streaming ? t('chat.stop') : t('chat.send')}

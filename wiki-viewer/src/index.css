@@ -172,23 +172,22 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   }
 
-  .apple-button-warm {
+  .apple-button-danger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--apple-blue);
+    background-color: var(--apple-red);
     color: white;
     font-weight: 500;
     border-radius: 9999px;
     padding: 0.625rem 1.25rem;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.2s;
   }
-  .apple-button-warm:hover {
-    background-color: var(--apple-blue-hover);
+  .apple-button-danger:hover {
+    background-color: #e03a30;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: scale(1.02);
   }
-  .apple-button-warm:active {
+  .apple-button-danger:active {
     box-shadow: none;
   }
 
@@ -210,37 +209,6 @@
     background-color: var(--bg-secondary);
   }
   .apple-button-ghost:active {
-    box-shadow: none;
-  }
-
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 500;
-    border-radius: 9999px;
-    padding: 0.5rem 1rem;
-    transition: all 0.2s;
-  }
-
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 500;
-    border-radius: 9999px;
-    padding: 0.5rem 1rem;
-    background-color: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-default);
-    transition: all 0.2s;
-  }
-  .btn-secondary:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
-    background-color: var(--bg-secondary);
-  }
-  .btn-secondary:active {
     box-shadow: none;
   }
 

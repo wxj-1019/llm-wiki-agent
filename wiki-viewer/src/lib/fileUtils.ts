@@ -35,7 +35,7 @@ export function getFileCategory(name: string): FileTypeFilter {
 
 export function getFileTypeColor(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase() || '';
-  if (ext === 'pdf') return 'text-red-500';
+  if (ext === 'pdf') return 'text-apple-red';
   if (['docx', 'doc'].includes(ext)) return 'text-blue-500';
   if (['xlsx', 'xls'].includes(ext)) return 'text-green-500';
   if (['pptx', 'ppt'].includes(ext)) return 'text-orange-500';
@@ -47,9 +47,9 @@ export function getFileTypeColor(name: string): string {
 
 export function getFileTypeBg(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase() || '';
-  if (ext === 'pdf') return 'bg-red-500/8';
+  if (ext === 'pdf') return 'bg-apple-red/8';
   if (['docx', 'doc'].includes(ext)) return 'bg-blue-500/8';
-  if (['xlsx', 'xls', 'csv'].includes(ext)) return 'bg-emerald-500/8';
+  if (['xlsx', 'xls', 'csv'].includes(ext)) return 'bg-apple-green/8';
   if (['md', 'txt'].includes(ext)) return 'bg-apple-blue/8';
   if (['json', 'yaml', 'yml'].includes(ext)) return 'bg-amber-500/8';
   if (['zip', 'tar', 'gz'].includes(ext)) return 'bg-violet-500/8';

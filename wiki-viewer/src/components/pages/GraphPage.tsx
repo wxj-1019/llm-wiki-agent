@@ -498,7 +498,7 @@ export function GraphPage() {
                   selected.forEach((id: string) => ds.remove(id));
                 }
               }}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-red-500 bg-red-500/10"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-apple-red bg-apple-red/10"
               title="Delete selected nodes"
               aria-label="Delete selected nodes"
             >
@@ -675,7 +675,7 @@ function NodePanel({
           onClick={() => toggleFavorite(node.id)}
           className={`apple-button-ghost flex-1 text-sm ${
             isFav
-              ? 'bg-red-500/10 border-red-500/20 text-red-500'
+              ? 'bg-apple-red/10 border-apple-red/20 text-apple-red'
               : ''
           }`}
         >

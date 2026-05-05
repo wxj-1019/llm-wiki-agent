@@ -43,7 +43,7 @@ export function PreviewPanel({ previewContent, previewName, onClose, onCopy }: P
               )}
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
+                className="p-2 hover:bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-apple-red transition-colors"
                 title={t('upload.preview.close')}
               >
                 <X size={16} />

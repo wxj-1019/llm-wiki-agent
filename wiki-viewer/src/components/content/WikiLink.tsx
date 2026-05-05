@@ -31,7 +31,7 @@ export function WikiLink({ target, children }: WikiLinkProps) {
   return (
     <Link
       to={path}
-      className="text-red-500/70 font-medium border-b border-dashed border-apple-red/40 hover:text-red-500 hover:border-apple-red transition-colors duration-200 cursor-pointer inline"
+      className="text-apple-red/70 font-medium border-b border-dashed border-apple-red/40 hover:text-apple-red hover:border-apple-red transition-colors duration-200 cursor-pointer inline"
       title={t('wikiLink.brokenTitle', { target })}
     >
       {display}

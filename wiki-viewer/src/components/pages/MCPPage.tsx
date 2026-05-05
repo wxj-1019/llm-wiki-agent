@@ -246,17 +246,17 @@ function InstallWizard({
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>
+              <div className="p-3 bg-apple-red/10 text-apple-red rounded-xl text-sm">{error}</div>
             )}
 
             <div className="flex justify-end gap-2">
-              <button onClick={onClose} className="btn-secondary px-4 py-2 text-sm">
+              <button onClick={onClose} className="apple-button-ghost px-4 py-2 text-sm">
                 {t('common.close', '取消')}
               </button>
               <button
                 onClick={handleInstall}
                 disabled={installing}
-                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                className="apple-button px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {installing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 {installing ? t('mcp.installing', '安装中...') : t('mcp.install.action', '安装')}
@@ -354,7 +354,7 @@ export function MCPPage() {
         </div>
         <button
           onClick={() => setShowInstallWizard(true)}
-          className="btn-primary text-sm flex items-center gap-2"
+          className="apple-button text-sm flex items-center gap-2"
         >
           <Plus size={14} />
           {t('mcp.action.install', '安装 Server')}
@@ -362,7 +362,7 @@ export function MCPPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-500/10 text-red-500 rounded-xl text-sm">{error}</div>
+        <div className="p-3 bg-apple-red/10 text-apple-red rounded-xl text-sm">{error}</div>
       )}
 
       <div className="grid gap-4">
@@ -385,7 +385,7 @@ export function MCPPage() {
               <div className="flex items-center gap-3">
                 <div
                   className={`w-2.5 h-2.5 rounded-full ${
-                    s.status === 'running' ? 'bg-emerald-500' : 'bg-[var(--text-tertiary)]'
+                    s.status === 'running' ? 'bg-apple-green' : 'bg-[var(--text-tertiary)]'
                   }`}
                 />
                 <h3 className="font-semibold">{s.display_name || s.name}</h3>
@@ -407,7 +407,7 @@ export function MCPPage() {
                   <button
                     onClick={() => action(`/api/mcp/stop/${s.name}`, 'POST', s.display_name || s.name)}
                     disabled={actioningServer === s.name}
-                    className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
+                    className="p-2 hover:bg-apple-red/10 hover:text-apple-red rounded-xl transition-colors disabled:opacity-50"
                     title={t('mcp.stop', '停止')}
                   >
                     <Square size={14} />
@@ -431,7 +431,7 @@ export function MCPPage() {
                 <button
                   onClick={() => action(`/api/mcp/uninstall/${s.name}`, 'DELETE', s.display_name || s.name)}
                   disabled={actioningServer === s.name}
-                  className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors disabled:opacity-50"
+                  className="p-2 hover:bg-apple-red/10 hover:text-apple-red rounded-xl transition-colors disabled:opacity-50"
                   title={t('mcp.uninstall', '卸载')}
                 >
                   <Trash2 size={14} />

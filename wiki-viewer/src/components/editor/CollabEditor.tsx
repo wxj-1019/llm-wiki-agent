@@ -132,12 +132,12 @@ export function CollabEditor({
     connected: {
       icon: <Wifi size={14} />,
       label: 'Connected',
-      color: 'text-emerald-500',
+      color: 'text-apple-green',
     },
     disconnected: {
       icon: <WifiOff size={14} />,
       label: 'Disconnected',
-      color: 'text-red-500',
+      color: 'text-apple-red',
     },
     syncing: {
       icon: <Loader2 size={14} className="animate-spin" />,

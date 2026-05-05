@@ -326,7 +326,7 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setRssFeeds(config.rss.feeds.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-apple-red/60 hover:text-apple-red hover:bg-apple-red/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
                     aria-label={t('settings.remove')}
                   >
@@ -361,7 +361,7 @@ export function SettingsPage() {
         <div className="space-y-4 max-w-2xl">
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <BookOpen size={16} className="text-red-500" />
+              <BookOpen size={16} className="text-apple-red" />
               {t('settings.tab.arxiv')}
             </h3>
             <div className="space-y-3">
@@ -396,7 +396,7 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setArxivQueries(config.arxiv.queries.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-apple-red/60 hover:text-apple-red hover:bg-apple-red/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
                     aria-label={t('settings.remove')}
                   >
@@ -497,7 +497,7 @@ export function SettingsPage() {
 
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Key size={16} className="text-emerald-500" />
+              <Key size={16} className="text-apple-green" />
               {t('settings.llm.apiKey')}
             </h3>
             <div className="space-y-4">
@@ -505,7 +505,7 @@ export function SettingsPage() {
                 <label className="block text-sm text-[var(--text-secondary)] mb-2 flex items-center gap-2">
                   <span>{t('settings.llm.apiKey')}</span>
                   {llmKeySet && (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-apple-green/10 text-apple-green rounded-full">
                       {t('settings.llm.keySet')}
                     </span>
                   )}

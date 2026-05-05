@@ -43,7 +43,7 @@ export function NotFoundPage() {
         </form>
 
         <div className="flex items-center justify-center gap-3">
-          <Link to="/" className="apple-button-warm">
+          <Link to="/" className="apple-button">
             <Home size={16} />
             {t('notFound.backToHome')}
           </Link>

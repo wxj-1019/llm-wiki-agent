@@ -540,7 +540,7 @@ export function DashboardPage() {
   }
 
   const overallScore = Math.round(healthScores.reduce((a, b) => a + b, 0) / 5);
-  const scoreColor = overallScore >= 80 ? 'text-emerald-500' : overallScore >= 60 ? 'text-amber-500' : 'text-red-500';
+  const scoreColor = overallScore >= 80 ? 'text-apple-green' : overallScore >= 60 ? 'text-amber-500' : 'text-apple-red';
 
   return (
     <motion.div

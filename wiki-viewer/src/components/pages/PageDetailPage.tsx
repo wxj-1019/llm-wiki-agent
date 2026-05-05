@@ -534,7 +534,7 @@ function FavoriteButton({
       onClick={handleClick}
       className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
         fav
-          ? 'text-red-500 bg-red-500/10 border-red-500/30'
+          ? 'text-apple-red bg-apple-red/10 border-apple-red/30'
           : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
       }`}
       title={fav ? t('detail.favorite.remove') : t('detail.favorite.add')}

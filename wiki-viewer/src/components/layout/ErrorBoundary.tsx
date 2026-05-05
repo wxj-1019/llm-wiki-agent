@@ -19,8 +19,8 @@ export function ErrorBoundary() {
         className="max-w-md w-full text-center"
         role="alert"
       >
-        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-500/10 flex items-center justify-center">
-          <AlertTriangle size={28} className="text-red-500" />
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-apple-red/10 flex items-center justify-center">
+          <AlertTriangle size={28} className="text-apple-red" />
         </div>
 
         <h1 className="text-2xl font-semibold text-[var(--text-primary)] mb-2">
@@ -33,7 +33,7 @@ export function ErrorBoundary() {
 
         {!isRouteError && (
           <div className="mb-6 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 text-left overflow-auto">
-            <code className="text-xs font-mono text-red-500 whitespace-pre-wrap break-all">
+            <code className="text-xs font-mono text-apple-red whitespace-pre-wrap break-all">
               {message}
             </code>
           </div>

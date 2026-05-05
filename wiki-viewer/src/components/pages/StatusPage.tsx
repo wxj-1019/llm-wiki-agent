@@ -155,8 +155,8 @@ export function StatusPage() {
   if (error || !status) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <AlertCircle size={24} className="text-red-500" />
-        <p className="text-sm text-red-500">{t('status.error.title', { error })}</p>
+        <AlertCircle size={24} className="text-apple-red" />
+        <p className="text-sm text-apple-red">{t('status.error.title', { error })}</p>
         <button onClick={fetchStatus} className="apple-button text-xs">{t('error.retry')}</button>
       </div>
     );
@@ -259,9 +259,9 @@ export function StatusPage() {
               <div className="flex items-center justify-between p-4 border-b border-[var(--border-default)]">
                 <div className="flex items-center gap-2">
                   {toolResult.success ? (
-                    <CheckCircle size={18} className="text-emerald-500" />
+                    <CheckCircle size={18} className="text-apple-green" />
                   ) : (
-                    <AlertCircle size={18} className="text-red-500" />
+                    <AlertCircle size={18} className="text-apple-red" />
                   )}
                   <span className="font-medium">
                     {t(`status.tools.${toolResult.name}`, toolResult.name)} — {toolResult.success ? t('status.tools.success', 'Success') : t('status.tools.failed', 'Failed')}
@@ -285,7 +285,7 @@ export function StatusPage() {
                 {toolResult.stderr && (
                   <div>
                     <div className="text-xs text-red-400 mb-1 uppercase tracking-wider">stderr</div>
-                    <pre className="bg-red-500/5 text-red-500 p-3 rounded-xl whitespace-pre-wrap break-all text-xs">{toolResult.stderr}</pre>
+                    <pre className="bg-apple-red/5 text-apple-red p-3 rounded-xl whitespace-pre-wrap break-all text-xs">{toolResult.stderr}</pre>
                   </div>
                 )}
                 {!toolResult.stdout && !toolResult.stderr && (
@@ -313,7 +313,7 @@ export function StatusPage() {
             <StatusRow
               label={t('status.llm.apiKey')}
               value={status.llm.api_key_set ? t('status.llm.configured') : t('status.llm.notSet')}
-              valueClass={status.llm.api_key_set ? 'text-emerald-500' : 'text-amber-500'}
+              valueClass={status.llm.api_key_set ? 'text-apple-green' : 'text-amber-500'}
             />
           </div>
         </div>
@@ -331,7 +331,7 @@ export function StatusPage() {
               label={t('status.graph.status')}
               value={status.graph.ready ? t('status.graph.ready') : t('status.graph.notBuilt')}
               icon={status.graph.ready ? CheckCircle : AlertCircle}
-              iconClass={status.graph.ready ? 'text-emerald-500' : 'text-amber-500'}
+              iconClass={status.graph.ready ? 'text-apple-green' : 'text-amber-500'}
             />
             <StatusRow label={t('status.graph.path')} value={status.graph.path || '—'} />
           </div>
@@ -350,7 +350,7 @@ export function StatusPage() {
               label={t('status.agentKit.generated')}
               value={status.agent_kit.generated ? t('status.yes') : t('status.no')}
               icon={status.agent_kit.generated ? CheckCircle : AlertCircle}
-              iconClass={status.agent_kit.generated ? 'text-emerald-500' : 'text-amber-500'}
+              iconClass={status.agent_kit.generated ? 'text-apple-green' : 'text-amber-500'}
             />
             <StatusRow label={t('status.agentKit.files')} value={String(status.agent_kit.files)} />
           </div>
