@@ -488,7 +488,7 @@ export function UploadPage() {
             >
               <h3 id="batch-delete-title" className="text-lg font-semibold">{t('upload.batchDeleteTitle', 'Batch Delete')}</h3>
               <p className="text-sm text-[var(--text-secondary)]">
-                {t('upload.batchDeleteConfirm', { count: selectedPaths.size }, `Delete ${selectedPaths.size} file(s)? This cannot be undone.`)}
+                {t('upload.batchDeleteConfirm', { count: selectedPaths.size })}
               </p>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowBatchDeleteConfirm(false)} className="btn-secondary px-4 py-2 text-sm">

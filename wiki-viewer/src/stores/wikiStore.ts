@@ -49,9 +49,9 @@ function loadGraphCache(): GraphData | null {
   const parsed = safeGet(GRAPH_CACHE_KEY, isObject, null);
   if (!parsed) return null;
   if (Date.now() - (parsed._cachedAt as number || 0) > GRAPH_CACHE_TTL_MS) return null;
-  const data = parsed.data;
+  const data = parsed.data as Record<string, unknown>;
   if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) return null;
-  return data as GraphData;
+  return data as unknown as GraphData;
 }
 
 function saveGraphCache(data: GraphData) {

@@ -60,9 +60,9 @@ import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-function deepMerge<T extends Record<string, unknown>>(target: T, source: unknown): T {
+function deepMerge(target: Record<string, unknown>, source: unknown): Record<string, unknown> {
   if (!source || typeof source !== 'object' || Array.isArray(source)) return target;
-  const result = { ...target };
+  const result: Record<string, unknown> = { ...target };
   for (const key of Object.keys(source)) {
     if (DANGEROUS_KEYS.has(key)) continue;
     const s = (source as Record<string, unknown>)[key];
@@ -73,12 +73,12 @@ function deepMerge<T extends Record<string, unknown>>(target: T, source: unknown
       result[key] = s;
     }
   }
-  return result as T;
+  return result;
 }
 
 function loadFromStorage(): SystemConfig {
   const stored = safeGet('wiki-system-config', isObject, {});
-  return deepMerge(DEFAULT_CONFIG, stored) as SystemConfig;
+  return deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, stored) as unknown as SystemConfig;
 }
 
 interface ConfigState {
@@ -101,7 +101,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   setConfig: (partial) => {
     const current = get().config;
-    const next = deepMerge(current, partial) as SystemConfig;
+    const next = deepMerge(current as unknown as Record<string, unknown>, partial) as unknown as SystemConfig;
     set({ config: next });
     safeSet('wiki-system-config', next);
   },
@@ -192,21 +192,21 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       if (g1) {
         const parsed = parseGithubYaml(g1);
         if (parsed) {
-          set({ config: deepMerge(get().config, parsed) as SystemConfig });
+          set({ config: deepMerge(get().config as unknown as Record<string, unknown>, parsed) as unknown as SystemConfig });
           updated = true;
         }
       }
       if (g2) {
         const parsed = parseRssYaml(g2);
         if (parsed) {
-          set({ config: deepMerge(get().config, parsed) as SystemConfig });
+          set({ config: deepMerge(get().config as unknown as Record<string, unknown>, parsed) as unknown as SystemConfig });
           updated = true;
         }
       }
       if (g3) {
         const parsed = parseArxivYaml(g3);
         if (parsed) {
-          set({ config: deepMerge(get().config, parsed) as SystemConfig });
+          set({ config: deepMerge(get().config as unknown as Record<string, unknown>, parsed) as unknown as SystemConfig });
           updated = true;
         }
       }

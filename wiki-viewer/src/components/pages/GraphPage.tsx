@@ -56,9 +56,9 @@ export function GraphPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
-  const nodesDataSetRef = useRef<DataSet<unknown> | null>(null);
-  const edgesDataSetRef = useRef<DataSet<unknown> | null>(null);
+  const networkRef = useRef<any>(null);
+  const nodesDataSetRef = useRef<any>(null);
+  const edgesDataSetRef = useRef<any>(null);
   const graphData = useWikiStore((s) => s.graphData);
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
@@ -179,7 +179,7 @@ export function GraphPage() {
 
     const network = new VisNetwork(
       containerRef.current,
-      { nodes: nodesDataSet, edges: edgesDataSet },
+      { nodes: nodesDataSet as any, edges: edgesDataSet as any },
       {
         physics: {
           barnesHut: {

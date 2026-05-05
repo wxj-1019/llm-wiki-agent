@@ -307,7 +307,7 @@ export function FileList({
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition-colors disabled:opacity-50"
                     >
                       {batchDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                      {t('upload.batchDelete', { count: selectedPaths.size }, `Delete ${selectedPaths.size}`)}
+                      {t('upload.batchDelete', { count: selectedPaths.size })}
                     </button>
                     <button
                       onClick={onClearSelection}

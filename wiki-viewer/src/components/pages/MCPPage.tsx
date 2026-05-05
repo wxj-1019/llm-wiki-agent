@@ -5,7 +5,7 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { Server, Play, Square, RotateCcw, Trash2, Plus, Terminal, Activity, X, Package, Globe, FolderOpen, Wand2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MCPPageSkeleton } from '@/components/ui/Skeleton';
+import { MCPSkeleton } from '@/components/ui/Skeleton';
 
 interface MCPServer {
   name: string;
@@ -342,7 +342,7 @@ export function MCPPage() {
   };
 
   if (initialLoading) {
-    return <MCPPageSkeleton />;
+    return <MCPSkeleton />;
   }
 
   return (

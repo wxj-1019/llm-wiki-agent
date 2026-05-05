@@ -24,25 +24,25 @@ describe('useSpeechSynthesis', () => {
   });
 
   it('returns initial state', () => {
-    const { result } = renderHook(() => useSpeechSynthesis());
+    const { result } = renderHook(() => useSpeechSynthesis(''));
     expect(result.current.playing).toBe(false);
     expect(result.current.rate).toBe(1);
     expect(result.current.voices).toHaveLength(2);
   });
 
   it('starts playing', () => {
-    const { result } = renderHook(() => useSpeechSynthesis());
+    const { result } = renderHook(() => useSpeechSynthesis('Hello world'));
     act(() => {
-      result.current.play('Hello world');
+      result.current.play();
     });
     expect(result.current.playing).toBe(true);
     expect(mockSpeak).toHaveBeenCalledOnce();
   });
 
   it('stops playing', () => {
-    const { result } = renderHook(() => useSpeechSynthesis());
+    const { result } = renderHook(() => useSpeechSynthesis('Hello'));
     act(() => {
-      result.current.play('Hello');
+      result.current.play();
       result.current.stop();
     });
     expect(result.current.playing).toBe(false);
@@ -50,7 +50,7 @@ describe('useSpeechSynthesis', () => {
   });
 
   it('changes rate', () => {
-    const { result } = renderHook(() => useSpeechSynthesis());
+    const { result } = renderHook(() => useSpeechSynthesis(''));
     act(() => {
       result.current.setRate(1.5);
     });
