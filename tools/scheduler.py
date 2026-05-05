@@ -27,30 +27,30 @@ REPO_ROOT = Path(__file__).parent.parent.resolve()
 PYTHON = sys.executable
 
 
-def _run(*cmds: str) -> None:
+def _run(*cmds: list[str]) -> None:
     for cmd in cmds:
-        print(f"[scheduler] Running: {cmd}")
-        result = subprocess.run(cmd.split(), cwd=str(REPO_ROOT))
+        print(f"[scheduler] Running: {' '.join(cmd)}")
+        result = subprocess.run(cmd, cwd=str(REPO_ROOT))
         if result.returncode != 0:
-            print(f"[scheduler] Warning: '{cmd}' exited with {result.returncode}")
+            print(f"[scheduler] Warning: '{' '.join(cmd)}' exited with {result.returncode}")
 
 
 def fetch_rss() -> None:
-    _run(f"{PYTHON} tools/fetchers/rss_fetcher.py --config config/rss_sources.yaml")
+    _run([PYTHON, "tools/fetchers/rss_fetcher.py", "--config", "config/rss_sources.yaml"])
 
 
 def fetch_arxiv() -> None:
-    _run(f"{PYTHON} tools/fetchers/arxiv_fetcher.py --config config/arxiv_sources.yaml")
+    _run([PYTHON, "tools/fetchers/arxiv_fetcher.py", "--config", "config/arxiv_sources.yaml"])
 
 
 def fetch_github() -> None:
-    _run(f"{PYTHON} tools/fetchers/github_fetcher.py --config config/github_sources.yaml")
+    _run([PYTHON, "tools/fetchers/github_fetcher.py", "--config", "config/github_sources.yaml"])
 
 
 def compile_and_ingest() -> None:
     _run(
-        f"{PYTHON} tools/batch_compiler.py",
-        f"{PYTHON} tools/batch_ingest.py",
+        [PYTHON, "tools/batch_compiler.py"],
+        [PYTHON, "tools/batch_ingest.py"],
     )
 
 
@@ -62,9 +62,9 @@ def fetch_github_and_ingest() -> None:
 
 def maintenance() -> None:
     _run(
-        f"{PYTHON} tools/archive_stale.py",
-        f"{PYTHON} tools/health.py",
-        f"{PYTHON} tools/build_graph.py",
+        [PYTHON, "tools/archive_stale.py"],
+        [PYTHON, "tools/health.py"],
+        [PYTHON, "tools/build_graph.py"],
     )
 
 

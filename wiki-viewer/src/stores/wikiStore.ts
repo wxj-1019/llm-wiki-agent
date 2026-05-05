@@ -82,6 +82,7 @@ const _readingTimestamps: Record<string, number> = {};
 
 let _initPromise: Promise<void> | null = null;
 let _pollInterval: ReturnType<typeof setInterval> | null = null;
+let _persistTimer: ReturnType<typeof setTimeout> | null = null;
 let _lastEtag = '0';
 let _pollFetching = false;
 

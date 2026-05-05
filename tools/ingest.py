@@ -116,10 +116,6 @@ def sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
-def read_file(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.exists() else ""
-
-
 # ── Shared path safety (with inline fallback) ──
 try:
     from tools.shared.paths import sanitize_wiki_path
@@ -179,12 +175,6 @@ except ImportError:
 
         response = completion(**kwargs)
         return response.choices[0].message.content
-
-
-def write_file(path: Path, content: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    print(f"  wrote: {path.relative_to(REPO_ROOT)}")
 
 
 def build_wiki_context(max_page_chars: int = 2000) -> str:
@@ -471,6 +461,8 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
 
     print(f"  calling API (model: {os.getenv('LLM_MODEL', 'claude-3-5-sonnet-latest')})")
     raw = call_llm(prompt, max_tokens=8192)
+    if not raw:
+        raise IngestError("LLM returned empty response")
     try:
         data = parse_json_from_response(raw)
     except (ValueError, json.JSONDecodeError) as e:

@@ -229,7 +229,15 @@ def query(question: str, save_path: str | None = None):
         raw = re.sub(r"\s*```$", "", raw)
         try:
             paths = json.loads(raw)
-            relevant_pages = [WIKI_DIR / p for p in paths if (WIKI_DIR / p).exists()]
+            relevant_pages = []
+            for p in paths:
+                cand = (WIKI_DIR / p).resolve()
+                try:
+                    cand.relative_to(WIKI_DIR.resolve())
+                except ValueError:
+                    continue
+                if cand.exists():
+                    relevant_pages.append(cand)
         except (json.JSONDecodeError, TypeError):
             pass
 

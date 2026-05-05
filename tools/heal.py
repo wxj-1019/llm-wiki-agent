@@ -206,23 +206,24 @@ def heal_missing_entities(dry_run: bool = False):
         for s in sources:
             context += f"\n\n### {s.name}\n{s.read_text(encoding='utf-8')[:800]}"
 
+        safe_entity_name = entity.replace('\\', '\\\\').replace('"', '\\"')
         prompt = f"""You are filling a data gap in the Personal LLM Wiki.
-Create an Entity definition page for "{entity}".
+Create an Entity definition page for "{safe_entity_name}".
 
 Here is how the entity appears in the current sources:
 {context}
 
 Format:
 ---
-title: "{entity}"
+title: "{safe_entity_name}"
 type: entity
 tags: []
 sources: {[s.name for s in sources]}
 ---
 
-# {entity}
+# {safe_entity_name}
 
-Write a comprehensive paragraph defining what `{entity}` means in the context of this wiki, its main significance, and any actions or associations related to it.
+Write a comprehensive paragraph defining what `{safe_entity_name}` means in the context of this wiki, its main significance, and any actions or associations related to it.
 """
         try:
             result = call_llm(prompt)

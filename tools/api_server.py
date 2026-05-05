@@ -161,7 +161,7 @@ async def rate_limit(request: Request, call_next):
         for k in expired:
             del _rate_limit_store[k]
         _rate_limit_last_cleanup = now
-    window = _rate_limit_store[client]
+    window = _rate_limit_store.get(client, [])
     _rate_limit_store[client] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
     if len(_rate_limit_store[client]) >= RATE_LIMIT_MAX:
         return JSONResponse(status_code=429, content={"error": "Rate limit exceeded. Please slow down."})

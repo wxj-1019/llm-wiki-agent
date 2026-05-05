@@ -217,6 +217,8 @@ class MCPManager:
         return {"status": "uninstalled", "name": name}
 
     def start(self, name: str) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid server name: {name}"}
         server_dir = self.base_dir / name
         server_file = server_dir / "server.py"
         if not server_file.exists():
@@ -244,6 +246,8 @@ class MCPManager:
         return {"pid": proc.pid, "status": "running"}
 
     def stop(self, name: str) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid server name: {name}"}
         proc = self.processes.pop(name, None)
         if proc and proc.poll() is None:
             if sys.platform == "win32":
@@ -259,6 +263,8 @@ class MCPManager:
         return {"status": "stopped", "name": name}
 
     def restart(self, name: str) -> dict:
+        if not _SAFE_NAME_RE.match(name):
+            return {"error": f"Invalid server name: {name}"}
         self.stop(name)
         time.sleep(0.5)
         return self.start(name)

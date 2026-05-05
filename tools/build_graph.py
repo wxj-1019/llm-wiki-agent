@@ -365,6 +365,12 @@ def build_inferred_edges(pages: list[Path], existing_edges: list[dict], cache: d
         global_idx = already_done + i
         print(f"    [{global_idx}/{grand_total}] Inferring for '{src}'... ", end="", flush=True)
 
+        edges_for_page = [e for e in existing_edges if e.get("from") == src or e.get("from", "").endswith(src)]
+        existing_edge_summary = "\n".join(
+            f"- {e['from']} -> {e['to']} ({e.get('type', 'EXTRACTED')})"
+            for e in edges_for_page
+        ) if edges_for_page else "(none)"
+
         prompt = f"""Analyze this wiki page and identify implicit semantic relationships to other pages in the wiki.
 
 Source page: {src}
