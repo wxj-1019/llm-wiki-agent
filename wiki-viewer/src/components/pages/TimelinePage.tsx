@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWikiStore } from '@/stores/wikiStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion } from 'framer-motion';
-import { Calendar, GitCommit, Search, Activity, BarChart3, Layers } from 'lucide-react';
+import { Calendar, GitCommit, Search, Activity, BarChart3, Layers, Wrench, RefreshCw, Frown } from 'lucide-react';
+import { fetchLog, type LogEntry } from '@/services/dataService';
 import { TimelineSkeleton } from '@/components/ui/Skeleton';
 
 interface TimelineEvent {
@@ -19,6 +19,9 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   health: Activity,
   lint: BarChart3,
   graph: Layers,
+  heal: Wrench,
+  refresh: RefreshCw,
+  report: BarChart3,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -27,54 +30,79 @@ const TYPE_COLORS: Record<string, string> = {
   health: 'bg-apple-teal',
   lint: 'bg-apple-orange',
   graph: 'bg-apple-purple',
+  heal: 'bg-apple-pink',
+  refresh: 'bg-apple-indigo',
+  report: 'bg-apple-yellow',
 };
 
-function parseLogEvents(logContent: string): TimelineEvent[] {
-  const events: TimelineEvent[] = [];
-  const lines = logContent.split('\n');
-  let currentDate = '';
-
-  for (const line of lines) {
-    const dateMatch = line.match(/^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*(\w+)\s*\|\s*(.+)$/);
-    if (dateMatch) {
-      currentDate = dateMatch[1];
-      const type = dateMatch[2].toLowerCase();
-      const title = dateMatch[3].trim();
-      events.push({
-        date: currentDate,
-        type,
-        title,
-        description: '',
-      });
-    }
-  }
-
-  return events.reverse().slice(0, 100);
+function logEntryToEvent(entry: LogEntry): TimelineEvent {
+  const typeDesc: Record<string, string> = {
+    ingest: 'Ingested a new source document',
+    query: 'Ran a knowledge query',
+    health: 'Performed a health check',
+    lint: 'Ran content quality lint',
+    graph: 'Built or updated the knowledge graph',
+    heal: 'Auto-healed missing entities',
+    refresh: 'Refreshed stale source pages',
+    report: 'Generated a report',
+  };
+  return {
+    date: entry.date,
+    type: entry.operation,
+    title: entry.title,
+    description: typeDesc[entry.operation] || 'Wiki operation',
+  };
 }
 
 export function TimelinePage() {
   const { t } = useTranslation();
   useDocumentTitle(t('nav.timeline') || 'Timeline');
-  const graphData = useWikiStore((s) => s.graphData);
-  const loading = useWikiStore((s) => s.loading);
 
-  const now = useMemo(() => Date.now(), []);
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const events = useMemo(() => {
-    // In a real implementation, we'd fetch log.md content
-    // For now, generate synthetic events from graph data
-    const nodes = graphData?.nodes || [];
-    const synthetic: TimelineEvent[] = nodes
-      .filter((n) => n.type === 'source')
-      .slice(0, 20)
-      .map((n, i) => ({
-        date: new Date(now - i * 86400000 * 3).toISOString().slice(0, 10),
-        type: 'ingest',
-        title: n.label,
-        description: `Ingested ${n.type} page`,
-      }));
-    return synthetic;
-  }, [graphData, now]);
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { entries } = await fetchLog(200);
+      const mapped = entries.map(logEntryToEvent);
+      setEvents(mapped);
+    } catch (e) {
+      setError((e as Error).message);
+      // Fallback: try to read log.md directly
+      try {
+        const res = await fetch('/data/wiki/log.md');
+        if (res.ok) {
+          const text = await res.text();
+          const lines = text.split('\n');
+          const parsed: TimelineEvent[] = [];
+          const re = /^##\s+\[(\d{4}-\d{2}-\d{2})\]\s+(\w+)\s+\|\s+(.+)$/;
+          for (const line of lines) {
+            const m = line.match(re);
+            if (m) {
+              parsed.push(logEntryToEvent({
+                date: m[1],
+                operation: m[2].toLowerCase(),
+                title: m[3].trim(),
+              }));
+            }
+          }
+          setEvents(parsed.reverse());
+          setError(null);
+        }
+      } catch {
+        // keep original error
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   // Group by month
   const grouped = useMemo(() => {
@@ -87,22 +115,50 @@ export function TimelinePage() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [events]);
 
-  if (loading || !graphData) {
+  if (loading) {
     return <TimelineSkeleton />;
+  }
+
+  if (error && events.length === 0) {
+    return (
+      <div className="empty-state-warm mt-20">
+        <div className="flex justify-center mb-3">
+          <Frown size={40} className="text-apple-orange" />
+        </div>
+        <h3 className="text-lg font-semibold mb-1">{t('timeline.error.title', 'Failed to load timeline')}</h3>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">{error}</p>
+        <button onClick={loadEvents} className="apple-button text-xs">
+          {t('error.retry', 'Retry')}
+        </button>
+      </div>
+    );
   }
 
   if (events.length === 0) {
     return (
       <div className="empty-state-warm mt-20">
         <Calendar size={48} className="text-[var(--text-tertiary)] mb-3" />
-        <h3 className="text-lg font-semibold">No timeline events yet</h3>
+        <h3 className="text-lg font-semibold">{t('timeline.empty.title', 'No timeline events yet')}</h3>
+        <p className="text-sm text-[var(--text-secondary)] mt-2">
+          {t('timeline.empty.description', 'Start ingesting documents to see your knowledge timeline.')}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-semibold">{t('nav.timeline') || 'Knowledge Timeline'}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-semibold">{t('nav.timeline') || 'Knowledge Timeline'}</h1>
+        <button
+          onClick={loadEvents}
+          className="apple-button-ghost flex items-center gap-2 px-3 py-2 text-sm"
+          title={t('timeline.refresh', 'Refresh timeline')}
+        >
+          <RefreshCw size={14} />
+          <span className="hidden sm:inline">{t('timeline.refresh', 'Refresh')}</span>
+        </button>
+      </div>
 
       <div className="relative">
         {/* Vertical line */}
@@ -115,6 +171,9 @@ export function TimelinePage() {
                 <Calendar size={12} className="text-[var(--text-secondary)]" />
               </div>
               <h2 className="text-lg font-semibold">{month}</h2>
+              <span className="text-xs text-[var(--text-tertiary)] ml-1">
+                {monthEvents.length} {t('timeline.events', 'events')}
+              </span>
             </div>
 
             <div className="space-y-4 ml-10">
@@ -123,17 +182,17 @@ export function TimelinePage() {
                 const color = TYPE_COLORS[event.type] || 'bg-gray-400';
                 return (
                   <motion.div
-                    key={`${event.date}-${i}`}
+                    key={`${event.date}-${event.type}-${event.title}-${i}`}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
                     className="apple-card p-4 flex items-start gap-3"
                   >
-                    <div className={`p-2 rounded-lg ${color} bg-opacity-20 text-[var(--text-primary)]`}>
+                    <div className={`p-2 rounded-lg ${color} bg-opacity-20`}>
                       <Icon size={14} className="text-[var(--text-secondary)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-xs text-[var(--text-tertiary)]">{event.date}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full text-white ${color}`}>
                           {event.type}
