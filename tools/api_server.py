@@ -63,6 +63,7 @@ ALLOWED_EXTENSIONS = {
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024
 MAX_LLM_MESSAGES = 20
 MAX_LLM_CONTENT_SIZE = 50 * 1024  # 50KB
+AGENT_DIR = WIKI / ".agent"
 
 # ── Webhook auth (optional) ──
 _WEBHOOK_TOKEN = os.environ.get("WIKI_WEBHOOK_TOKEN", "").strip()
@@ -1157,6 +1158,21 @@ _llm_config_cache_ts: float = 0.0
 _LLM_CONFIG_TTL = 5.0
 
 
+def _load_agent_context() -> str:
+    """Load agent memory (MEMORY.md + USER.md) as system context string."""
+    parts = []
+    for name in ("MEMORY.md", "USER.md"):
+        path = AGENT_DIR / name
+        if path.exists():
+            try:
+                content = path.read_text(encoding="utf-8").strip()
+                if content:
+                    parts.append(content)
+            except (OSError, UnicodeDecodeError):
+                pass
+    return "\n\n---\n\n".join(parts) if parts else ""
+
+
 def _load_llm_config() -> dict:
     """Load LLM config from config/llm.yaml and apply env overrides. Cached with TTL.
     API key is loaded separately from .cache/llm_api_key for security."""
@@ -1338,12 +1354,14 @@ async def wiki_chat(payload: WikiChatRequest):
     if not knowledge_context:
         knowledge_context = "No relevant wiki pages found."
 
+    agent_ctx = _load_agent_context()
     system_prompt = (
         "You are a helpful assistant for the LLM Wiki knowledge base. "
         "Answer the user's question based ONLY on the following retrieved wiki content. "
         "If the answer is not in the retrieved content, say so clearly. "
-        "Cite sources using [source: path/to/page] format.\n\n"
-        f"Retrieved content:\n{knowledge_context}"
+        "Cite sources using [source: path/to/page] format."
+        + (f"\n\nAgent memory and user preferences:\n{agent_ctx}" if agent_ctx else "")
+        + f"\n\nRetrieved content:\n{knowledge_context}"
     )
 
     full_messages = [{"role": "system", "content": system_prompt}]
