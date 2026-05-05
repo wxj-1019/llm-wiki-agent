@@ -594,7 +594,7 @@ export function GraphPage() {
               className="bg-[var(--bg-primary)] rounded-2xl p-6 max-w-xs mx-4 shadow-xl border border-[var(--border-default)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4 text-center">{t('graph.tour.title')}</h3>
+              <h3 className="text-lg font-semibold mb-4 text-center">{t('graph.tour.title')}</h3>
               <div className="space-y-3 mb-5">
                 {[
                   { icon: MousePointer2, label: t('graph.tour.click') },

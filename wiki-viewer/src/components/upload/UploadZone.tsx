@@ -44,7 +44,7 @@ export function UploadZone({ dragActive, uploading, onDrag, onDrop, onFileInput 
           role="button"
           tabIndex={0}
           aria-label={t('upload.dropHint')}
-          className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all relative overflow-hidden ${
+          className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all relative overflow-hidden ${
             dragActive
               ? 'border-apple-blue bg-apple-blue/5 scale-[1.01]'
               : uploading

@@ -476,7 +476,7 @@ export function ChatPage() {
               animate={{ opacity: 1, y: 0 }}
               className="max-w-md"
             >
-              <div className="w-16 h-16 mx-auto mb-6 bg-apple-blue/10 rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-6 bg-apple-blue/10 rounded-xl flex items-center justify-center">
                 <Sparkles size={28} className="text-apple-blue" />
               </div>
               <h2 className="text-xl font-semibold mb-2">{t('chat.empty.title')}</h2>

@@ -272,7 +272,7 @@ export function BrowsePage() {
               <div className="flex justify-center mb-4">
                 <Inbox size={48} className="text-apple-blue" />
               </div>
-              <h3 className="text-lg font-bold mb-2">{t('browse.empty.noData.title')}</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('browse.empty.noData.title')}</h3>
               <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-sm">{t('browse.empty.noData.description')}</p>
               <Link to="/" className="apple-button">
                 <BookOpen size={16} />
@@ -284,7 +284,7 @@ export function BrowsePage() {
               <div className="flex justify-center mb-3">
                 <Search size={40} className="text-apple-blue" />
               </div>
-              <h3 className="text-base font-bold mb-1">{t('browse.empty.title')}</h3>
+              <h3 className="text-base font-semibold mb-1">{t('browse.empty.title')}</h3>
               <p className="text-sm text-[var(--text-secondary)] mb-4">{t('browse.empty.description')}</p>
               {(query.trim() || filterType !== 'all') && (
                 <button
@@ -339,7 +339,7 @@ const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: s
           <span className="text-xs text-[var(--text-tertiary)] font-medium">{t(typeLabelKey(node.type) as string)}</span>
         </div>
       </div>
-      <h3 className="font-bold text-base mb-2 group-hover:text-apple-blue transition-colors">
+      <h3 className="font-semibold text-base mb-2 group-hover:text-apple-blue transition-colors">
         {node.label}
       </h3>
       <p className="text-sm text-[var(--text-secondary)] line-clamp-3 leading-relaxed mb-3">

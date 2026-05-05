@@ -19,7 +19,7 @@ export function ErrorBoundary() {
         className="max-w-md w-full text-center"
         role="alert"
       >
-        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-apple-red/10 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-apple-red/10 flex items-center justify-center">
           <AlertTriangle size={28} className="text-apple-red" />
         </div>
 

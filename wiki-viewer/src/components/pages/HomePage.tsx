@@ -104,7 +104,7 @@ export function HomePage() {
           transition={{ duration: 0.5 }}
           className="mb-10"
         >
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] mb-2 font-rounded">
+          <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-primary)] mb-2 font-rounded">
             {t(greetingKey)}
           </h1>
           <p className="text-[var(--text-secondary)]">
@@ -125,7 +125,7 @@ export function HomePage() {
                 <div className="flex justify-center mb-4">
                   <Inbox size={48} className="text-apple-blue" />
                 </div>
-                <h2 className="text-lg font-bold mb-2">{t('empty.title')}</h2>
+                <h2 className="text-lg font-semibold mb-2">{t('empty.title')}</h2>
                 <p className="text-sm text-[var(--text-secondary)]">{t('empty.description')}</p>
               </div>
 
@@ -274,7 +274,7 @@ export function HomePage() {
                 <Link
                   key={stat.labelKey}
                   to={`/browse?t=${stat.labelKey.replace('stat.', '')}`}
-                  className="apple-card p-4 block group"
+                  className="apple-card p-5 block group"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div className={`${stat.color} ${stat.bg} p-1.5 rounded-lg`}>
@@ -282,7 +282,7 @@ export function HomePage() {
                     </div>
                     <span className="text-xs text-[var(--text-secondary)] font-medium">{t(stat.labelKey as string)}</span>
                   </div>
-                  <div className="text-3xl font-bold tabular-nums mb-2">{stat.count}</div>
+                  <div className="text-2xl font-semibold tabular-nums mb-2">{stat.count}</div>
                   <div className="w-full h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                     <div className={`h-full ${stat.bar} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
                   </div>
@@ -301,7 +301,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.25 }}
             className="mb-12"
           >
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Heart size={16} className="text-apple-pink" />
               {t('home.favorites.title')}
             </h2>
@@ -339,7 +339,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mb-12"
           >
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Clock size={16} className="text-apple-purple" />
               {t('home.sections.continueReading')}
             </h2>
@@ -373,7 +373,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="mb-12"
           >
-            <h2 className="text-lg font-bold mb-4">{t('home.sections.randomDiscovery')}</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('home.sections.randomDiscovery')}</h2>
             <div className="warm-card p-6">
               <div className="flex items-start justify-between">
                 <div>
@@ -381,7 +381,7 @@ export function HomePage() {
                     <TypeBadge type={randomNode.type} />
                     <span className="text-xs text-[var(--text-secondary)]">{randomNode.id}</span>
                   </div>
-                  <h3 className="text-base font-bold mb-2">{randomNode.label}</h3>
+                  <h3 className="text-base font-semibold mb-2">{randomNode.label}</h3>
                   <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{randomNode.preview}</p>
                 </div>
               </div>
@@ -402,7 +402,7 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">{t('home.sections.knowledgeGraph')}</h2>
+              <h2 className="text-lg font-semibold">{t('home.sections.knowledgeGraph')}</h2>
               <Link to="/graph" className="text-sm text-apple-blue hover:underline flex items-center gap-1">
                 {t('action.explore')} <ArrowRight size={14} />
               </Link>
@@ -410,15 +410,15 @@ export function HomePage() {
             <div className="apple-card p-6">
               <div className="flex items-center justify-center gap-8 text-sm text-[var(--text-secondary)]">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{nodes.length}</div>
+                  <div className="text-2xl font-semibold text-[var(--text-primary)] tabular-nums">{nodes.length}</div>
                   <div className="text-xs font-medium">{t('stat.nodes')}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{graphData.edges.length}</div>
+                  <div className="text-2xl font-semibold text-[var(--text-primary)] tabular-nums">{graphData.edges.length}</div>
                   <div className="text-xs font-medium">{t('stat.edges')}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{new Set(nodes.map((n) => n.group)).size}</div>
+                  <div className="text-2xl font-semibold text-[var(--text-primary)] tabular-nums">{new Set(nodes.map((n) => n.group)).size}</div>
                   <div className="text-xs font-medium">{t('stat.communities')}</div>
                 </div>
               </div>
@@ -430,7 +430,7 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            <h2 className="text-lg font-bold mb-4">{t('home.sections.knowledgeGraph')}</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('home.sections.knowledgeGraph')}</h2>
             <div className="apple-card p-6 text-center">
               <p className="text-sm text-[var(--text-secondary)] mb-4">{t('home.graph.error')}</p>
               <button
@@ -461,10 +461,10 @@ function PageCard({ node }: { node: { id: string; label: string; type: string; p
   return (
     <Link
       to={getPagePath(node)}
-      className="apple-card p-4 block"
+      className="apple-card p-5 block"
     >
       <TypeBadge type={node.type} />
-      <h3 className="font-bold mt-2 mb-1">{node.label}</h3>
+      <h3 className="font-semibold mt-2 mb-1">{node.label}</h3>
       <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{stripMarkdown(node.preview)}</p>
     </Link>
   );

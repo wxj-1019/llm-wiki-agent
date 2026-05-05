@@ -336,7 +336,7 @@ export function FileList({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[var(--bg-secondary)] mb-5"
+              className="inline-flex items-center justify-center w-20 h-20 rounded-xl bg-[var(--bg-secondary)] mb-5"
             >
               <Inbox size={36} className="text-[var(--text-tertiary)]" />
             </motion.div>

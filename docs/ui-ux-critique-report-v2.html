@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Critique · LLM Wiki Agent UI/UX 评审报告</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-tertiary: #86868b;
+    --accent: #0a84ff;
+    --accent-soft: rgba(10,132,255,0.12);
+    --border: rgba(0,0,0,0.08);
+    --radius: 18px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.6;
+    padding: 48px 24px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+  .verdict {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 6px 16px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  /* Radar */
+  .radar-wrap {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .radar-wrap svg { max-width: 360px; width: 100%; }
+  .radar-labels {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .radar-labels span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* Dimension cards */
+  .dimensions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  @media (min-width: 720px) {
+    .dimensions { grid-template-columns: 1fr 1fr; }
+  }
+  .dim {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 28px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dim:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+  .dim-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .dim-header h3 {
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+  .score {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+  }
+  .band {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .dim p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
+  .dim .action {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .action strong { color: var(--accent); }
+
+  /* Action lists */
+  .actions {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  @media (min-width: 720px) {
+    .actions { grid-template-columns: repeat(3, 1fr); }
+  }
+  .action-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+  .action-card h4 {
+    font-size: 0.9rem;
+    font-weight: 650;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .action-card ul { list-style: none; }
+  .action-card li {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .action-card li:last-child { border-bottom: none; }
+  .check { color: #30d158; font-weight: 700; flex-shrink: 0; }
+  .cross { color: #ff453a; font-weight: 700; flex-shrink: 0; }
+  .star { color: #ff9f0a; font-weight: 700; flex-shrink: 0; }
+
+  .frontier {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 28px;
+    margin-bottom: 32px;
+  }
+  .frontier h4 {
+    font-size: 1rem;
+    font-weight: 650;
+    margin-bottom: 12px;
+  }
+  .frontier p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .frontier ul {
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .frontier li {
+    padding: 6px 0;
+    padding-left: 18px;
+    position: relative;
+  }
+  .frontier li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LLM Wiki Agent · UI/UX 设计评审</h1>
+  <p>基于 5 维度专家框架 · 评审范围：wiki-viewer 全站前端</p>
+  <div class="verdict">方向明确，细节有漂移，系统级 token 需统一</div>
+</header>
+
+<!-- Radar -->
+<div class="radar-wrap">
+  <svg viewBox="0 0 300 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <polygon id="grid5" points="150,30 253,105 214,220 86,220 47,105"/>
+      <polygon id="grid4" points="150,54 234,115 203,196 97,196 66,115"/>
+      <polygon id="grid3" points="150,78 215,125 192,172 108,172 85,125"/>
+      <polygon id="grid2" points="150,102 196,135 181,148 119,148 104,135"/>
+      <polygon id="grid1" points="150,126 177,145 170,124 130,124 123,145"/>
+    </defs>
+    <!-- Background grid -->
+    <use href="#grid5" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <use href="#grid4" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <use href="#grid3" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <use href="#grid2" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <use href="#grid1" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <!-- Axis lines -->
+    <line x1="150" y1="30" x2="150" y2="130" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <line x1="253" y1="105" x2="150" y2="130" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <line x1="214" y1="220" x2="150" y2="130" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <line x1="86" y1="220" x2="150" y2="130" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <line x1="47" y1="105" x2="150" y2="130" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+    <!-- Data polygon: Philosophy 6, Hierarchy 7, Detail 6, Functionality 8, Innovation 5 -->
+    <polygon points="150,78 228,117 196,184 104,184 70,117" fill="rgba(10,132,255,0.15)" stroke="#0a84ff" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- Vertices -->
+    <circle cx="150" cy="78" r="4" fill="#0a84ff"/>
+    <circle cx="228" cy="117" r="4" fill="#0a84ff"/>
+    <circle cx="196" cy="184" r="4" fill="#0a84ff"/>
+    <circle cx="104" cy="184" r="4" fill="#0a84ff"/>
+    <circle cx="70" cy="117" r="4" fill="#0a84ff"/>
+    <!-- Labels -->
+    <text x="150" y="20" text-anchor="middle" font-size="11" font-weight="600" fill="#1d1d1f">哲学一致性</text>
+    <text x="265" y="105" text-anchor="start" font-size="11" font-weight="600" fill="#1d1d1f">视觉层级</text>
+    <text x="222" y="235" text-anchor="start" font-size="11" font-weight="600" fill="#1d1d1f">细节执行</text>
+    <text x="78" y="235" text-anchor="end" font-size="11" font-weight="600" fill="#1d1d1f">功能性</text>
+    <text x="35" y="105" text-anchor="end" font-size="11" font-weight="600" fill="#1d1d1f">创新性</text>
+  </svg>
+  <div class="radar-labels">
+    <span><span class="dot" style="background:#0a84ff"></span> 当前设计</span>
+    <span><span class="dot" style="background:rgba(0,0,0,0.08)"></span> 理想网格</span>
+  </div>
+</div>
+
+<!-- Dimensions -->
+<div class="dimensions">
+  <div class="dim">
+    <div class="dim-header">
+      <h3>哲学一致性 · Philosophy</h3>
+      <div><span class="score">6</span><span class="band"> / 10 Functional</span></div>
+    </div>
+    <p>
+      Apple-inspired 方向明确：glass morphism、rounded-xl 卡片、SF Pro 字体栈、ambient blob 背景。但系统混入两套调色板——自定义 <code>apple-green</code> 与 Tailwind <code>emerald-500</code> 在 toast 和健康评分中并存。按钮系统未收敛：<code>apple-button</code>（pill）、<code>apple-button-warm</code>（弹性缩放）、<code>apple-button-ghost</code>、<code>btn-primary</code>/<code>btn-secondary</code> 及大量内联样式同时存在，导致同一操作在不同页面呈现为 3–4 种不同控件。
+    </p>
+    <div class="action"><strong>Fix：</strong>将所有语义颜色映射到 <code>apple-*</code> token；合并按钮为 3 个变体（Solid / Ghost / Warm），删除 <code>btn-primary</code>。</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-header">
+      <h3>视觉层级 · Hierarchy</h3>
+      <div><span class="score">7</span><span class="band"> / 10 Strong</span></div>
+    </div>
+    <p>
+      字体层级清晰：<code>text-3xl</code> 页面标题 → <code>text-lg</code> 节标题 → <code>text-sm</code> 正文 → <code>text-xs</code> 元数据。Dashboard 的 section header 模式（icon + uppercase tracking-wider）一致且有效。HomePage 的搜索栏作为首要行动点，视觉权重正确。但跨页同类元素尺寸漂移：Dashboard stat cards 用 <code>p-5 text-2xl</code>，HomePage stat cards 用 <code>p-4 text-3xl font-bold</code>。"Knowledge Graph Mini" 标题使用 <code>font-bold</code> 而其他 section 用 <code>font-semibold</code>。
+    </p>
+    <div class="action"><strong>Fix：</strong>统一 stat card 组件，消除跨页尺寸/字重差异；建立 section title 的单一组件。</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-header">
+      <h3>细节执行 · Detail</h3>
+      <div><span class="score">6</span><span class="band"> / 10 Functional</span></div>
+    </div>
+    <p>
+      入场动画高度一致（<code>opacity:0, y:8</code>，duration 0.3s），glass 效果、自定义滚动条、selection 高亮均为加分项。但圆角混用：<code>rounded-xl</code>（卡片）、<code>rounded-2xl</code>（搜索/empty state）、<code>rounded-lg</code>（badge）同时出现。Skeleton 的雷达图占位符使用 <code>rounded-full</code>（圆形）而非与真实图表匹配的五边形。Sidebar 的分隔符在展开/折叠态使用两种不同样式（border-top vs 短横线）。Toast 的 progress bar 背景 <code>bg-black/10</code> 在 dark mode 下缺乏覆盖。
+    </p>
+    <div class="action"><strong>Fix：</strong>将圆角规范收敛到 <code>rounded-xl</code>（16px）与 <code>rounded-full</code>（pill）两级；修正 Skeleton 雷达图形状；为 progress bar 添加 dark mode track 色。</div>
+  </div>
+
+  <div class="dim">
+    <div class="dim-header">
+      <h3>功能性 · Functionality</h3>
+      <div><span class="score">8</span><span class="band"> / 10 Strong</span></div>
+    </div>
+    <p>
+      防御性工程做得扎实：vim 风格键盘快捷键（<code>g h/b/g</code>）、焦点陷阱、ARIA 标签（<code>role="alert"</code>、<code>aria-live="polite"</code>）、响应式断点（<code>md:</code>）、骨架屏 loading、通知系统的 progress toast。页面切换的 AnimatePresence 使导航有明确的流向感。唯一瑕疵：ToastContainer 的固定宽度 <code>w-80</code> 即使无 toast 时也会阻挡右侧 320px 的点击穿透；Sidebar 的 nav item <code>py-2</code> 在移动端 drawer 中 touch target 偏小。
+    </p>
+    <div class="action"><strong>Quick win：</strong>将 ToastContainer 改为仅在 toast 存在时渲染，或将其宽度收缩为 toast 实际宽度。</div>
+  </div>
+
+  <div class="dim" style="grid-column: 1 / -1;">
+    <div class="dim-header">
+      <h3>创新性 · Innovation</h3>
+      <div><span class="score">5</span><span class="band"> / 10 Functional</span></div>
+    </div>
+    <p>
+      整体处于"安全但平庸"的区间。Apple 美学本身是成熟设计系统，但作为"AI 驱动的知识管理工具"，视觉语言并未传达出智能、联结或认知的独特气质。GrowthTrendChart 的 CSS stroke-dashoffset 动画和 ambient blob 背景是不错的 touches，但缺乏一个令人难忘的视觉签名。没有 unexpected 的排版手势、没有专属的布局 motif、没有 material treatment 能让人感到"这是 Wiki Agent，不是又一个 Apple Dashboard"。
+    </p>
+    <div class="action"><strong>Fix：</strong>引入一个差异化的视觉符号——例如将知识图谱的边线动态映射到页面背景中，或使用节点脉冲动画作为 loading indicator，让"图"的概念渗透到 Chrome 层。</div>
+  </div>
+</div>
+
+<!-- Action lists -->
+<div class="actions">
+  <div class="action-card">
+    <h4><span class="check">✓</span> Keep · 保持</h4>
+    <ul>
+      <li><span class="check">✓</span> <strong>CSS 变量系统</strong>：light/dark 双主题通过 <code>:root</code> 与 <code>[data-theme='dark']</code> 切换，扩展性好。</li>
+      <li><span class="check">✓</span> <strong>入场动画节奏</strong>：统一的 <code>y:8 + opacity</code> 0.3s 入场，使全站有连贯的呼吸感。</li>
+      <li><span class="check">✓</span> <strong>glass 卡片</strong>：<code>.glass</code> 的 backdrop-blur + 半透明边框质感干净，不要丢。</li>
+      <li><span class="check">✓</span> <strong>键盘快捷键</strong>：vim 和弦导航是产品的差异化功能，保持可见性。</li>
+      <li><span class="check">✓</span> <strong>图标尺寸梯度</strong>：14px（按钮）→ 16px（nav）→ 18px（header）→ 20px（stats）的体系合理。</li>
+    </ul>
+  </div>
+
+  <div class="action-card">
+    <h4><span class="cross">✕</span> Fix · 必须修复</h4>
+    <ul>
+      <li><span class="cross">✕</span> <strong>统一按钮系统</strong>：删除 <code>btn-primary</code>/<code>btn-secondary</code>，收敛为 3 个变体。</li>
+      <li><span class="cross">✕</span> <strong>消除双调色板</strong>：将 <code>emerald-500</code>、<code>red-500</code> 替换为 <code>apple-green</code>、<code>apple-red</code>。</li>
+      <li><span class="cross">✕</span> <strong>统一 stat card</strong>：HomePage 与 Dashboard 的统计卡片尺寸/字重必须一致。</li>
+      <li><span class="cross">✕</span> <strong>圆角规范</strong>：卡片/容器统一 <code>rounded-xl</code>（16px），交互元素（button/badge）用 <code>rounded-full</code>。</li>
+      <li><span class="cross">✕</span> <strong>Toast 占位</strong>：空状态时不应占据 320px 点击盲区。</li>
+      <li><span class="cross">✕</span> <strong>Skeleton 诚实性</strong>：雷达图占位符应为五边形而非圆形。</li>
+    </ul>
+  </div>
+
+  <div class="action-card">
+    <h4><span class="star">★</span> Quick Wins · 快速收益</h4>
+    <ul>
+      <li><span class="star">★</span> <strong>标题字重</strong>：全局搜索 <code>font-bold</code> 替换为 <code>font-semibold</code>（仅保留数据高亮）。</li>
+      <li><span class="star">★</span> <strong>Progress bar dark</strong>：为 toast progress track 添加 <code>dark:bg-white/10</code>。</li>
+      <li><span class="star">★</span> <strong>Sidebar 分隔符</strong>：collapsed 态的短横线改为与 expanded 态一致的 <code>border-t</code> 逻辑。</li>
+      <li><span class="star">★</span> <strong>Empty state 圆角</strong>：将 empty state 卡片从 <code>rounded-2xl</code> 降为 <code>rounded-xl</code> 以匹配全局。</li>
+      <li><span class="star">★</span> <strong>Search focus ring</strong>：将 <code>shadow-[0_0_0_3px_rgba(10,132,255,0.15)]</code> 提取为 <code>--focus-ring</code> token。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Frontier -->
+<div class="frontier">
+  <h4>下一步：从"Apple Clone"走向"Wiki Agent 身份"</h4>
+  <p>
+    当前设计是安全的、可读的、专业的——但它可以属于任何 SaaS Dashboard。作为 AI 驱动的知识图谱工具，视觉语言需要开始回答"为什么是这个产品"。以下是基于 <strong>frontend-design</strong> skill 的三个差异化方向：
+  </p>
+  <ul>
+    <li><strong>Organic + Neural（推荐）</strong>：保留现有 rounded corners 和温暖色调，引入微妙的节点网络纹理（SVG feTurbulence 粒子）作为页面背景，让"知识图谱"的隐喻渗透到 chrome 层。配色从纯 Apple 转向有机 earth tones（sage, clay, moss），传达知识的生长感而非工具的冰冷感。</li>
+    <li><strong>Swiss + Graph Paper</strong>：将当前设计推向更极端的 Swiss 方向——纯白背景、可见的 1px 网格线、不对称排版、将节点/边的数值作为构图元素（类似印刷品中的 folio number）。适合强调"结构化知识"的精确感。</li>
+    <li><strong>Retro-Futuristic Terminal</strong>：深色 phosphor green + amber 双色调，CRT scanline 纹理，等宽字体主导。适合极客用户群体，但会牺牲目前的通用亲和力。</li>
+  </ul>
+  <p style="margin-top:12px;">
+    建议先完成 Fix 列表中的系统级收敛，再选择一个差异化方向进行下一轮的视觉跃迁。
+  </p>
+</div>
+
+<footer>
+  Generated by OD · Critique skill · LLM Wiki Agent · 2026-05-06
+</footer>
+
+</body>
+</html>

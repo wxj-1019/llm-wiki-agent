@@ -15,7 +15,7 @@ export function AudioOverview({ text, onClose }: Props) {
   const speedOptions = [0.5, 1, 1.5, 2];
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-2xl shadow-lg p-4">
+    <div className="fixed bottom-4 right-4 z-50 w-80 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-xl shadow-lg p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Volume2 size={16} className="text-apple-blue" />
