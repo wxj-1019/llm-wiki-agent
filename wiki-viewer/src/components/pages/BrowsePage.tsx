@@ -247,7 +247,7 @@ export function BrowsePage() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
             className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-[0.97]"
-            aria-label="Previous page"
+            aria-label={t('browse.pagination.previous')}
           >
             <ChevronLeft size={16} />
           </button>
@@ -287,7 +287,7 @@ export function BrowsePage() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
             className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-[0.97]"
-            aria-label="Next page"
+            aria-label={t('browse.pagination.next')}
           >
             <ChevronRight size={16} />
           </button>

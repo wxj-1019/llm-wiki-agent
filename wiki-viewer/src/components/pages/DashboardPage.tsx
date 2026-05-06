@@ -221,7 +221,7 @@ function RadarChart({ values }: { values: number[] }) {
         {/* Data area */}
         <polygon
           points={points}
-          fill="rgba(10, 132, 255, 0.08)"
+          fill="var(--chart-fill)"
           stroke="var(--apple-blue)"
           strokeWidth={1.5}
           strokeLinejoin="round"
@@ -376,6 +376,7 @@ function TypeBarChart({ stats }: { stats: WikiStats }) {
 }
 
 function GrowthTrendChart({ currentPages }: { currentPages: number }) {
+  const { t, i18n } = useTranslation();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const days = useMemo(() => {
@@ -395,7 +396,7 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
       const noise = i === 6 ? 0 : Math.sin(i * 2.5) * 0.08 * maxPages;
       return {
         date,
-        label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        label: date.toLocaleDateString(i18n.language === 'zh-CN' ? 'zh-CN' : 'en', { month: 'short', day: 'numeric' }),
         value: Math.max(0, Math.round(base + noise)),
       };
     });
@@ -465,7 +466,7 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
         ))}
 
         {/* Area under line */}
-        <polygon points={areaPoints} fill="rgba(10, 132, 255, 0.06)" />
+        <polygon points={areaPoints} fill="var(--chart-fill-area)" />
 
         {/* Trend line */}
         <polyline
@@ -506,7 +507,7 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
           }}
         >
           <div className="font-medium text-[var(--text-primary)]">{data[hoveredIndex].label}</div>
-          <div className="text-[var(--text-secondary)]">{data[hoveredIndex].value} pages</div>
+          <div className="text-[var(--text-secondary)]">{t('dashboard.pageCount', { count: data[hoveredIndex].value })}</div>
         </div>
       )}
     </div>

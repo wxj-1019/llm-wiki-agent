@@ -50,6 +50,8 @@
     --marshmallow-sky: #BAE6FD;
     --marshmallow-lavender: #DDD6FE;
     --marshmallow-peach: #FFD6C1;
+    --chart-fill: rgba(10, 132, 255, 0.08);
+    --chart-fill-area: rgba(10, 132, 255, 0.06);
   }
 
   [data-theme='dark'] {
@@ -77,6 +79,8 @@
     --marshmallow-sky: #7DD3FC;
     --marshmallow-lavender: #C4B5FD;
     --marshmallow-peach: #FCA5A5;
+    --chart-fill: rgba(41, 151, 255, 0.12);
+    --chart-fill-area: rgba(41, 151, 255, 0.10);
   }
 
   html {

@@ -146,7 +146,7 @@ export function SearchPage() {
             aria-label={t('search.semantic')}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-[var(--bg-primary)] rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
             />
           </button>
           <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">

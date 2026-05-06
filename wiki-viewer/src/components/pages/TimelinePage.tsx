@@ -37,14 +37,14 @@ const TYPE_COLORS: Record<string, string> = {
 
 function logEntryToEvent(entry: LogEntry): TimelineEvent {
   const typeDesc: Record<string, string> = {
-    ingest: 'Ingested a new source document',
-    query: 'Ran a knowledge query',
-    health: 'Performed a health check',
-    lint: 'Ran content quality lint',
-    graph: 'Built or updated the knowledge graph',
-    heal: 'Auto-healed missing entities',
-    refresh: 'Refreshed stale source pages',
-    report: 'Generated a report',
+    ingest: t('timeline.type.ingest'),
+    query: t('timeline.type.query'),
+    health: t('timeline.type.health'),
+    lint: t('timeline.type.lint'),
+    graph: t('timeline.type.graph'),
+    heal: t('timeline.type.heal'),
+    refresh: t('timeline.type.refresh'),
+    report: t('timeline.type.report'),
   };
   return {
     date: entry.date,

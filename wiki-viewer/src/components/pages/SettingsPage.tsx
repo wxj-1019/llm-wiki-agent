@@ -174,9 +174,17 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {/* GitHub Panel */}
-      {activeTab === 'github' && (
-        <div className="space-y-6 max-w-2xl">
+      {/* Tab Panels */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'github' && (
+          <motion.div
+            key="github"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <Key size={16} className="text-apple-blue" />
@@ -285,12 +293,18 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* RSS Panel */}
-      {activeTab === 'rss' && (
-        <div className="space-y-4 max-w-2xl">
+        {activeTab === 'rss' && (
+          <motion.div
+            key="rss"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <Rss size={16} className="text-orange-500" />
@@ -298,9 +312,11 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-3">
               {config.rss.feeds.length === 0 && (
-                <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">
-                  {t('settings.rss.empty')}
-                </p>
+                <div className="py-8 text-center">
+                  <Rss size={32} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+                  <p className="text-sm text-[var(--text-tertiary)]">{t('settings.rss.empty')}</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 opacity-60">{t('settings.rss.emptyHint')}</p>
+                </div>
               )}
               {config.rss.feeds.map((feed, idx) => (
                 <div key={idx} className="flex items-start gap-3">
@@ -355,12 +371,18 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* arXiv Panel */}
-      {activeTab === 'arxiv' && (
-        <div className="space-y-4 max-w-2xl">
+        {activeTab === 'arxiv' && (
+          <motion.div
+            key="arxiv"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <BookOpen size={16} className="text-red-500" />
@@ -368,9 +390,11 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-3">
               {config.arxiv.queries.length === 0 && (
-                <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">
-                  {t('settings.arxiv.empty')}
-                </p>
+                <div className="py-8 text-center">
+                  <BookOpen size={32} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+                  <p className="text-sm text-[var(--text-tertiary)]">{t('settings.arxiv.empty')}</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 opacity-60">{t('settings.arxiv.emptyHint')}</p>
+                </div>
               )}
               {config.arxiv.queries.map((q, idx) => (
                 <div key={idx} className="flex items-start gap-3">
@@ -425,12 +449,18 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* LLM Panel */}
-      {activeTab === 'llm' && (
-        <div className="space-y-6 max-w-2xl">
+        {activeTab === 'llm' && (
+          <motion.div
+            key="llm"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <Bot size={16} className="text-purple-500" />
@@ -548,8 +578,9 @@ export function SettingsPage() {
               {llmSaveStatus === 'success' ? t('settings.saved') : llmSaveStatus === 'error' ? t('settings.error') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </motion.div>
   );
 }

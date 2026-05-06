@@ -33,9 +33,27 @@ function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+let _systemThemeListener: ((e: MediaQueryListEvent) => void) | null = null;
+
 function applyTheme(theme: 'light' | 'dark' | 'system') {
   const effective = theme === 'system' ? getSystemTheme() : theme;
   document.documentElement.setAttribute('data-theme', effective);
+
+  // Listen for system theme changes when in "system" mode
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  if (theme === 'system') {
+    if (!_systemThemeListener) {
+      _systemThemeListener = (e: MediaQueryListEvent) => {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      };
+      mql.addEventListener('change', _systemThemeListener);
+    }
+  } else {
+    if (_systemThemeListener) {
+      mql.removeEventListener('change', _systemThemeListener);
+      _systemThemeListener = null;
+    }
+  }
 }
 
 import { safeGet, safeSet, isObject } from '@/lib/safeStorage';

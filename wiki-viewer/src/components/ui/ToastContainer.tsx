@@ -40,7 +40,7 @@ export function ToastContainer() {
                 {toast.type !== 'progress' && (
                   <button
                     onClick={() => dismissToast(toast.id)}
-                    className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                    className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
                     aria-label="Dismiss toast"
                   >
                     <X size={14} aria-hidden="true" />

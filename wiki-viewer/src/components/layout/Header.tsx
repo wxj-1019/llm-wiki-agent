@@ -100,7 +100,7 @@ export function Header() {
         {sidebarCollapsed ? <Menu size={16} aria-hidden="true" /> : <X size={16} aria-hidden="true" />}
       </button>
 
-      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2.5" aria-label="LLM Wiki Viewer home">
+      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2.5" aria-label={t('meta.homeAria')}>
         <img src="/logo.svg?v=6" alt="" className="w-7 h-7 rounded-lg" aria-hidden="true" />
         <span className="hidden sm:inline">{t('brand.name')}</span>
       </Link>

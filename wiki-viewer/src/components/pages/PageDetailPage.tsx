@@ -351,9 +351,9 @@ export function PageDetailPage({ type }: Props) {
               {/* Edit mode toolbar */}
               <div className="flex items-center gap-2">
                 {([
-                  { mode: 'edit' as const, icon: Edit3, label: 'Edit' },
-                  { mode: 'preview' as const, icon: Eye, label: 'Preview' },
-                  { mode: 'split' as const, icon: Columns, label: 'Split' },
+                  { mode: 'edit' as const, icon: Edit3, label: t('detail.editMode.edit') },
+                  { mode: 'preview' as const, icon: Eye, label: t('detail.editMode.preview') },
+                  { mode: 'split' as const, icon: Columns, label: t('detail.editMode.split') },
                 ]).map(({ mode, icon: Icon, label }) => (
                   <button
                     key={mode}
@@ -376,13 +376,13 @@ export function PageDetailPage({ type }: Props) {
                       ? 'bg-apple-blue/10 text-apple-blue'
                       : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                   }`}
-                  title={collaborate ? 'Stop collaborating' : 'Collaborate'}
+                  title={collaborate ? t('detail.collaborate.stop') : t('detail.collaborate.start')}
                 >
                   <Users size={14} />
-                  <span className="hidden sm:inline">{collaborate ? 'Collaborating' : 'Collaborate'}</span>
+                  <span className="hidden sm:inline">{collaborate ? t('detail.collaborate.active') : t('detail.collaborate.start')}</span>
                 </button>
                 {draftKey && hasDraft && (
-                  <span className="text-xs text-apple-blue ml-2">Draft saved</span>
+                  <span className="text-xs text-apple-blue ml-2">{t('detail.draftSaved')}</span>
                 )}
               </div>
 
@@ -476,9 +476,14 @@ export function PageDetailPage({ type }: Props) {
         </h2>
         {backlinks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {backlinks.map((link) => (
+            {backlinks.map((link, i) => (
+              <motion.div
+                key={link.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.2 }}
+              >
                 <Link
-                  key={link.id}
                   to={getPagePath(link)}
                   className="apple-card p-3 flex items-center gap-3"
                 >
@@ -487,9 +492,10 @@ export function PageDetailPage({ type }: Props) {
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
                 </Link>
-              ))}
+              </motion.div>
+            ))}
           </div>
-        ) : (
+        )} : (
           <div className="apple-card p-6 text-center">
             <p className="text-sm text-[var(--text-secondary)] mb-1">{t('detail.backlinks.zero')}</p>
             <p className="text-xs text-[var(--text-tertiary)]">{t('detail.backlinks.hint')}</p>

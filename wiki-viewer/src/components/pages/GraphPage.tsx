@@ -497,15 +497,15 @@ export function GraphPage() {
                 if (!net) return;
                 const selected = net.getSelectedNodes();
                 if (selected.length === 0) return;
-                if (!window.confirm(`Delete ${selected.length} selected node(s)?`)) return;
+                if (!window.confirm(t('graph.confirmDelete', { count: selected.length }))) return;
                 const ds = nodesDataSetRef.current;
                 if (ds) {
                   selected.forEach((id: string) => ds.remove(id));
                 }
               }}
               className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-red-500 bg-red-500/10"
-              title="Delete selected nodes"
-              aria-label="Delete selected nodes"
+              title={t('graph.tooltip.deleteSelected')}
+              aria-label={t('graph.tooltip.deleteSelected')}
             >
               <Trash2 size={14} aria-hidden="true" />
             </button>
@@ -521,13 +521,13 @@ export function GraphPage() {
             try {
               const res = await fetch('/api/tools/build-graph', { method: 'POST' });
               if (res.ok) {
-                addNotification('Graph rebuilt successfully', 'success');
+                addNotification(t('graph.rebuildSuccess'), 'success');
                 initialize();
               } else {
-                addNotification('Failed to rebuild graph', 'error');
+                addNotification(t('graph.rebuildFailed'), 'error');
               }
             } catch {
-              addNotification('Failed to rebuild graph', 'error');
+              addNotification(t('graph.rebuildFailed'), 'error');
             } finally {
               setRebuilding(false);
             }
@@ -538,8 +538,8 @@ export function GraphPage() {
               ? 'bg-apple-green/10 text-apple-green'
               : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
           }`}
-          title="Rebuild graph"
-          aria-label="Rebuild graph"
+          title={t('graph.tooltip.rebuild')}
+          aria-label={t('graph.tooltip.rebuild')}
         >
           <RefreshCw size={14} className={rebuilding ? 'animate-spin' : ''} />
           <span className="hidden sm:inline">Rebuild</span>

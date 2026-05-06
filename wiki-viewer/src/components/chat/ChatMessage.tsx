@@ -1,8 +1,22 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Copy, Check, RefreshCw, Loader2 } from 'lucide-react';
+import { Copy, Check, RefreshCw } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import type { WikiChatSource } from '@/services/chatService';
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-[var(--text-tertiary)] animate-bounce"
+          style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export interface ChatEntry {
   role: 'user' | 'assistant';
@@ -81,12 +95,12 @@ export const ChatMessage = memo(function ChatMessage({
                 />
               ) : entry.sources && entry.sources.length > 0 ? (
                 <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <Loader2 size={14} className="animate-spin" />
+                  <TypingIndicator />
                   {t('chat.typing')}
                 </div>
               ) : streaming && isLastAssistant ? (
                 <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <Loader2 size={14} className="animate-spin" />
+                  <TypingIndicator />
                   {t('chat.searching')}
                 </div>
               ) : null}

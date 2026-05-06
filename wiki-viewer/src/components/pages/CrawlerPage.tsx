@@ -132,7 +132,7 @@ export function CrawlerPage() {
       setSettings(parsed.settings);
       setDirty(false);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load config');
+      setError(e instanceof Error ? e.message : t('crawler.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ export function CrawlerPage() {
       setSuccess(t('crawler.saved'));
       setTimeout(() => setSuccess(null), 3000);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to save');
+      setError(e instanceof Error ? e.message : t('crawler.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -184,7 +184,7 @@ export function CrawlerPage() {
       const result = await runCrawler();
       setCrawlResult(result);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Crawl failed');
+      setError(e instanceof Error ? e.message : t('crawler.crawlFailed'));
     } finally {
       setRunning(false);
     }
@@ -199,7 +199,7 @@ export function CrawlerPage() {
       const result = await runBatchPipeline();
       setBatchResult(result);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Pipeline failed');
+      setError(e instanceof Error ? e.message : t('crawler.pipelineFailed'));
     } finally {
       setRunningPipeline(false);
     }
@@ -212,11 +212,11 @@ export function CrawlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
             <Globe className="w-6 h-6 text-apple-blue" />
             {t('crawler.title')}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('crawler.subtitle')}</p>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">{t('crawler.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {dirty && (
@@ -285,7 +285,7 @@ export function CrawlerPage() {
         <button
           onClick={loadConfig}
           disabled={isBusy}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           {t('crawler.reload')}
@@ -302,7 +302,7 @@ export function CrawlerPage() {
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`rounded-xl ${bg} p-4 text-center`}>
               <div className={`text-2xl font-bold ${color}`}>{value}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</div>
+              <div className="text-xs text-[var(--text-secondary)] mt-1">{label}</div>
             </div>
           ))}
         </div>
@@ -311,7 +311,7 @@ export function CrawlerPage() {
       {/* Batch pipeline result */}
       {batchResult && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('crawler.pipelineSteps')}</h3>
+          <h3 className="text-sm font-semibold text-[var(--text-secondary)]">{t('crawler.pipelineSteps')}</h3>
           {batchResult.steps.map((step) => (
             <div
               key={step.name}
@@ -324,7 +324,7 @@ export function CrawlerPage() {
               {step.success
                 ? <CheckCircle className="w-4 h-4 text-apple-green flex-shrink-0" />
                 : <AlertCircle className="w-4 h-4 text-apple-red flex-shrink-0" />}
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{step.name}</span>
+              <span className="text-sm font-medium text-[var(--text-primary)]">{step.name}</span>
               <span className="text-xs text-gray-500 ml-auto">exit {step.returncode}</span>
             </div>
           ))}
@@ -338,7 +338,7 @@ export function CrawlerPage() {
       <div className="glass-card rounded-2xl overflow-hidden">
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
         >
           {showSettings ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           {t('crawler.settings')}
@@ -360,7 +360,7 @@ export function CrawlerPage() {
                   { key: 'user_agent', label: t('crawler.setting.userAgent'), type: 'text' },
                 ].map(({ key, label, type }) => (
                   <div key={key}>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{label}</label>
                     <input
                       type={type}
                       value={(settings as Record<string, unknown>)[key] as string | number}
@@ -369,7 +369,7 @@ export function CrawlerPage() {
                         setSettings(prev => ({ ...prev, [key]: val }));
                         setDirty(true);
                       }}
-                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+                      className="w-full px-3 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
                     />
                   </div>
                 ))}
@@ -387,7 +387,7 @@ export function CrawlerPage() {
                       }}
                       className="w-4 h-4 rounded border-gray-300 text-apple-blue focus:ring-apple-blue/50"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                    <span className="text-sm text-[var(--text-secondary)]">{label}</span>
                   </label>
                 ))}
               </div>
@@ -398,7 +398,7 @@ export function CrawlerPage() {
 
       {/* Add URL */}
       <div className="glass-card rounded-2xl p-5 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2">
           <Plus className="w-4 h-4" />
           {t('crawler.addUrl')}
         </h3>
@@ -408,7 +408,7 @@ export function CrawlerPage() {
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder={t('crawler.urlPlaceholder')}
-            className="sm:col-span-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+            className="sm:col-span-2 px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddUrl(); }}
           />
           <div className="flex gap-2">
@@ -417,7 +417,7 @@ export function CrawlerPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={t('crawler.namePlaceholder')}
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+              className="flex-1 px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
             />
             <button
               onClick={handleAddUrl}
@@ -433,14 +433,14 @@ export function CrawlerPage() {
           value={newTags}
           onChange={(e) => setNewTags(e.target.value)}
           placeholder={t('crawler.tagsPlaceholder')}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+          className="w-full px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
         />
       </div>
 
       {/* URL List */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <div className="px-5 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[var(--text-secondary)]">
             {t('crawler.urlList')} ({urls.length})
           </h3>
         </div>
@@ -455,15 +455,15 @@ export function CrawlerPage() {
             <p className="text-sm">{t('crawler.empty')}</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="divide-y divide-[var(--border-subtle)]">
             {urls.map((item, idx) => (
-              <div key={idx} className="flex items-start gap-3 px-5 py-3 group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+              <div key={idx} className="flex items-start gap-3 px-5 py-3 group hover:hover:bg-[var(--bg-secondary)] transition-colors">
                 <Globe className="w-4 h-4 text-apple-blue mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   {item.name && (
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.name}</p>
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">{item.name}</p>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.url}</p>
+                  <p className="text-xs text-[var(--text-secondary)] truncate">{item.url}</p>
                   {item.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {item.tags.map((tag) => (
@@ -496,14 +496,14 @@ export function CrawlerPage() {
             exit={{ opacity: 0, height: 0 }}
             className="glass-card rounded-2xl overflow-hidden"
           >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-default)]">
+              <h3 className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2">
                 <Terminal className="w-4 h-4" />
                 {t('crawler.output')}
               </h3>
               <button
                 onClick={() => setShowOutput(false)}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-1 rounded hover:bg-[var(--bg-secondary)]"
               >
                 <X className="w-4 h-4 text-gray-400" />
               </button>

@@ -177,7 +177,7 @@ export function UploadPage() {
 
   const handleFetchUrl = useCallback(async () => {
     if (!fetchUrl.trim()) {
-      showToast('Please enter a URL', 'error');
+      showToast(t('upload.enterUrl'), 'error');
       return;
     }
     try {
@@ -191,7 +191,7 @@ export function UploadPage() {
         setFetchName('');
         await loadFiles();
       } else {
-        showToast(result.stderr || 'Fetch failed', 'error');
+        showToast(result.stderr || t('upload.fetchFailed'), 'error');
       }
     } catch (err) {
       showToast(String(err), 'error');
@@ -237,7 +237,7 @@ export function UploadPage() {
     try {
       setDeletingPaths((prev) => new Set(prev).add(file.path));
       await deleteRawFile(file.path);
-      showToast(t('upload.delete') + ': ' + file.name, 'success');
+      showToast(t('upload.deletedFile', { name: file.name }), 'success');
       setSelectedPaths((prev) => { const n = new Set(prev); n.delete(file.path); return n; });
       await loadFiles();
     } catch (err) {

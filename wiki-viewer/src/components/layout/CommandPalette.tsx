@@ -204,7 +204,7 @@ export function CommandPalette() {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Command palette"
+            aria-label={t('cmd.ariaLabel')}
           >
             {/* Search input */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border-default)]">

@@ -9,6 +9,21 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('wiki-viewer-storage');
+          if (stored) {
+            var parsed = JSON.parse(stored);
+            var theme = parsed.state && parsed.state.theme ? parsed.state.theme : 'system';
+            var effective = theme === 'system'
+              ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+              : theme;
+            document.documentElement.setAttribute('data-theme', effective);
+          }
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
     <title>LLM Wiki Viewer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
