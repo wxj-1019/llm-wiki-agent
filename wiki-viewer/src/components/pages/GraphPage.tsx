@@ -25,9 +25,9 @@ function getThemeColors(): Record<string, string> {
     synthesis: root.getPropertyValue('--apple-orange').trim() || '#D97706',
   };
 }
-const EDGE_COLOR_EXTRACTED = 'rgba(0, 122, 255, 0.25)';
-const EDGE_COLOR_INFERRED = 'rgba(120, 120, 128, 0.15)';
-const EDGE_COLOR_AMBIGUOUS = 'rgba(120, 120, 128, 0.08)';
+const EDGE_COLOR_EXTRACTED = 'rgba(10, 132, 255, 0.18)';
+const EDGE_COLOR_INFERRED = 'rgba(140, 140, 150, 0.12)';
+const EDGE_COLOR_AMBIGUOUS = 'rgba(140, 140, 150, 0.06)';
 function getAppleEdgeColor(edgeType: string): string {
   if (edgeType === 'EXTRACTED') return EDGE_COLOR_EXTRACTED;
   if (edgeType === 'AMBIGUOUS') return EDGE_COLOR_AMBIGUOUS;
@@ -42,8 +42,8 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
-import type { Network } from 'vis-network';
-import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Plus, Layers } from 'lucide-react';
+
+import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -57,8 +57,11 @@ export function GraphPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const networkRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodesDataSetRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const edgesDataSetRef = useRef<any>(null);
   const graphData = useWikiStore((s) => s.graphData);
   const loading = useWikiStore((s) => s.loading);
@@ -182,6 +185,7 @@ export function GraphPage() {
 
     const network = new VisNetwork(
       containerRef.current,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { nodes: nodesDataSet as any, edges: edgesDataSet as any },
       {
         physics: {
@@ -238,7 +242,8 @@ export function GraphPage() {
       const themeColors = getThemeColors();
       const allNodes = nodesDataSetRef.current.get();
       nodesDataSetRef.current.update(
-        (allNodes as any[]).map((n) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (allNodes as any[]).map((n: any) => {
           const ic = themeColors[n.type] || n.color?.background || '#0A84FF';
           return {
             id: n.id,
@@ -286,7 +291,7 @@ export function GraphPage() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={32} className="text-apple-blue animate-spin mx-auto mb-4" />
           <p className="text-sm text-[var(--text-secondary)]">{t('graph.loading')}</p>
@@ -297,7 +302,7 @@ export function GraphPage() {
 
   if (error || !graphData) {
     return (
-      <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="empty-state-warm">
           <div className="flex justify-center mb-4">
             <Frown size={48} className="text-apple-orange" />
@@ -318,7 +323,7 @@ export function GraphPage() {
 
   if (nodes.length === 0) {
     return (
-      <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="empty-state-warm">
           <div className="flex justify-center mb-4">
             <NetworkIcon size={48} className="text-apple-blue" />
@@ -335,7 +340,7 @@ export function GraphPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 relative">
+    <div className="h-full relative">
       {/* Graph Canvas */}
       <div ref={containerRef} className="w-full h-full bg-[var(--bg-primary)]" />
 
@@ -577,7 +582,7 @@ export function GraphPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             onClick={(e) => {

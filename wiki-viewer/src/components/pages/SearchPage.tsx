@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers, Loader2, BrainCircuit, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,20 @@ const typeIcons: Record<string, React.ElementType> = {
   synthesis: Layers,
 };
 
+const typeColors: Record<string, string> = {
+  source: 'text-apple-blue bg-apple-blue/10',
+  entity: 'text-apple-green bg-apple-green/10',
+  concept: 'text-apple-purple bg-apple-purple/10',
+  synthesis: 'text-apple-orange bg-apple-orange/10',
+};
+
+const typeTagColors: Record<string, string> = {
+  source: 'text-apple-blue bg-apple-blue/10 border-apple-blue/20',
+  entity: 'text-apple-green bg-apple-green/10 border-apple-green/20',
+  concept: 'text-apple-purple bg-apple-purple/10 border-apple-purple/20',
+  synthesis: 'text-apple-orange bg-apple-orange/10 border-apple-orange/20',
+};
+
 function HighlightText({ text, matches }: { text: string; matches?: ReadonlyArray<[number, number]> }) {
   if (!matches || matches.length === 0) return <>{text}</>;
   const elements: React.ReactNode[] = [];
@@ -29,7 +43,7 @@ function HighlightText({ text, matches }: { text: string; matches?: ReadonlyArra
       elements.push(<span key={`t-${i}`}>{text.slice(lastIndex, start)}</span>);
     }
     elements.push(
-      <mark key={`h-${i}`} className="bg-apple-blue/15 text-[var(--text-primary)] px-0.5 rounded">
+      <mark key={`h-${i}`} className="bg-apple-blue/10 text-[var(--text-primary)] px-0.5 rounded">
         {text.slice(start, end + 1)}
       </mark>
     );
@@ -109,39 +123,41 @@ export function SearchPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-semibold mb-6">{t('search.title')}</h1>
 
-      <div className="relative mb-8">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); userEditedRef.current = true; }}
-          placeholder={t('search.placeholder')}
-          aria-label={t('search.placeholder')}
-          className="apple-input pl-9 text-lg"
-        />
+      <div className="relative mb-8 max-w-2xl">
+        <div className="flex items-center gap-3 w-full px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_4px_rgba(10,132,255,0.08)] transition-all duration-200 rounded-2xl">
+          <Search size={20} className="text-[var(--text-tertiary)] shrink-0" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); userEditedRef.current = true; }}
+            placeholder={t('search.placeholder')}
+            aria-label={t('search.placeholder')}
+            className="flex-1 bg-transparent outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] text-lg"
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 select-none">
+        <div className="flex items-center gap-3 select-none">
           <button
             onClick={handleToggleSemantic}
-            className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-apple-blue/30 ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`}
+            className={`relative w-10 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-apple-blue/30 ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`}
             aria-pressed={semantic}
             aria-label={t('search.semantic')}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
             />
           </button>
           <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
-            <BrainCircuit size={14} />
+            <BrainCircuit size={16} />
             {t('search.semantic')}
           </span>
         </div>
         <button
           onClick={handleReindex}
           disabled={reindexing}
-          className="flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-apple-blue transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-tertiary)] hover:text-apple-blue hover:bg-apple-blue/10 rounded-xl transition-all active:scale-[0.97] disabled:opacity-50"
           title={t('search.reindex')}
         >
           {reindexing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
@@ -173,17 +189,19 @@ export function SearchPage() {
             >
               <Link
                 to={getPagePath(node)}
-                className="apple-card p-4 flex items-start gap-4 block"
+                className="apple-card p-4 flex items-start gap-4 block group"
               >
-                <div className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)]">
-                  <Icon size={16} />
+                <div className={`p-2.5 rounded-xl shrink-0 ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>
+                  <Icon size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold">
+                    <span className="font-semibold group-hover:text-apple-blue transition-colors">
                       <HighlightText text={node.label} matches={labelMatches?.indices} />
                     </span>
-                    <span className="text-xs text-[var(--text-tertiary)] capitalize">{t(typeLabelKey(node.type) as string)}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-lg border ${typeTagColors[node.type] || 'text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-[var(--border-default)]'}`}>
+                      {t(typeLabelKey(node.type) as string)}
+                    </span>
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
                     <HighlightText text={node.preview} matches={previewMatches?.indices} />

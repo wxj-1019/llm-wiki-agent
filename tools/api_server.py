@@ -329,7 +329,8 @@ def _fallback_search(query: str, limit: int) -> list[dict]:
             continue
         try:
             content = p.read_text(encoding="utf-8")
-        except Exception:
+        except Exception as e:
+            logger.warning("Fallback search skipped file: %s", e)
             continue
         if q_clean in content.lower():
             results.append({
@@ -355,7 +356,8 @@ def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200
             continue
         try:
             content = p.read_text(encoding="utf-8")
-        except Exception:
+        except Exception as e:
+            logger.warning("Fallback search skipped file: %s", e)
             continue
         if q_clean in content.lower():
             preview_raw = content[:200].replace("<", "&lt;").replace(">", "&gt;")
@@ -426,8 +428,8 @@ def get_system_status():
                     if match:
                         last_ingest = match.group(1)
                         break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("File conversion failed: %s", e)
 
     cfg = _load_llm_config()
     return {
@@ -581,7 +583,8 @@ async def upload_file(file: UploadFile = File(...)):
                 return cp
             converted_path = await asyncio.to_thread(_do_convert)
             converted = converted_path.relative_to(REPO).as_posix()
-        except Exception:
+        except Exception as e:
+            logger.warning("Config back-compat cleanup failed: %s", e)
             pass
 
     return {
@@ -979,7 +982,7 @@ def get_config(name: str):
     return {"name": safe_name, "content": path.read_text(encoding="utf-8")}
 
 
-ALLOWED_CONFIG_NAMES = {"llm", "github", "app", "search", "github_sources", "rss_sources", "arxiv_sources"}
+ALLOWED_CONFIG_NAMES = {"llm", "github", "app", "search", "github_sources", "rss_sources", "arxiv_sources", "web_sources"}
 
 @app.post("/api/config/{name}")
 async def save_config(name: str, request: Request):
@@ -1192,7 +1195,8 @@ def _load_llm_config() -> dict:
         return {}
     try:
         cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    except Exception:
+    except Exception as e:
+        logger.warning("LLM config load failed: %s", e)
         return {}
     # Load API key from separate secure location
     if LLM_API_KEY_PATH.exists():
@@ -1436,8 +1440,8 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
             })
         if results:
             return results
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Log parse failed: %s", e)
     q_words = [w for w in q_lower.split() if len(w) >= 2]
     if not q_words:
         q_words = [q_lower]
@@ -1684,7 +1688,8 @@ async def save_llm_config(payload: LLMConfigPayload):
             if "api_key" in existing:
                 existing.pop("api_key")
                 LLM_CONFIG_PATH.write_text(yaml.safe_dump(existing, default_flow_style=False, sort_keys=False), encoding="utf-8")
-        except Exception:
+        except Exception as e:
+            logger.warning("Config back-compat cleanup failed: %s", e)
             pass
     LLM_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     LLM_CONFIG_PATH.write_text(yaml.safe_dump(cfg, default_flow_style=False, sort_keys=False), encoding="utf-8")
@@ -2191,6 +2196,86 @@ async def tools_build_graph(payload: ToolRunPayload | None = None):
     return result
 
 
+# ── Web Fetcher (URL to article) ──
+class FetchUrlPayload(BaseModel):
+    url: str = Field(..., description="URL to fetch")
+    name: str = Field(default="", description="Optional display name")
+    tags: list[str] = Field(default_factory=list, description="Tags for the article")
+
+
+@app.post("/api/fetch/url")
+async def fetch_url_endpoint(payload: FetchUrlPayload):
+    """Fetch a single web URL and extract article content via web_fetcher.py."""
+    url = payload.url.strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    result = await asyncio.to_thread(
+        _run_tool_script, "fetchers/web_fetcher.py", ["--url", url]
+    )
+    # Parse stdout to find saved filename
+    saved_file = None
+    quality = None
+    for line in result.get("stdout", "").split("\n"):
+        if "[OK] Saved to" in line:
+            parts = line.split("Saved to ")
+            if len(parts) > 1:
+                saved_file = parts[1].split(" ")[0]
+        if "[Q=" in line:
+            q_part = line.split("[Q=")[1].split("]")[0] if "[Q=" in line else ""
+            quality = q_part
+    return {
+        "success": result["success"],
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+        "saved_file": saved_file,
+        "quality": quality,
+    }
+
+
+# ── Web Crawler (batch) ──
+@app.post("/api/crawler/run")
+async def crawler_run():
+    """Run web_fetcher.py with config to crawl all URLs in web_sources.yaml."""
+    result = await asyncio.to_thread(
+        _run_tool_script, "fetchers/web_fetcher.py", ["--config", "config/web_sources.yaml"]
+    )
+    stats = {"saved": 0, "skipped": 0, "errors": 0}
+    for line in result.get("stdout", "").split("\n"):
+        if "[OK] Saved" in line:
+            stats["saved"] += 1
+        elif "[SKIP]" in line:
+            stats["skipped"] += 1
+        elif "[ERROR]" in line or "[FALLBACK-ERR]" in line:
+            stats["errors"] += 1
+    return {**result, "stats": stats}
+
+
+@app.post("/api/crawler/batch")
+async def crawler_batch():
+    """Run full pipeline: web_fetcher → batch_compiler → batch_ingest."""
+    steps: list[dict] = []
+
+    step1 = await asyncio.to_thread(
+        _run_tool_script, "fetchers/web_fetcher.py", ["--config", "config/web_sources.yaml"]
+    )
+    steps.append({"name": "web_fetcher", **step1})
+    if not step1["success"]:
+        return {"success": False, "steps": steps, "stopped_at": "web_fetcher"}
+
+    step2 = await asyncio.to_thread(
+        _run_tool_script, "batch_compiler.py", ["--window", "daily"]
+    )
+    steps.append({"name": "batch_compiler", **step2})
+    if not step2["success"]:
+        return {"success": False, "steps": steps, "stopped_at": "batch_compiler"}
+
+    step3 = await asyncio.to_thread(
+        _run_tool_script, "batch_ingest.py", []
+    )
+    steps.append({"name": "batch_ingest", **step3})
+    return {"success": step3["success"], "steps": steps}
+
+
 # ── Collaborative Editing (R24) ──
 _collab_connections: dict[str, set[WebSocket]] = defaultdict(set)
 
@@ -2217,7 +2302,8 @@ async def _broadcast_to_room(doc_id: str, message: dict, exclude: WebSocket | No
             continue
         try:
             await ws.send_json(message)
-        except Exception:
+        except Exception as e:
+            logger.warning("WebSocket broadcast failed: %s", e)
             dead.append(ws)
     for ws in dead:
         _collab_connections[doc_id].discard(ws)

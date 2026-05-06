@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Send, Square, MessageCircle, Trash2, Sparkles, Loader2, Copy, Check, RefreshCw,
+  Send, Square, MessageCircle, Trash2, Sparkles,
   ChevronDown, Plus, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
+
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { chatWithWikiStream, type WikiChatMessage, type WikiChatSource } from '@/services/chatService';
@@ -103,7 +103,7 @@ export function ChatPage() {
   const contextSentRef = useRef(false);
 
   const activeSession = sessions.find((s) => s.id === activeId) || sessions[0];
-  const entries = activeSession?.messages || [];
+  const entries = useMemo<ChatEntry[]>(() => activeSession?.messages || [], [activeSession]);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
   const activeIdRef = useRef(activeId);

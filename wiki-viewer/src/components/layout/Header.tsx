@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+﻿import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe, Check } from 'lucide-react';
@@ -9,44 +9,22 @@ import { searchNodes } from '@/lib/search';
 import { getPagePath } from '@/lib/wikilink';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { AppleSelect } from '@/components/ui/AppleSelect';
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
-  const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
-      <button
-        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)]"
-        title={t('action.switchLanguage')}
-        aria-label={t('action.switchLanguage')}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen(!open)}
-      >
-        <Globe size={16} aria-hidden="true" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 py-1 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[140px] z-50 shadow-lg" role="listbox" aria-label={t('action.switchLanguage')}>
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => { i18n.changeLanguage(lang.code); setOpen(false); }}
-                className={`w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between ${
-                  i18n.language === lang.code ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
-                }`}
-                role="option"
-                aria-selected={i18n.language === lang.code}
-              >
-                {lang.label}
-                {i18n.language === lang.code && <Check size={14} aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="relative w-36">
+      <AppleSelect
+        value={i18n.language}
+        onChange={(code) => i18n.changeLanguage(code)}
+        options={SUPPORTED_LANGUAGES.map((lang) => ({
+          value: lang.code,
+          label: lang.label,
+          icon: <Globe size={14} />,
+        }))}
+      />
     </div>
   );
 }
@@ -112,18 +90,18 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-14 backdrop-blur-md bg-[var(--bg-primary)]/80 border-b border-[var(--border-default)] flex items-center px-4 gap-3">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 backdrop-blur-xl bg-[var(--bg-primary)]/75 border-b border-[var(--border-subtle)] flex items-center px-4 gap-3">
       <button
         onClick={toggleSidebar}
-        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-all border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center active:scale-[0.97]"
         aria-label={sidebarCollapsed ? t('action.expandSidebar') : t('action.collapseSidebar')}
         aria-expanded={!sidebarCollapsed}
       >
         {sidebarCollapsed ? <Menu size={16} aria-hidden="true" /> : <X size={16} aria-hidden="true" />}
       </button>
 
-      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2" aria-label="LLM Wiki Viewer home">
-        <span className="w-6 h-6 rounded-lg bg-apple-blue flex items-center justify-center text-white text-xs font-bold">W</span>
+      <Link to="/" className="font-semibold text-base tracking-tight flex items-center gap-2.5" aria-label="LLM Wiki Viewer home">
+        <img src="/logo.svg?v=6" alt="" className="w-7 h-7 rounded-lg" aria-hidden="true" />
         <span className="hidden sm:inline">{t('brand.name')}</span>
       </Link>
 
@@ -132,7 +110,7 @@ export function Header() {
       <div className="relative" ref={searchRef}>
         <button
           onClick={() => setSearchOpen(!searchOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-colors border border-[var(--border-default)] hover:border-[var(--border-strong)] hover:shadow-sm"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-sm hover:text-[var(--text-primary)] transition-all border border-[var(--border-default)] hover:border-[var(--border-strong)] hover:shadow-sm active:scale-[0.97]"
           aria-label={t('action.search')}
           aria-expanded={searchOpen}
           aria-haspopup="dialog"
@@ -150,7 +128,7 @@ export function Header() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-lg"
+              className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-default)] p-3 z-50 shadow-xl"
             >
             <input
               autoFocus
@@ -207,7 +185,7 @@ export function Header() {
 
       <Link
         to="/graph"
-        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center"
+        className="p-2 rounded-xl hover:bg-[var(--bg-secondary)] transition-all border border-transparent hover:border-[var(--border-default)] min-w-[40px] min-h-[40px] flex items-center justify-center active:scale-[0.97]"
         title={t('graph.tooltip')}
         aria-label={t('graph.tooltip')}
       >

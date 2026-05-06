@@ -41,7 +41,7 @@ export function LogPage() {
     try { return parseInt(localStorage.getItem('wiki-log-tail') || '100', 10) || 100; } catch { return 100; }
   });
   const graphData = useWikiStore((s) => s.graphData);
-  const nodes = graphData?.nodes || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
   const nodeLabelMap = useMemo(() => {
     const map = new Map<string, typeof nodes[0]>();
     for (const n of nodes) {

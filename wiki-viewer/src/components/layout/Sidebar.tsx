@@ -1,9 +1,10 @@
+import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, LayoutDashboard, Network, Clock } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, LayoutDashboard, Network, Clock, Search, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+
 
 interface NavItem {
   icon: React.ElementType;
@@ -15,28 +16,37 @@ interface NavItem {
 interface NavGroup {
   labelKey: string;
   items: NavItem[];
+  defaultCollapsed?: boolean;
 }
 
 const navGroups: NavGroup[] = [
   {
-    labelKey: 'nav.group.knowledge',
+    labelKey: 'nav.group.core',
     items: [
       { icon: Home, translationKey: 'nav.home', path: '/', matchPath: '/' },
       { icon: Compass, translationKey: 'nav.browse', path: '/browse', matchPath: '/browse' },
+      { icon: Search, translationKey: 'nav.search', path: '/search', matchPath: '/search' },
       { icon: GitBranch, translationKey: 'nav.graph', path: '/graph', matchPath: '/graph' },
-      { icon: LayoutDashboard, translationKey: 'nav.dashboard', path: '/dashboard', matchPath: '/dashboard' },
-      { icon: Network, translationKey: 'nav.mindmap', path: '/mindmap/overview', matchPath: '/mindmap' },
-      { icon: Clock, translationKey: 'nav.timeline', path: '/timeline', matchPath: '/timeline' },
     ],
   },
   {
-    labelKey: 'nav.group.tools',
+    labelKey: 'nav.group.workspace',
     items: [
       { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
+      { icon: Globe, translationKey: 'nav.crawler', path: '/crawler', matchPath: '/crawler' },
       { icon: MessageCircle, translationKey: 'nav.chat', path: '/chat', matchPath: '/chat' },
+      { icon: LayoutDashboard, translationKey: 'nav.dashboard', path: '/dashboard', matchPath: '/dashboard' },
+    ],
+  },
+  {
+    labelKey: 'nav.group.advanced',
+    items: [
       { icon: Server, translationKey: 'nav.mcp', path: '/mcp', matchPath: '/mcp' },
       { icon: Wrench, translationKey: 'nav.skills', path: '/skills', matchPath: '/skills' },
+      { icon: Clock, translationKey: 'nav.timeline', path: '/timeline', matchPath: '/timeline' },
+      { icon: Network, translationKey: 'nav.mindmap', path: '/mindmap/overview', matchPath: '/mindmap' },
     ],
+    defaultCollapsed: true,
   },
   {
     labelKey: 'nav.group.system',
@@ -57,7 +67,21 @@ export function Sidebar() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useWikiStore((s) => s.toggleSidebar);
   const location = useLocation();
-  // disablePointerEvents removed — redundant with AnimatePresence exit animation
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    const set = new Set<string>();
+    navGroups.forEach((g) => { if (g.defaultCollapsed) set.add(g.labelKey); });
+    return set;
+  });
+
+  const toggleGroup = useCallback((labelKey: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(labelKey)) next.delete(labelKey);
+      else next.add(labelKey);
+      return next;
+    });
+  }, []);
 
   const handleNavClick = () => {
     if (window.matchMedia('(max-width: 768px)').matches && !sidebarCollapsed) {
@@ -77,9 +101,9 @@ export function Sidebar() {
             className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
               navActive
                 ? sidebarCollapsed
-                  ? 'bg-apple-blue/15 text-apple-blue font-medium'
-                  : 'bg-apple-blue/10 text-apple-blue font-medium border-l-2 border-apple-blue'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:translate-x-0.5'
+                  ? 'bg-apple-blue/12 text-apple-blue font-medium'
+                  : 'bg-apple-blue/8 text-apple-blue font-medium'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:translate-x-0.5 active:scale-[0.97]'
             }`}
             title={t(item.translationKey as string)}
             aria-current={navActive ? 'page' : undefined}
@@ -105,45 +129,51 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       <nav className="p-2 flex-1">
-        {navGroups.slice(0, 2).map((group, groupIdx) => (
+        {navGroups.map((group, groupIdx) => (
           <div
             key={group.labelKey}
-            className={groupIdx > 0 ? 'mt-4 pt-3 border-t border-[var(--border-default)]' : ''}
+            className={groupIdx > 0 ? 'mt-2 pt-2 border-t border-[var(--border-default)]' : ''}
           >
             {!sidebarCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2 }}
-                className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
+              <button
+                onClick={() => toggleGroup(group.labelKey)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors rounded-lg"
               >
-                {t(group.labelKey)}
-              </motion.div>
+                <motion.span
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {t(group.labelKey)}
+                </motion.span>
+                {group.items.length > 2 && (
+                  <motion.span
+                    animate={{ rotate: collapsedGroups.has(group.labelKey) ? -90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown size={12} />
+                  </motion.span>
+                )}
+              </button>
             )}
             {sidebarCollapsed && groupIdx > 0 && (
               <div className="w-5 h-px bg-[var(--border-default)] mx-auto my-2" />
             )}
-            {renderItems(group.items)}
+            <AnimatePresence initial={false}>
+              {!collapsedGroups.has(group.labelKey) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {renderItems(group.items)}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ))}
       </nav>
-
-      <div className="p-2 border-t border-[var(--border-default)]">
-        {!sidebarCollapsed && (
-          <motion.div
-            initial={{ opacity: 0, x: -5 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.2 }}
-            className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
-          >
-            {t(navGroups[2].labelKey)}
-          </motion.div>
-        )}
-        {sidebarCollapsed && (
-          <div className="w-5 h-px bg-[var(--border-default)] mx-auto my-2" />
-        )}
-        {renderItems(navGroups[2].items)}
-      </div>
     </div>
   );
 

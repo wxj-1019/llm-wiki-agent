@@ -85,7 +85,7 @@ export async function hybridSearch(
   if (!query || nodes.length === 0) return [];
 
   // 1. Try FTS5 backend first (with optional semantic boost)
-  let ftsMatches: FuseResult<GraphNode>[] = [];
+  const ftsMatches: FuseResult<GraphNode>[] = [];
   try {
     const apiResults = await searchFts(query, 20, semantic);
     const nodeMap = new Map(nodes.map((n, i) => [n.path, { node: n, index: i }]));

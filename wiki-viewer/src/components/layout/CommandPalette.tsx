@@ -18,6 +18,13 @@ interface CommandItem {
   keywords?: string;
 }
 
+const typeIcons: Record<string, { icon: React.ElementType; color: string }> = {
+  source: { icon: FileText, color: 'text-apple-blue' },
+  entity: { icon: Users, color: 'text-apple-blue' },
+  concept: { icon: Lightbulb, color: 'text-apple-blue' },
+  synthesis: { icon: Layers, color: 'text-apple-blue' },
+};
+
 export function CommandPalette() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -28,7 +35,7 @@ export function CommandPalette() {
   useBodyScrollLock(open);
   const navigate = useNavigate();
   const graphData = useWikiStore((s) => s.graphData);
-  const nodes = graphData?.nodes ?? [];
+  const nodes = useMemo(() => graphData?.nodes ?? [], [graphData?.nodes]);
   const recentPages = useWikiStore((s) => s.recentPages);
   const favorites = useWikiStore((s) => s.favorites);
 
@@ -56,13 +63,6 @@ export function CommandPalette() {
     }
   }, [open]);
 
-  const typeIcons: Record<string, { icon: React.ElementType; color: string }> = {
-    source: { icon: FileText, color: 'text-apple-blue' },
-    entity: { icon: Users, color: 'text-apple-blue' },
-    concept: { icon: Lightbulb, color: 'text-apple-blue' },
-    synthesis: { icon: Layers, color: 'text-apple-blue' },
-  };
-
   const staticCommands: CommandItem[] = useMemo(() => [
     { id: 'nav-home', label: t('cmd.home'), subtitle: t('cmd.homeSub'), icon: Home, action: () => navigate('/') },
     { id: 'nav-browse', label: t('cmd.browse'), subtitle: t('cmd.browseSub'), icon: BookOpen, action: () => navigate('/browse') },
@@ -78,18 +78,15 @@ export function CommandPalette() {
       .map((id) => nodes.find((n) => n.id === id))
       .filter(Boolean)
       .slice(0, 5)
-      .map((node) => {
-        const ti = typeIcons[node!.type] || typeIcons.source;
-        return {
-          id: `recent-${node!.id}`,
-          label: node!.label,
-          subtitle: t('cmd.recentSub', { type: node!.type }),
-          icon: Clock,
-          color: 'text-[var(--text-tertiary)]',
-          action: () => navigate(getPagePath(node!)),
-          keywords: node!.label.toLowerCase(),
-        };
-      });
+      .map((node) => ({
+        id: `recent-${node!.id}`,
+        label: node!.label,
+        subtitle: t('cmd.recentSub', { type: node!.type }),
+        icon: Clock,
+        color: 'text-[var(--text-tertiary)]',
+        action: () => navigate(getPagePath(node!)),
+        keywords: node!.label.toLowerCase(),
+      }));
   }, [recentPages, nodes, navigate, t]);
 
   const favCommands: CommandItem[] = useMemo(() => {
@@ -97,29 +94,26 @@ export function CommandPalette() {
       .map((id) => nodes.find((n) => n.id === id))
       .filter(Boolean)
       .slice(0, 5)
-      .map((node) => {
-        const ti = typeIcons[node!.type] || typeIcons.source;
-        return {
-          id: `fav-${node!.id}`,
-          label: node!.label,
-          subtitle: t('cmd.favoriteSub', { type: node!.type }),
-          icon: Heart,
-          color: 'text-apple-blue',
-          action: () => navigate(getPagePath(node!)),
-          keywords: node!.label.toLowerCase(),
-        };
-      });
+      .map((node) => ({
+        id: `fav-${node!.id}`,
+        label: node!.label,
+        subtitle: t('cmd.favoriteSub', { type: node!.type }),
+        icon: Heart,
+        color: 'text-apple-blue',
+        action: () => navigate(getPagePath(node!)),
+        keywords: node!.label.toLowerCase(),
+      }));
   }, [favorites, nodes, navigate, t]);
 
   const pageCommands: CommandItem[] = useMemo(() => {
     return nodes.map((node) => {
-      const ti = typeIcons[node.type] || typeIcons.source;
+      const typeInfo = typeIcons[node.type] || typeIcons.source;
       return {
         id: `page-${node.id}`,
         label: node.label,
         subtitle: t('cmd.pageSub', { type: node.type, preview: node.preview.slice(0, 60) }),
-        icon: ti.icon,
-        color: ti.color,
+        icon: typeInfo.icon,
+        color: typeInfo.color,
         action: () => navigate(getPagePath(node)),
         keywords: `${node.label.toLowerCase()} ${node.type}`,
       };
@@ -197,7 +191,7 @@ export function CommandPalette() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh] bg-black/40"
+          className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh] bg-black/25 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <motion.div
@@ -206,7 +200,7 @@ export function CommandPalette() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.96 }}
             transition={{ duration: 0.15 }}
-            className="w-full max-w-lg glass rounded-2xl shadow-xl overflow-hidden"
+            className="w-full max-w-lg glass rounded-2xl shadow-2xl overflow-hidden border border-[var(--border-subtle)]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -256,8 +250,8 @@ export function CommandPalette() {
                     aria-selected={isSelected}
                     onClick={() => { cmd.action(); setOpen(false); }}
                     onMouseEnter={() => setSelectedIndex(i)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                      isSelected ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]/50'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg transition-colors ${
+                      isSelected ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]/40'
                     }`}
                   >
                     <div className={`w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0 ${cmd.color || 'text-[var(--text-secondary)]'}`}>

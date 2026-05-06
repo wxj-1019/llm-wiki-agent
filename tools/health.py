@@ -54,7 +54,7 @@ except ImportError:
     def all_wiki_pages():
         exclude = {"index.md", "log.md", "lint-report.md", "health-report.md"}
         for p in WIKI_DIR.rglob("*.md"):
-            if p.name not in exclude:
+            if p.name not in exclude and ".agent" not in p.parts:
                 yield p
 
     def strip_frontmatter(content: str) -> str:

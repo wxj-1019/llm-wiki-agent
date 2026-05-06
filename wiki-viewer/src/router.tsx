@@ -8,7 +8,7 @@ import { LogPage } from '@/components/pages/LogPage';
 import { StatusPage } from '@/components/pages/StatusPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy } from 'react';
 
 // Lazy-load heavy / less frequently visited pages
 const GraphPage = lazy(() => import('@/components/pages/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -20,28 +20,9 @@ const MindmapPage = lazy(() => import('@/components/pages/MindmapPage').then((m)
 const TimelinePage = lazy(() => import('@/components/pages/TimelinePage').then((m) => ({ default: m.TimelinePage })));
 const MCPPage = lazy(() => import('@/components/pages/MCPPage').then((m) => ({ default: m.MCPPage })));
 const SkillsPage = lazy(() => import('@/components/pages/SkillsPage').then((m) => ({ default: m.SkillsPage })));
+const CrawlerPage = lazy(() => import('@/components/pages/CrawlerPage').then((m) => ({ default: m.CrawlerPage })));
 
-// eslint-disable-next-line react-refresh/only-export-components
-function PageLoader({ label }: { label: string }) {
-  return (
-    <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-apple-blue mx-auto mb-4" />
-        <p className="text-sm text-[var(--text-secondary)]">Loading {label}...</p>
-      </div>
-    </div>
-  );
-}
-
-// Wrap lazy-loaded pages with their own error boundary so a crash in one
-// doesn't bring down the entire app.
-function LazyPage({ children }: { children: ReactNode }) {
-  return (
-    <Suspense fallback={<PageLoader label="page" />}>
-      {children}
-    </Suspense>
-  );
-}
+import { LazyPage } from '@/components/layout/LazyPage';
 
 export const router = createBrowserRouter([
   {
@@ -67,6 +48,7 @@ export const router = createBrowserRouter([
       { path: '/dashboard', element: <LazyPage><DashboardPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/mindmap/:slug', element: <LazyPage><MindmapPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/timeline', element: <LazyPage><TimelinePage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/crawler', element: <LazyPage><CrawlerPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },

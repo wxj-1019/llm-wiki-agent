@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import {
   Settings, Code, Rss, BookOpen, Save, Download,
   Check, AlertTriangle, Bot, Key, ExternalLink, Trash2, Plus,
+  Sparkles, Flame,
 } from 'lucide-react';
+import { AppleSelect } from '@/components/ui/AppleSelect';
 import { useConfigStore } from '@/stores/configStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -39,7 +41,7 @@ export function SettingsPage() {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (llmTimerRef.current) clearTimeout(llmTimerRef.current);
     };
-  }, []);
+  }, [addNotification, t]);
 
   useEffect(() => {
     checkApi();
@@ -59,7 +61,7 @@ export function SettingsPage() {
       .catch(() => {
         addNotification(t('settings.error', 'Failed to load LLM config'), 'error');
       });
-  }, []);
+  }, [addNotification, t]);
 
   const handleSave = async () => {
     if (apiAvailable) {
@@ -436,14 +438,11 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="llm-provider" className="block text-sm text-[var(--text-secondary)] mb-2">
-                  {t('settings.llm.provider')}
-                </label>
-                <select
+                <AppleSelect
                   id="llm-provider"
+                  label={t('settings.llm.provider')}
                   value={llmProvider}
-                  onChange={(e) => {
-                    const p = e.target.value;
+                  onChange={(p) => {
                     setLlmProvider(p);
                     if (p === 'deepseek') {
                       setLlmModel('deepseek/deepseek-chat');
@@ -456,12 +455,12 @@ export function SettingsPage() {
                       setLlmModelFast('openai/gpt-3.5-turbo');
                     }
                   }}
-                  className="apple-input"
-                >
-                  <option value="anthropic">Anthropic (Claude)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                  <option value="deepseek">DeepSeek</option>
-                </select>
+                  options={[
+                    { value: 'anthropic', label: 'Anthropic (Claude)', icon: <Sparkles size={14} /> },
+                    { value: 'openai', label: 'OpenAI (GPT)', icon: <Bot size={14} /> },
+                    { value: 'deepseek', label: 'DeepSeek', icon: <Flame size={14} /> },
+                  ]}
+                />
               </div>
 
               <div>

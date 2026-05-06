@@ -48,9 +48,9 @@ def resolve_wikilink_target(link: str) -> str:
 
 
 def all_wiki_pages() -> Iterator[Path]:
-    """Yield all .md files in wiki/, excluding meta files."""
+    """Yield all .md files in wiki/, excluding meta files and agent internals."""
     for p in WIKI_DIR.rglob("*.md"):
-        if p.name not in META_FILES:
+        if p.name not in META_FILES and ".agent" not in p.parts:
             yield p
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers, Shuffle } from 'lucide-react';
+import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers, Shuffle, Compass, GitBranch, Upload, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,23 +10,27 @@ import { searchNodes } from '@/lib/search';
 import { stripMarkdown } from '@/lib/textUtils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
-import { PageSkeleton } from '@/components/ui/Skeleton';
+
 
 export function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const graphData = useWikiStore((s) => s.graphData);
-  const loading = useWikiStore((s) => s.loading);
+
   const initialize = useWikiStore((s) => s.initialize);
   const recentPages = useWikiStore((s) => s.recentPages);
   const favorites = useWikiStore((s) => s.favorites);
-  const nodes = graphData?.nodes || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
 
   const [homeQuery, setHomeQuery] = useState('');
   const debouncedHomeQuery = useDebounce(homeQuery, 200);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current); };
+  }, []);
 
   const homeResults = useMemo(
     () => (debouncedHomeQuery ? searchNodes(debouncedHomeQuery).slice(0, 5) : []),
@@ -71,16 +75,7 @@ export function HomePage() {
     navigate(getPagePath(node));
   }, [nodes, navigate]);
 
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
-  }, []);
-  useEffect(() => {
-    return () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current); };
-  }, []);
+
 
   useDocumentTitle();
 
@@ -94,8 +89,8 @@ export function HomePage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-marshmallow-peach rounded-full ambient-blob" />
-      <div className="absolute top-40 -right-20 w-96 h-96 bg-marshmallow-lavender rounded-full ambient-blob" style={{ animationDelay: '3s' }} />
+      <div className="absolute -top-20 -left-20 w-80 h-80 bg-marshmallow-peach rounded-full ambient-blob" style={{ opacity: 0.06 }} />
+      <div className="absolute top-40 -right-20 w-96 h-96 bg-marshmallow-lavender rounded-full ambient-blob" style={{ animationDelay: '3s', opacity: 0.06 }} />
       <div className="relative z-10">
         {/* Greeting */}
         <motion.div
@@ -180,11 +175,11 @@ export function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-12"
+            className="mb-10"
           >
-            <div className="relative max-w-xl" ref={searchWrapperRef} role="search">
-              <div className="flex items-center gap-3 w-full px-5 py-3 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_3px_rgba(10,132,255,0.15)] transition-all duration-200 rounded-2xl">
-                <Search size={18} className="text-[var(--text-tertiary)] shrink-0" />
+            <div className="relative max-w-2xl" ref={searchWrapperRef} role="search">
+              <div className="flex items-center gap-3 w-full px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_4px_rgba(10,132,255,0.08)] transition-all duration-200 rounded-2xl">
+                <Search size={20} className="text-[var(--text-tertiary)] shrink-0" />
                 <input
                   value={homeQuery}
                   onChange={(e) => { setHomeQuery(e.target.value); setSelectedIdx(-1); }}
@@ -211,7 +206,7 @@ export function HomePage() {
                     }
                   }}
                 />
-                <kbd className="ml-auto px-2 py-0.5 text-xs bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg">{t('shortcut.ctrlK')}</kbd>
+                <kbd className="ml-auto px-2.5 py-1 text-xs bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg">{t('shortcut.ctrlK')}</kbd>
               </div>
               <AnimatePresence>
                 {homeResults.length > 0 && (
@@ -249,6 +244,34 @@ export function HomePage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Quick Actions */}
+        {nodes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mb-10"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { key: 'browse', labelKey: 'home.quickActions.browse', icon: Compass, path: '/browse', color: 'text-apple-blue bg-apple-blue/10 hover:bg-apple-blue/20' },
+                { key: 'graph', labelKey: 'home.quickActions.graph', icon: GitBranch, path: '/graph', color: 'text-apple-purple bg-apple-purple/10 hover:bg-apple-purple/20' },
+                { key: 'upload', labelKey: 'home.quickActions.upload', icon: Upload, path: '/upload', color: 'text-apple-green bg-apple-green/10 hover:bg-apple-green/20' },
+                { key: 'chat', labelKey: 'home.quickActions.chat', icon: MessageCircle, path: '/chat', color: 'text-apple-orange bg-apple-orange/10 hover:bg-apple-orange/20' },
+              ].map((action) => (
+                <Link
+                  key={action.key}
+                  to={action.path}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all active:scale-[0.97] ${action.color}`}
+                >
+                  <action.icon size={16} />
+                  {t(action.labelKey as string)}
+                </Link>
+              ))}
             </div>
           </motion.div>
         )}
@@ -299,7 +322,7 @@ export function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.25 }}
-            className="mb-12"
+            className="mb-10"
           >
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Heart size={16} className="text-apple-pink" />
@@ -337,7 +360,7 @@ export function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mb-12"
+            className="mb-10"
           >
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Clock size={16} className="text-apple-purple" />
@@ -365,84 +388,86 @@ export function HomePage() {
           </motion.div>
         )}
 
-        {/* Random Discovery */}
-        {randomNode && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mb-12"
-          >
-            <h2 className="text-lg font-bold mb-4">{t('home.sections.randomDiscovery')}</h2>
-            <div className="warm-card p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <TypeBadge type={randomNode.type} />
-                    <span className="text-xs text-[var(--text-secondary)]">{randomNode.id}</span>
+        {/* Bottom Bento */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {randomNode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <h2 className="text-lg font-bold mb-4">{t('home.sections.randomDiscovery')}</h2>
+              <div className="warm-card p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <TypeBadge type={randomNode.type} />
+                      <span className="text-xs text-[var(--text-secondary)]">{randomNode.id}</span>
+                    </div>
+                    <h3 className="text-base font-bold mb-2">{randomNode.label}</h3>
+                    <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{randomNode.preview}</p>
                   </div>
-                  <h3 className="text-base font-bold mb-2">{randomNode.label}</h3>
-                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">{randomNode.preview}</p>
+                </div>
+                <div className="mt-4">
+                  <PageLink node={randomNode} className="apple-button text-sm">
+                    {t('action.explore')} <ArrowRight size={14} />
+                  </PageLink>
                 </div>
               </div>
-              <div className="mt-4">
-                <PageLink node={randomNode} className="apple-button text-sm">
-                  {t('action.explore')} <ArrowRight size={14} />
-                </PageLink>
-              </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {/* Knowledge Graph Mini */}
-        {graphData ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">{t('home.sections.knowledgeGraph')}</h2>
-              <Link to="/graph" className="text-sm text-apple-blue hover:underline flex items-center gap-1">
-                {t('action.explore')} <ArrowRight size={14} />
-              </Link>
-            </div>
-            <div className="apple-card p-6">
-              <div className="flex items-center justify-center gap-8 text-sm text-[var(--text-secondary)]">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{nodes.length}</div>
-                  <div className="text-xs font-medium">{t('stat.nodes')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{graphData.edges.length}</div>
-                  <div className="text-xs font-medium">{t('stat.edges')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{new Set(nodes.map((n) => n.group)).size}</div>
-                  <div className="text-xs font-medium">{t('stat.communities')}</div>
+          {graphData ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">{t('home.sections.knowledgeGraph')}</h2>
+                <Link to="/graph" className="text-sm text-apple-blue hover:underline flex items-center gap-1">
+                  {t('action.explore')} <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="apple-card p-6">
+                <div className="flex items-center justify-center gap-8 text-sm text-[var(--text-secondary)]">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{nodes.length}</div>
+                    <div className="text-xs font-medium">{t('stat.nodes')}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{graphData.edges.length}</div>
+                    <div className="text-xs font-medium">{t('stat.edges')}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-[var(--text-primary)] tabular-nums">{new Set(nodes.map((n) => n.group)).size}</div>
+                    <div className="text-xs font-medium">{t('stat.communities')}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ) : nodes.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <h2 className="text-lg font-bold mb-4">{t('home.sections.knowledgeGraph')}</h2>
-            <div className="apple-card p-6 text-center">
-              <p className="text-sm text-[var(--text-secondary)] mb-4">{t('home.graph.error')}</p>
-              <button
-                onClick={() => initialize()}
-                className="apple-button-ghost text-sm"
-              >
-                <RefreshCw size={14} />
-                {t('home.graph.retry')}
-              </button>
-            </div>
-          </motion.div>
-        ) : null}
+            </motion.div>
+          ) : nodes.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">{t('home.sections.knowledgeGraph')}</h2>
+              </div>
+              <div className="apple-card p-6 text-center">
+                <p className="text-sm text-[var(--text-secondary)] mb-4">{t('home.graph.error')}</p>
+                <button
+                  onClick={() => initialize()}
+                  className="apple-button-ghost text-sm"
+                >
+                  <RefreshCw size={14} />
+                  {t('home.graph.retry')}
+                </button>
+              </div>
+            </motion.div>
+          ) : null}
+        </div>
       </div>
     </motion.div>
   );
@@ -450,8 +475,14 @@ export function HomePage() {
 
 function TypeBadge({ type }: { type: string }) {
   const { t } = useTranslation();
+  const colorMap: Record<string, string> = {
+    source: 'text-apple-blue bg-apple-blue/10 border-apple-blue/20',
+    entity: 'text-apple-green bg-apple-green/10 border-apple-green/20',
+    concept: 'text-apple-purple bg-apple-purple/10 border-apple-purple/20',
+    synthesis: 'text-apple-orange bg-apple-orange/10 border-apple-orange/20',
+  };
   return (
-    <span className="text-xs font-medium px-2 py-0.5 border border-[var(--border-default)] text-[var(--text-secondary)] rounded-lg">
+    <span className={`text-xs font-medium px-2 py-0.5 border rounded-lg ${colorMap[type] || 'text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-[var(--border-default)]'}`}>
       {t(typeLabelKey(type) as string)}
     </span>
   );

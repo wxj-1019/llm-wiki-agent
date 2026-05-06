@@ -40,8 +40,8 @@ interface WikiStats {
 
 function useWikiStats(): { stats: WikiStats; loading: boolean; error: string | null; refetch: () => void } {
   const graphData = useWikiStore((s) => s.graphData);
-  const nodes = graphData?.nodes || [];
-  const edges = graphData?.edges || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
+  const edges = useMemo(() => graphData?.edges || [], [graphData?.edges]);
 
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -150,7 +150,7 @@ function StatCard({ icon: Icon, label, value, color, suffix }: {
       animate={{ opacity: 1, y: 0 }}
       className="apple-card p-5 flex items-center gap-4"
     >
-      <div className={`p-3 rounded-xl ${color}`}>
+      <div className={`p-3 rounded-xl ${color} bg-opacity-60`}>
         <Icon size={20} />
       </div>
       <div>
@@ -221,9 +221,10 @@ function RadarChart({ values }: { values: number[] }) {
         {/* Data area */}
         <polygon
           points={points}
-          fill="rgba(10, 132, 255, 0.15)"
+          fill="rgba(10, 132, 255, 0.08)"
           stroke="var(--apple-blue)"
-          strokeWidth={2}
+          strokeWidth={1.5}
+          strokeLinejoin="round"
         />
         {/* Labels */}
         {labels.map((label, i) => {
@@ -307,7 +308,7 @@ function RecentActivity() {
 
   return (
     <div className="apple-card p-6">
-      <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+      <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] tracking-wide">
         <ScrollText size={18} />
         {t('dashboard.recentActivity', 'Recent Activity')}
       </h2>
@@ -433,9 +434,9 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
               y1={line.y}
               x2={width - paddingRight}
               y2={line.y}
-              stroke="var(--border-default)"
+              stroke="var(--border-subtle)"
               strokeWidth={1}
-              strokeDasharray="4 4"
+              strokeDasharray="6 4"
             />
             <text
               x={paddingLeft - 10}
@@ -464,14 +465,14 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
         ))}
 
         {/* Area under line */}
-        <polygon points={areaPoints} fill="rgba(10, 132, 255, 0.08)" />
+        <polygon points={areaPoints} fill="rgba(10, 132, 255, 0.06)" />
 
         {/* Trend line */}
         <polyline
           points={points}
           fill="none"
           stroke="var(--apple-blue)"
-          strokeWidth={2.5}
+          strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
           className="growth-line"
@@ -579,7 +580,7 @@ export function DashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="apple-card p-6">
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] tracking-wide">
             <BarChart3 size={18} />
             {t('dashboard.pageDistribution', 'Page Distribution')}
           </h2>
@@ -587,7 +588,7 @@ export function DashboardPage() {
         </div>
 
         <div className="apple-card p-6">
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] tracking-wide">
             <Activity size={18} />
             {t('dashboard.wikiHealth', 'Wiki Health')}
           </h2>
@@ -600,7 +601,7 @@ export function DashboardPage() {
 
       {/* Growth Trend */}
       <div className="apple-card p-6">
-        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] tracking-wide">
           <TrendingUp size={18} />
           {t('dashboard.growthTrend', 'Growth Trend')}
         </h2>
@@ -609,7 +610,7 @@ export function DashboardPage() {
 
       {/* Link Density */}
       <div className="apple-card p-6">
-        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] uppercase tracking-wider">
+        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--text-secondary)] tracking-wide">
           <Link2 size={18} />
           {t('dashboard.linkDensity', 'Link Density')}
         </h2>

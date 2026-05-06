@@ -2,11 +2,12 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useTranslation } from 'react-i18next';
-import { CloudUpload, FolderOpen, HardDrive, CheckCircle, Loader2 } from 'lucide-react';
+import { FolderOpen, HardDrive, CheckCircle, Loader2, Globe, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchRawFiles, uploadFile, uploadText, triggerIngest,
   fetchRawFileContent, deleteRawFile, ingestImageFile,
+  fetchUrlArticle,
 } from '@/services/dataService';
 import type { RawFile, UploadResult, IngestResult } from '@/services/dataService';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -36,12 +37,17 @@ export function UploadPage() {
   const [pasteContent, setPasteContent] = useState('');
   const [savingText, setSavingText] = useState(false);
 
+  const [fetchUrl, setFetchUrl] = useState('');
+  const [fetchName, setFetchName] = useState('');
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [fetchResult, setFetchResult] = useState<{ saved: string | null; quality: string | null } | null>(null);
+
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState('');
 
   const [ingestingPaths, setIngestingPaths] = useState<Set<string>>(new Set());
   const [deletingPaths, setDeletingPaths] = useState<Set<string>>(new Set());
-  const [imageIngestingPaths, setImageIngestingPaths] = useState<Set<string>>(new Set());
+
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -111,7 +117,6 @@ export function UploadPage() {
       const file = fileList[i];
       try {
         if (isImageFile(file.name)) {
-          setImageIngestingPaths((prev) => new Set(prev).add(file.name));
           const result = await ingestImageFile(file);
           if (result.success) {
             showToast(t('upload.success.imageIngest', { path: result.md_path }), 'success');
@@ -119,14 +124,12 @@ export function UploadPage() {
           } else {
             showToast(t('upload.error.imageIngest', { error: result.stderr || 'Unknown' }), 'error');
           }
-          setImageIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.name); return n; });
         } else {
           const result: UploadResult = await uploadFile(file);
           showToast(t('upload.success.upload', { path: result.path }), 'success');
         }
       } catch (err) {
         showToast(String(err), 'error');
-        setImageIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.name); return n; });
       }
     }
     setUploadProgress({ current: fileList.length, total: fileList.length });
@@ -171,6 +174,31 @@ export function UploadPage() {
       setSavingText(false);
     }
   }, [pasteTitle, pasteContent, loadFiles, showToast, t]);
+
+  const handleFetchUrl = useCallback(async () => {
+    if (!fetchUrl.trim()) {
+      showToast('Please enter a URL', 'error');
+      return;
+    }
+    try {
+      setFetchingUrl(true);
+      setFetchResult(null);
+      const result = await fetchUrlArticle(fetchUrl.trim(), fetchName.trim());
+      if (result.success && result.saved_file) {
+        showToast(`Fetched: ${result.saved_file} (Quality: ${result.quality || 'N/A'})`, 'success');
+        setFetchResult({ saved: result.saved_file, quality: result.quality });
+        setFetchUrl('');
+        setFetchName('');
+        await loadFiles();
+      } else {
+        showToast(result.stderr || 'Fetch failed', 'error');
+      }
+    } catch (err) {
+      showToast(String(err), 'error');
+    } finally {
+      setFetchingUrl(false);
+    }
+  }, [fetchUrl, fetchName, loadFiles, showToast]);
 
   const handlePreview = useCallback(async (file: RawFile) => {
     if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
@@ -422,6 +450,58 @@ export function UploadPage() {
           onContentChange={setPasteContent}
           onSave={handleSaveText}
         />
+
+        {/* URL Fetch Panel */}
+        <div className="apple-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="text-apple-blue" size={20} />
+            <h2 className="text-lg font-semibold">{t('upload.fetchFromUrl', 'Fetch from URL')}</h2>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="url"
+              placeholder="https://example.com/article"
+              value={fetchUrl}
+              onChange={(e) => setFetchUrl(e.target.value)}
+              className="apple-input w-full"
+              disabled={fetchingUrl}
+            />
+            <input
+              type="text"
+              placeholder={t('upload.fetchNamePlaceholder', 'Optional display name')}
+              value={fetchName}
+              onChange={(e) => setFetchName(e.target.value)}
+              className="apple-input w-full"
+              disabled={fetchingUrl}
+            />
+            <button
+              onClick={handleFetchUrl}
+              disabled={fetchingUrl || !fetchUrl.trim()}
+              className="apple-button w-full flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {fetchingUrl ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {fetchingUrl ? t('upload.fetching', 'Fetching...') : t('upload.fetch', 'Fetch Article')}
+            </button>
+            {fetchResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-apple-green/10 border border-apple-green/30 rounded-xl px-4 py-3 text-sm"
+              >
+                <div className="flex items-center gap-2 text-apple-green font-medium mb-1">
+                  <CheckCircle size={14} />
+                  <span>{t('upload.fetchSuccess', 'Article fetched')}</span>
+                </div>
+                <div className="text-[var(--text-secondary)]">
+                  <p>{fetchResult.saved}</p>
+                  {fetchResult.quality && (
+                    <p className="mt-1">{t('upload.quality', 'Quality')}: {fetchResult.quality}</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Preview Panel */}

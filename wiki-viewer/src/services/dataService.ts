@@ -211,6 +211,20 @@ export async function ingestImageFile(file: File): Promise<{ success: boolean; d
   return res.json();
 }
 
+export async function fetchUrlArticle(url: string, name = '', tags: string[] = []): Promise<{ success: boolean; saved_file: string | null; quality: string | null; stdout: string; stderr: string }> {
+  const res = await fetchWithTimeout('/api/fetch/url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, name, tags }),
+    timeoutMs: 120000,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `URL fetch failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function saveWikiPage(path: string, content: string): Promise<{ success: boolean; path: string }> {
   if (!isValidFilePath(path)) throw new Error('Invalid file path');
   const res = await fetchWithTimeout('/api/wiki/write', {
@@ -223,5 +237,60 @@ export async function saveWikiPage(path: string, content: string): Promise<{ suc
     const err = await res.text();
     throw new Error(`Save failed: ${res.status} ${err}`);
   }
+  return res.json();
+}
+
+export async function fetchWebSourcesConfig(): Promise<{ name: string; content: string }> {
+  return dedupe('config:web_sources', async () => {
+    const res = await fetchWithTimeout('/api/config/web_sources', { timeoutMs: 5000 });
+    if (!res.ok) throw new Error(`Failed to load config: ${res.status}`);
+    return res.json();
+  });
+}
+
+export async function saveWebSourcesConfig(yamlContent: string): Promise<{ success: boolean }> {
+  const res = await fetchWithTimeout('/api/config/web_sources', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/yaml' },
+    body: yamlContent,
+    timeoutMs: 5000,
+  });
+  if (!res.ok) throw new Error(`Failed to save config: ${res.status}`);
+  return res.json();
+}
+
+export interface CrawlerRunResult {
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  returncode: number;
+  stats: { saved: number; skipped: number; errors: number };
+}
+
+export async function runCrawler(): Promise<CrawlerRunResult> {
+  const res = await fetchWithTimeout('/api/crawler/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`Crawler failed: ${res.status}`);
+  return res.json();
+}
+
+export interface BatchResult {
+  success: boolean;
+  steps: { name: string; success: boolean; stdout: string; stderr: string; returncode: number }[];
+  stopped_at?: string;
+}
+
+export async function runBatchPipeline(): Promise<BatchResult> {
+  const res = await fetchWithTimeout('/api/crawler/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    timeoutMs: 600000,
+  });
+  if (!res.ok) throw new Error(`Batch pipeline failed: ${res.status}`);
   return res.json();
 }

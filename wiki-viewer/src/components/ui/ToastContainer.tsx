@@ -32,7 +32,7 @@ export function ToastContainer() {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 30, scale: 0.9 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className={`pointer-events-auto flex flex-col gap-2 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-sm ${colorMap[toast.type]}`}
+              className={`pointer-events-auto flex flex-col gap-2 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md ${colorMap[toast.type]}`}
             >
               <div className="flex items-center gap-3">
                 <Icon size={18} className={`shrink-0 ${toast.type === 'progress' ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -48,7 +48,7 @@ export function ToastContainer() {
                 )}
               </div>
               {toast.type === 'progress' && typeof toast.progress === 'number' && (
-                <div className="w-full h-1 bg-black/10 rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-[var(--border-default)] rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-apple-purple rounded-full"
                     initial={{ width: 0 }}

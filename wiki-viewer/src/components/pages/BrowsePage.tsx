@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, memo } from 'react';
+﻿import { useState, useMemo, useEffect, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, FileText, Users, Lightbulb, Layers, X, BookOpen, Heart, Link2, ArrowUpDown, Inbox, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
@@ -154,7 +154,7 @@ export function BrowsePage() {
             <button
               key={tab.key}
               onClick={() => setFilterType(tab.key)}
-              className={`px-4 py-1.5 text-sm font-medium transition-all duration-150 rounded-lg ${
+              className={`px-4 py-1.5 text-sm font-medium transition-all duration-150 rounded-lg active:scale-[0.97] ${
                 filterType === tab.key
                   ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -168,7 +168,7 @@ export function BrowsePage() {
         <div className="relative">
           <button
             onClick={() => setSortOpen(!sortOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors rounded-xl"
+            className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all rounded-xl active:scale-[0.97]"
             aria-expanded={sortOpen}
             aria-haspopup="listbox"
             aria-label={t('browse.sort.label')}
@@ -193,7 +193,7 @@ export function BrowsePage() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -4 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 py-1 bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[160px] z-50 origin-top-right rounded-xl"
+                  className="absolute right-0 top-full mt-2 py-1 bg-[var(--bg-primary)] border border-[var(--border-default)] min-w-[160px] z-50 origin-top-right rounded-xl shadow-xl"
                 >
               {(['default', 'name', 'connected', 'updated'] as const).map((key) => (
                 <button
@@ -242,22 +242,51 @@ export function BrowsePage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
+        <div className="flex items-center justify-center gap-1.5 mt-8">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-[0.97]"
             aria-label="Previous page"
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm text-[var(--text-secondary)] px-3">
-            {page} / {totalPages}
-          </span>
+          {(() => {
+            const pages: (number | string)[] = [];
+            const maxVisible = 5;
+            if (totalPages <= maxVisible + 2) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              pages.push(1);
+              const start = Math.max(2, page - 1);
+              const end = Math.min(totalPages - 1, page + 1);
+              if (start > 2) pages.push('...');
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (end < totalPages - 1) pages.push('...');
+              pages.push(totalPages);
+            }
+            return pages.map((p, idx) =>
+              typeof p === 'string' ? (
+                <span key={`dots-${idx}`} className="px-2 text-sm text-[var(--text-tertiary)]">{p}</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`min-w-[36px] h-9 px-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.97] ${
+                    page === p
+                      ? 'bg-apple-blue text-white shadow-sm'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            );
+          })()}
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:scale-[0.97]"
             aria-label="Next page"
           >
             <ChevronRight size={16} />
@@ -315,7 +344,7 @@ const PageCard = memo(function PageCard({ node, backlinkCount }: { node: { id: s
   return (
     <Link
       to={getPagePath(node)}
-      className={`apple-card p-5 block group hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transition-all duration-200 ${typeHoverShadow[node.type] || 'hover:shadow-apple-blue/20'}`}
+      className={`apple-card p-5 block group hover:shadow-lg hover:-translate-y-1 active:scale-[0.97] active:translate-y-0 transition-all duration-200 ${typeHoverShadow[node.type] || 'hover:shadow-apple-blue/20'}`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2 rounded-xl ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>

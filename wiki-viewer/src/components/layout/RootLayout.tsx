@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { useOutlet, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,31 @@ import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useSWUpdate } from '@/hooks/useSWUpdate';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
+function getPageAnimation(pathname: string) {
+  if (pathname === '/graph' || pathname.startsWith('/mindmap')) {
+    return { initial: { opacity: 0, scale: 0.98 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.98 }, transition: { duration: 0.25 } };
+  }
+  if (pathname.startsWith('/upload') || pathname.startsWith('/chat') || pathname.startsWith('/settings') || pathname.startsWith('/status') || pathname.startsWith('/mcp') || pathname.startsWith('/skills') || pathname.startsWith('/dashboard') || pathname.startsWith('/timeline')) {
+    return { initial: { opacity: 0, x: 16 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -16 }, transition: { duration: 0.2 } };
+  }
+  return { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 }, transition: { duration: 0.2 } };
+}
+
+function PageTransition({ pathname, isGraphPage, children }: { pathname: string; isGraphPage: boolean; children: React.ReactNode }) {
+  const anim = getPageAnimation(pathname);
+  return (
+    <motion.div
+      className={isGraphPage ? 'h-full' : ''}
+      initial={anim.initial}
+      animate={anim.animate}
+      exit={anim.exit}
+      transition={anim.transition}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export function RootLayout() {
   const { t } = useTranslation();
   const initialize = useWikiStore((s) => s.initialize);
@@ -21,6 +46,8 @@ export function RootLayout() {
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
   const location = useLocation();
+  const element = useOutlet();
+  const isGraphPage = location.pathname === '/graph';
   const isOnline = useNetworkStatus();
   const { canInstall, install } = usePWAInstall();
   const { updateAvailable, applyUpdate } = useSWUpdate();
@@ -99,9 +126,9 @@ export function RootLayout() {
         */}
         <main
           id="main-content"
-          className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'}`}
+          className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'} ${isGraphPage ? 'overflow-hidden' : 'overflow-y-auto'}`}
         >
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-8'}>
             {loading ? (
               <div className="min-h-[60vh] py-8">
                 <PageSkeleton />
@@ -120,16 +147,10 @@ export function RootLayout() {
                 </button>
               </div>
             ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={location.pathname}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Outlet />
-                </motion.div>
+              <AnimatePresence mode="wait" initial={false}>
+                <PageTransition key={location.pathname} pathname={location.pathname} isGraphPage={isGraphPage}>
+                  {element}
+                </PageTransition>
               </AnimatePresence>
             )}
           </div>
