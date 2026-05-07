@@ -231,21 +231,41 @@ Write a comprehensive paragraph defining what `{safe_entity_name}` means in the 
             if not safe_entity or safe_entity in (".", ".."):
                 print(f" [!] Skipping invalid entity name: {entity!r}")
                 continue
-            out_path = ENTITIES_DIR / f"{safe_entity}.md"
+            # Normalize filename: remove spaces/dashes for continuous TitleCase
+            normalized = re.sub(r'[\\/:*?"<>|]', '', safe_entity)
+            normalized = normalized.replace(" ", "").replace("-", "")
+            # If legacy spaced file already exists, keep using it to avoid duplicates
+            legacy_path = ENTITIES_DIR / f"{safe_entity}.md"
+            out_path = ENTITIES_DIR / f"{normalized}.md"
+            if legacy_path.exists() and not out_path.exists():
+                out_path = legacy_path
             out_path.write_text(result, encoding="utf-8")
             print(f" -> Saved to {out_path.relative_to(REPO_ROOT)}")
-            created.append(entity)
+            created.append((safe_entity, out_path.stem))
         except Exception as e:
             print(f" [!] Failed to generate {entity}: {e}")
 
     # Update index with newly created entities
     if created:
         today = date.today().isoformat()
-        entries = [f"- [{e}](entities/{e}.md) — auto-healed entity" for e in created]
+        entries = [f"- [{display}](entities/{stem}.md) — auto-healed entity" for display, stem in created]
         update_index(entries)
         print(f"  indexed: {len(entries)} entity page(s)")
 
-        names = ", ".join(created)
+        # Normalize wikilinks across all pages to point to canonical filenames
+        from tools.shared.wiki import normalize_wikilinks
+        canonical_map = {}
+        for p in all_wiki_pages():
+            stem = p.stem
+            canonical_map[stem.lower()] = stem
+            canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
+        for p in all_wiki_pages():
+            c = p.read_text(encoding="utf-8")
+            nc = normalize_wikilinks(c, canonical_map)
+            if nc != c:
+                p.write_text(nc, encoding="utf-8")
+
+        names = ", ".join(display for display, _ in created)
         append_log(f"## [{today}] heal | Auto-healed missing entities\n\nCreated entity pages for: {names}.")
 
 

@@ -5,11 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { FolderOpen, HardDrive, CheckCircle, Loader2, CloudUpload, Plus, X, ChevronDown, Trash2, AlertCircle, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  fetchRawFiles, uploadFile, uploadText, triggerIngest,
+  fetchRawFiles, uploadFile, uploadText,
   fetchRawFileContent, deleteRawFile, ingestImageFile,
   fetchUrlArticle,
 } from '@/services/dataService';
-import type { RawFile, UploadResult, IngestResult } from '@/services/dataService';
+import type { RawFile, UploadResult } from '@/services/dataService';
+import { useIngestStore } from '@/stores/ingestStore';
+import { connectIngestStream } from '@/hooks/useIngestStream';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useWikiStore } from '@/stores/wikiStore';
@@ -49,7 +51,7 @@ export function UploadPage() {
 
   const [showUningestedOnly, setShowUningestedOnly] = useState(false);
 
-  const [ingestingPaths, setIngestingPaths] = useState<Set<string>>(new Set());
+  const jobs = useIngestStore((s) => s.jobs);
   const [deletingPaths, setDeletingPaths] = useState<Set<string>>(new Set());
 
   const addNotification = useNotificationStore((s) => s.addNotification);
@@ -58,7 +60,6 @@ export function UploadPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [fileTypeFilter, setFileTypeFilter] = useState<FileTypeFilter>('all');
-  const [batchIngesting, setBatchIngesting] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
   const [expandedMethod, setExpandedMethod] = useState<AddMethod>('none');
@@ -246,31 +247,10 @@ export function UploadPage() {
     setPreviewLoading(false);
   }, [t]);
 
-  const handleIngest = useCallback(async (file: RawFile) => {
-    try {
-      setIngestingPaths((prev) => new Set(prev).add(file.path));
-      const result: IngestResult = await triggerIngest(file.path);
-      if (result.success) {
-        showToast(t('upload.success.ingest'), 'success');
-        refreshGraphData();
-        await loadFiles();
-      } else {
-        const errText = result.stderr || result.stdout || 'Unknown error';
-        const shortErr = errText.length > 120 ? errText.slice(0, 120) + '...' : errText;
-        showToast(`${t('upload.error.ingest')}: ${shortErr}`, 'error');
-        setIngestErrorLog({
-          title: file.name,
-          stdout: result.stdout,
-          stderr: result.stderr,
-          returncode: result.returncode,
-        });
-      }
-    } catch (err) {
-      showToast(String(err), 'error');
-    } finally {
-      setIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.path); return n; });
-    }
-  }, [showToast, t, refreshGraphData, loadFiles]);
+  const handleIngest = useCallback((file: RawFile) => {
+    const jobId = useIngestStore.getState().startJob(file.path, file.name);
+    connectIngestStream(jobId, file.path);
+  }, []);
 
   const handleDelete = useCallback(async (file: RawFile) => {
     if (!confirm(t('upload.deleteConfirm'))) return;
@@ -287,57 +267,55 @@ export function UploadPage() {
     }
   }, [showToast, t, loadFiles]);
 
-  const handleBatchIngest = useCallback(async () => {
+  const handleBatchIngest = useCallback(() => {
     if (selectedPaths.size === 0) {
       showToast(t('upload.nothingSelected'), 'error');
       return;
     }
-    setBatchIngesting(true);
-    let successCount = 0;
-    const failed: string[] = [];
-    const errorLogs: { path: string; stdout: string; stderr: string; returncode: number }[] = [];
     for (const path of selectedPaths) {
-      try {
-        const result = await triggerIngest(path);
-        if (result.success) {
-          successCount++;
-        } else {
-          failed.push(path);
-          errorLogs.push({ path, stderr: result.stderr, stdout: result.stdout, returncode: result.returncode });
-        }
-      } catch (e) {
-        failed.push(path);
+      const file = files.find((f) => f.path === path);
+      if (file) {
+        const jobId = useIngestStore.getState().startJob(file.path, file.name);
+        connectIngestStream(jobId, file.path);
       }
     }
-    const total = selectedPaths.size;
-    if (failed.length > 0) {
-      const firstErr = errorLogs[0];
-      if (firstErr) {
-        const errText = firstErr.stderr || firstErr.stdout || 'Unknown error';
-        const shortErr = errText.length > 80 ? errText.slice(0, 80) + '...' : errText;
-        showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed): ${shortErr}`, successCount > 0 ? 'success' : 'error');
-        setIngestErrorLog({
-          title: `${failed.length} 个文件摄入失败`,
-          stdout: errorLogs.map((e) => `--- ${e.path} ---\n${e.stdout}`).join('\n\n'),
-          stderr: errorLogs.map((e) => `--- ${e.path} ---\n${e.stderr}`).join('\n\n'),
-          returncode: errorLogs[0].returncode,
-        });
-      } else {
-        showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed)`, successCount > 0 ? 'success' : 'error');
-      }
-    } else {
-      showToast(`${successCount}/${total} ${t('upload.success.ingest')}`, 'success');
-    }
-    setSelectedPaths(new Set());
-    setBatchIngesting(false);
-    refreshGraphData();
-    await loadFiles();
-  }, [selectedPaths, showToast, t, refreshGraphData, loadFiles]);
+  }, [selectedPaths, files, showToast, t]);
 
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const deleteDialogRef = useFocusTrap<HTMLDivElement>(showBatchDeleteConfirm);
   useBodyScrollLock(showBatchDeleteConfirm);
+
+  // Listen for completed/failed ingest jobs and refresh data
+  const completedIdsRef = useRef<Set<string>>(new Set());
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const refreshGraphDataRef = useRef(refreshGraphData);
+  refreshGraphDataRef.current = refreshGraphData;
+  const loadFilesRef = useRef(loadFiles);
+  loadFilesRef.current = loadFiles;
+  useEffect(() => {
+    for (const job of jobs) {
+      if (job.status !== 'running' && !completedIdsRef.current.has(job.id)) {
+        completedIdsRef.current.add(job.id);
+        if (job.status === 'failed') {
+          const stdout = job.logs.filter((l) => !l.startsWith('stderr:')).join('\n');
+          const stderr = job.logs.filter((l) => l.startsWith('stderr:')).map((l) => l.slice(7)).join('\n');
+          showToastRef.current(`${tRef.current('upload.error.ingest')}: ${job.name}`, 'error');
+          setIngestErrorLog({
+            title: job.name,
+            stdout,
+            stderr,
+            returncode: job.returncode ?? 1,
+          });
+        }
+        refreshGraphDataRef.current();
+        loadFilesRef.current();
+      }
+    }
+  }, [jobs]);
 
   // Global Escape handler for batch delete modal (motion.div doesn't auto-focus)
   useEffect(() => {
@@ -584,9 +562,7 @@ export function UploadPage() {
           sortMode={sortMode}
           fileTypeFilter={fileTypeFilter}
           showUningestedOnly={showUningestedOnly}
-          ingestingPaths={ingestingPaths}
           deletingPaths={deletingPaths}
-          batchIngesting={batchIngesting}
           batchDeleting={batchDeleting}
           hoveredPath={hoveredPath}
           onSearchChange={setSearchQuery}

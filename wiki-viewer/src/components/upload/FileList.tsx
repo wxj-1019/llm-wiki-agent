@@ -1,4 +1,4 @@
-import { useRef, memo } from 'react';
+import { useRef, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FolderOpen, Search, ArrowUpDown, Filter, CheckSquare, Square,
@@ -11,6 +11,7 @@ import {
   formatBytes, formatDate, getFileIcon, getFileCategory,
   getFileTypeColor, getFileTypeBg, type FileTypeFilter,
 } from '@/lib/fileUtils';
+import { useIngestStore } from '@/stores/ingestStore';
 
 interface Props {
   files: RawFile[];
@@ -21,9 +22,7 @@ interface Props {
   sortMode: 'newest' | 'name' | 'size';
   fileTypeFilter: FileTypeFilter;
   showUningestedOnly: boolean;
-  ingestingPaths: Set<string>;
   deletingPaths: Set<string>;
-  batchIngesting: boolean;
   batchDeleting: boolean;
   hoveredPath: string | null;
   onSearchChange: (value: string) => void;
@@ -75,7 +74,6 @@ const FileListItem = memo(function FileListItem({
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6, scale: 0.98 }}
@@ -204,9 +202,7 @@ export function FileList({
   sortMode,
   fileTypeFilter,
   showUningestedOnly,
-  ingestingPaths,
   deletingPaths,
-  batchIngesting,
   batchDeleting,
   hoveredPath,
   onSearchChange,
@@ -226,6 +222,10 @@ export function FileList({
 }: Props) {
   const { t } = useTranslation();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Stable ingestion state to prevent useSyncExternalStore infinite loop from new Set every render
+  const jobs = useIngestStore((s) => s.jobs);
+  const ingestingPaths = useMemo(() => new Set(jobs.filter((j) => j.status === 'running').map((j) => j.path)), [jobs]);
+  const batchIngesting = useMemo(() => Array.from(selectedPaths).some((p) => ingestingPaths.has(p)), [selectedPaths, ingestingPaths]);
 
   const isAllSelected = filteredFiles.length > 0 && selectedPaths.size === filteredFiles.length;
   const hasSelection = selectedPaths.size > 0;

@@ -6,6 +6,8 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte 项目的操作指引，Anthropic Claude Code CLI 的可构建分支，移除遥测、解锁 54 个实验性功能、中文界面与多模型支持
+- [王信杰 — 后端开发工程师简历](sources/wangxinjie-backend-developer-resume.md) — 王信杰个人简历，包含海康威视实习经历、能源大数据平台和慧公寓管理系统项目，以及Spring Boot/区块链/AI混合技术栈
 - [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点
 - [主力选股系统整体分析文档](sources/main-fund-selection-system-analysis.md) — AI驱动的旗舰智能选股系统六层架构详解，包含7种策略、量化评分、5位AI分析师、回测验证等
 - [Attention Is All You Need](sources/attention-is-all-you-need.md) — seminal paper introducing the Transformer architecture
@@ -14,6 +16,50 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
+- [Claude Code](entities/ClaudeCode.md) — auto-created entity
+- [Ink](entities/Ink.md) — auto-created entity
+- [Latte](entities/Latte.md) — auto-created entity
+- [Bun](entities/Bun.md) — auto-created entity
+- [AppleIntelligence](entities/AppleIntelligence.md) — auto-healed entity
+- [A股市场](entities/A股市场.md) — auto-healed entity
+- [Bitcoin](entities/Bitcoin.md) — auto-healed entity
+- [Claude Artifacts](entities/ClaudeArtifacts.md) — auto-healed entity
+- [ControlledPullback](entities/ControlledPullback.md) — auto-healed entity
+- [Datasette](entities/Datasette.md) — auto-healed entity
+- [DeepSeekR1-Lite-Preview](entities/DeepSeekR1LitePreview.md) — auto-healed entity
+- [Ethereum](entities/Ethereum.md) — auto-healed entity
+- [Gemini](entities/Gemini.md) — auto-healed entity
+- [Gemini 2.0 Flash](entities/Gemini2.0Flash.md) — auto-healed entity
+- [Gemini 2.0 Flash Thinking](entities/Gemini2.0FlashThinking.md) — auto-healed entity
+- [GrowthPotential](entities/GrowthPotential.md) — auto-healed entity
+- [LLM](entities/LLM.md) — auto-healed entity
+- [LowRiskIncome](entities/LowRiskIncome.md) — auto-healed entity
+- [MLX](entities/MLX.md) — auto-healed entity
+- [MLX-vlm](entities/MLXvlm.md) — auto-healed entity
+- [MainForceAccumulation](entities/MainForceAccumulation.md) — auto-healed entity
+- [Microsoft](entities/Microsoft.md) — auto-healed entity
+- [ModelCollapse](entities/ModelCollapse.md) — auto-healed entity
+- [NotebookLM](entities/NotebookLM.md) — auto-healed entity
+- [Phi4](entities/Phi4.md) — auto-healed entity
+- [QvQ](entities/QvQ.md) — auto-healed entity
+- [ScalingLaws](entities/ScalingLaws.md) — auto-healed entity
+- [ShortTermBreakout](entities/ShortTermBreakout.md) — auto-healed entity
+- [TrendMomentum](entities/TrendMomentum.md) — auto-healed entity
+- [ValueStable](entities/ValueStable.md) — auto-healed entity
+- [o3](entities/o3.md) — auto-healed entity
+- [主力资金流入策略](entities/主力资金流入策略.md) — auto-healed entity
+- [多因子评分策略](entities/多因子评分策略.md) — auto-healed entity
+- [板块轮动策略](entities/板块轮动策略.md) — auto-healed entity
+- [Claude](entities/Claude.md) — auto-healed entity
+- [DeepSeekV3](entities/DeepSeekV3.md) — auto-healed entity
+- [Evaluation](entities/Evaluation.md) — auto-healed entity
+- [MainFundSelectionSystem](entities/MainFundSelectionSystem.md) — auto-healed entity
+- [TechnicalAnalysis](entities/TechnicalAnalysis.md) — auto-healed entity
+- [Qwen](entities/Qwen.md) — auto-healed entity
+- [QwQ](entities/QwQ.md) — auto-healed entity
+- [DeepSeekR1](entities/DeepSeekR1.md) — auto-healed entity
+- [o1](entities/o1.md) — auto-healed entity
+- [DeepLearning](entities/DeepLearning.md) — auto-healed entity
 - [LargeLanguageModels](entities/LargeLanguageModels.md) — auto-healed entity
 - [GPT4](entities/GPT4.md) — auto-healed entity
 - [ChatGPT](entities/ChatGPT.md) — auto-healed entity
@@ -40,8 +86,28 @@ This file is maintained by the LLM. Updated on every ingest.
 - [DeepSeek](entities/DeepSeek.md) — Chinese AI lab; creator of DeepSeek-V3 and DeepSeek-R1
 - [Google DeepMind](entities/GoogleDeepMind.md) — Google AI research division
 - [Simon Willison](entities/SimonWillison.md) — developer and prolific LLM tools explorer
+- [Backtesting](entities/Backtesting.md) — 回测验证系统是[[main-fund-selection-system-analysis|主力选股系统]]的重要组成部分，用于验证选股策略和AI推荐的有效...
+- [GeneticAlgorithm](entities/GeneticAlgorithm.md) — [[慧公寓管理系统]] — 实际应用
+- [Hyperledger Fabric](entities/HyperledgerFabric.md) — [[慧公寓管理系统]] — 实际应用项目
+- [MainFundSelection](entities/MainFundSelection.md) — 主力选股系统，一个[[AIAgent|AI驱动的]]旗舰智能选股系统，采用六层流水线架构，从全市场主力资金流入股票中每日精选3-10只最优标的。
+- [QuantitativeAnalysis](entities/QuantitativeAnalysis.md) — 系统性量化分析方法论在金融选股中的应用。在[[main-fund-selection-system-analysis|主力选股系统]]中，量化预评分（Qu...
+- [Redis](entities/Redis.md) — [[王信杰]] — 技术栈中间件
+- [RocketMQ](entities/RocketMQ.md) — [[王信杰]] — 技术栈中间件
+- [SpringBoot](entities/SpringBoot.md) — [[王信杰]] — 技术栈核心
+- [SpringCloudAlibaba](entities/SpringCloudAlibaba.md) — [[王信杰]] — 技术栈
+- [Tushare](entities/Tushare.md) — Tushare是[[MainFundSelection|主力选股系统]]的备选数据源和技术指标提供者。
+- [WencaiAPI](entities/WencaiAPI.md) — 问财API（pywencai）是[[MainFundSelection|主力选股系统]]的主要数据源，提供A股市场的主力资金流向数据。
+- [ZKP](entities/ZKP.md) — [[慧公寓管理系统]] — 实际应用
+- [中国计算机设计大赛](entities/中国计算机设计大赛.md) — 全国性计算机设计竞赛，王信杰于2022年8月获得国家级三等奖。
+- [慧公寓管理系统](entities/慧公寓管理系统.md) — [[王信杰]] — 项目负责人
+- [服务外包竞赛](entities/服务外包竞赛.md) — 中国服务外包领域的学生竞赛，王信杰于2023年5月获得地区三等奖。
+- [海康威视](entities/海康威视.md) — 王信杰曾在此公司担任后端开发实习生（2024.09-2025.03），参与Python组件平台开发和Java敏捷项目
+- [王信杰](entities/王信杰.md) — [[能源大数据平台]] — 微服务架构+Redis集群，支持5000 QPS
+- [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [Platform Subpackage Publishing](concepts/PlatformSubpackagePublishing.md) — auto-created concept
+- [Feature Flag Dead Code Elimination](concepts/FeatureFlagDeadCodeElimination.md) — auto-created concept
 - [Attention Mechanism](concepts/AttentionMechanism.md) — neural network technique for focusing on specific parts of input
 - [Transformer](concepts/Transformer.md) — deep learning architecture based solely on attention mechanisms
 - [AI Agent](concepts/AIAgent.md) — 自主感知、决策和执行行动的 AI 系统
@@ -53,6 +119,29 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Inference Scaling / Reasoning](concepts/InferenceScalingReasoning.md) — scaling test-time compute for better reasoning
 - [Slop](concepts/Slop.md) — low-quality AI-generated content polluting training data
 - [Synthetic Data](concepts/SyntheticData.md) — artificially generated training data for model improvement
+- [AIMultiAgentStockAnalysis](concepts/AIMultiAgentStockAnalysis.md) — [[AIAgent|AI多智能体]]在股票分析中的应用范式。在[[main-fund-selection-system-analysis|主力选股系统]]...
+- [Backtesting](concepts/Backtesting.md) — 回测验证是[[MainFundSelection|主力选股系统]]六层架构的最后一环，用于验证推荐质量。
+- [ConvertibleBondArbitrage](concepts/ConvertibleBondArbitrage.md) — 可转债套利策略利用可转债兼具债性和股性的特点，通过转股溢价率、正股联动、波动率错配、回售/赎回博弈等方式获取收益。
+- [DataPipeline](concepts/DataPipeline.md) — [[MainFundSelection|主力选股系统]]的数据管道从多种来源获取并处理数据。
+- [EnterpriseBlockchain](concepts/EnterpriseBlockchain.md) — 企业级区块链指面向商业场景的许可区块链，区别于公共区块链（如[[Bitcoin]]、[[Ethereum]]）。典型代表是[[HyperledgerFab...
+- [EventDriven](concepts/EventDriven.md) — 事件驱动策略利用某个"事件"带来的定价重估机会，比如业绩超预期、重组、回购、政策刺激、指数纳入、分红送转等。
+- [GrowthStrategy](concepts/GrowthStrategy.md) — 成长策略重视未来盈利扩张，愿意为高增长支付更高估值。核心是找"高景气 + 高增长 + 增长可持续"的公司。
+- [HighDividendLowVol](concepts/HighDividendLowVol.md) — 高股息低波策略追求"稳"，主要目标是提高持有体验、控制回撤、争取长期复利，常见于类红利、类固收增强配置。
+- [MeanReversion](concepts/MeanReversion.md) — 均值回归策略认为，价格短期偏离合理区间后，未来有较大概率向均值回归。常见做法是买超跌、卖超涨。
+- [MomentumStrategy](concepts/MomentumStrategy.md) — 动量策略强调"过去一段时间涨得好的，未来一段时间可能继续强"。它与[[TrendTracking|趋势跟踪]]很像，但更偏向截面比较，也就是在同一批股票中...
+- [MoneyFlowStrategy](concepts/MoneyFlowStrategy.md) — 资金流策略是一种跟踪主力资金流向的量化交易方法。其核心逻辑是：如果主力资金持续净流入，而股价涨幅尚未完全反映，后续可能还有上行动力。
+- [MultiFactorSelection](concepts/MultiFactorSelection.md) — 多因子选股策略是一种同时从估值、成长、质量、动量、波动率、资金流等多个维度给股票打分，再综合排序选股的量化方法。它不押注单一逻辑，而是通过多因子的综合评分...
+- [QualityStrategy](concepts/QualityStrategy.md) — 质量策略偏好经营稳健、盈利能力强、财务结构健康的公司。它追求的不是最便宜、也不是涨最快，而是"长期胜率高"。
+- [QuantitativeAnalysis](concepts/QuantitativeAnalysis.md) — 量化分析在[[MainFundSelection|主力选股系统]]中通过量化预评分系统（Quant Scorer）实现，在AI分析前对股票进行客观评分。
+- [QuantPreScoring](concepts/QuantPreScoring.md) — 量化预评分系统（Quant Scorer）是AI分析前的股票客观评分机制。在[[main-fund-selection-system-analysis|主...
+- [RiskManagement](concepts/RiskManagement.md) — [[MainFundSelection|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。
+- [SectorRotation](concepts/SectorRotation.md) — 板块轮动策略是一种先判断当前市场最强行业或主题，再从强板块中挑选最强个股的量化方法。核心是"先选赛道，再选个股"。
+- [StatisticalArbitrage](concepts/StatisticalArbitrage.md) — 统计套利/配对交易策略寻找两只历史相关性较强的资产，当价差异常扩大时，赌它们未来重新收敛。
+- [StockSelectionStrategy](concepts/StockSelectionStrategy.md) — AI驱动的股票选择策略框架。在[[main-fund-selection-system-analysis|主力选股系统]]中，选股策略定义了从数据过滤到量...
+- [TrendTracking](concepts/TrendTracking.md) — 趋势跟踪策略的本质是：股价一旦形成上升趋势，往往不会立刻结束，而是会沿着趋势持续一段时间。策略不去预测底部，而是在趋势已经明确后跟随。
+- [ValueStrategy](concepts/ValueStrategy.md) — 价值策略认为低估值且基本面稳定的公司，最终会回归合理估值。常见选股标准是低 PE、低 PB、高股息、稳定盈利。
+- [VolumePriceBreakout](concepts/VolumePriceBreakout.md) — 量价突破策略的核心是：股价在关键压力位附近震荡后，如果伴随放量突破，说明新的资金愿意在更高价格成交，往往意味着新一轮上涨开始。
+- [HybridAIOptimizationModel](concepts/混合AI优化模型.md) — 混合AI优化模型指将[[DeepLearning|深度学习]]与[[GeneticAlgorithm|遗传算法]]等优化方法结合的技术路线。深度学习负责模...
 
 ## Syntheses
 - [Foundation Models Overview](syntheses/foundation-models-overview.md) — overview of large-scale AI foundation models and the Transformer era

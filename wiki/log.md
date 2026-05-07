@@ -6,6 +6,22 @@
 
 ---
 
+## [2026-05-08] ingest | Latte — Claude Code 可构建分支 (AGENTS.md)
+
+Added source page for latte project — a fork of Anthropic's Claude Code CLI. Key claims: removes telemetry and hard-coded safety guards, unlocks 54 experimental features, supports Chinese interface and multi-model access via OpenAI-compatible adapters. Created entity pages for Bun, Latte, Ink, and ClaudeCode. Created concept pages for Feature Flag Dead Code Elimination and Platform Subpackage Publishing. No contradictions with existing wiki content.
+
+## [2026-05-08] heal | Auto-healed broken links
+
+Created stub pages for: AppleIntelligence, A股市场, Bitcoin, Claude Artifacts, ControlledPullback, Datasette, DeepSeekR1-Lite-Preview, Ethereum, Gemini, Gemini 2.0 Flash, Gemini 2.0 Flash Thinking, GrowthPotential, LLM, LowRiskIncome, MLX, MLX-vlm, MainForceAccumulation, Microsoft, ModelCollapse, NotebookLM, Phi4, QvQ, ScalingLaws, ShortTermBreakout, TrendMomentum, ValueStable, o3, 主力资金流入策略, 多因子评分策略, 板块轮动策略.
+
+## [2026-05-08] heal | Auto-healed missing entities
+
+Created entity pages for: DeepLearning, Hyperledger Fabric, o1, DeepSeekR1, QwQ, Qwen, TechnicalAnalysis, MainFundSelectionSystem, Evaluation, DeepSeekV3, Claude, Spring Boot.
+
+## [2026-05-08] ingest | 王信杰 — 后端开发工程师简历
+
+Added source. Key claims: 王信杰曾在海康威视实习，参与能源大数据平台（Spring Boot+Redis集群，5000 QPS）和慧公寓管理系统（区块链+AI混合模型降低空置率从30%降至10%）。引入了新的企业级区块链（Hyperledger Fabric, ZKP）和混合AI优化模型知识。注意：简历中有两处获奖经历重复显示，疑为排版问题。
+
 ## [2026-05-07] ingest | A股常见量化交易策略指南
 
 Added source: 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点。Key claims: A股量化策略需单独理解市场特征；四种优先策略（主力资金流入、板块轮动、趋势+动量复合、多因子评分）最适合当前AI选股系统；"多因子底座 + A股特色信号 + 严格风控"为最优组合架构。无矛盾。

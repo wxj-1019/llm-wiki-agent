@@ -16,6 +16,7 @@ import time
 import socket
 import subprocess
 import urllib.parse
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from collections import defaultdict
@@ -57,6 +58,9 @@ FRONTEND_DIST = REPO / "wiki-viewer" / "dist"
 # Prefer .venv python so subprocesses find installed deps (litellm, markitdown, etc.)
 _VENV_PY = REPO / ".venv" / "Scripts" / "python.exe"
 PYTHON_EXE = str(_VENV_PY) if _VENV_PY.exists() else sys.executable
+
+# In-memory job registry for SSE ingest progress (jobs expire 1h after completion)
+ingestion_jobs: dict[str, dict] = {}
 
 ALLOWED_EXTENSIONS = {
     ".md", ".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".xls",
@@ -753,7 +757,7 @@ def delete_raw_file(path: str):
 
 @app.post("/api/ingest")
 async def api_ingest(payload: IngestPayload):
-    path_str = payload.path
+    path_str = path
     if not path_str:
         raise HTTPException(status_code=400, detail="path is required")
 
@@ -786,6 +790,148 @@ async def api_ingest(payload: IngestPayload):
         raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
+def _calc_ingest_progress(line: str, current: int) -> int:
+    """Map ingest.py stdout keywords to a rough progress percentage."""
+    if "Converting" in line:
+        return max(current, 10)
+    if "Converted" in line or "✓ Converted" in line:
+        return max(current, 20)
+    if "calling API" in line:
+        return max(current, 40)
+    if "wrote:" in line:
+        return min(90, current + 8)
+    if "Contradictions detected" in line:
+        return max(current, 85)
+    if "Running post-ingest reflection" in line:
+        return max(current, 92)
+    if "Batch complete" in line:
+        return 100
+    return current
+
+
+@app.get("/api/ingest/stream")
+async def api_ingest_stream(path: str = Query(..., min_length=1)):
+    """Ingest a raw file with real-time SSE progress updates.
+
+    Returns a text/event-stream where each event is one of:
+      - start    : job created
+      - log      : stdout line from ingest.py
+      - stderr   : stderr line from ingest.py
+      - complete : ingest finished (success or failure)
+    """
+    path_str = path
+    if not path_str:
+        raise HTTPException(status_code=400, detail="path is required")
+
+    target = (REPO / path_str).resolve()
+    raw_dir = (REPO / "raw").resolve()
+    try:
+        target.relative_to(raw_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Path must be within raw/")
+
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    job_id = str(uuid.uuid4())[:8]
+
+    async def event_generator():
+        proc = await asyncio.create_subprocess_exec(
+            PYTHON_EXE,
+            "-u",
+            str(REPO / "tools" / "ingest.py"),
+            str(target),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=str(REPO),
+        )
+
+        ingestion_jobs[job_id] = {
+            "id": job_id,
+            "path": path_str,
+            "status": "running",
+            "logs": [],
+            "progress": 0,
+            "created_at": time.time(),
+            "updated_at": time.time(),
+        }
+
+        yield f"event: start\ndata: {json.dumps({'job_id': job_id, 'path': path_str})}\n\n"
+
+        stderr_buffer: list[str] = []
+
+        async def read_stderr():
+            while True:
+                try:
+                    line = await asyncio.wait_for(proc.stderr.readline(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    if proc.returncode is not None:
+                        break
+                    continue
+                if not line:
+                    break
+                text = line.decode("utf-8", errors="replace").rstrip()
+                if text:
+                    stderr_buffer.append(text)
+                    ingestion_jobs[job_id]["logs"].append(text)
+                    ingestion_jobs[job_id]["updated_at"] = time.time()
+
+        stderr_task = asyncio.create_task(read_stderr())
+
+        try:
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                text = line.decode("utf-8", errors="replace").rstrip()
+                if not text:
+                    continue
+
+                ingestion_jobs[job_id]["logs"].append(text)
+                ingestion_jobs[job_id]["updated_at"] = time.time()
+
+                progress = _calc_ingest_progress(text, ingestion_jobs[job_id]["progress"])
+                ingestion_jobs[job_id]["progress"] = progress
+
+                yield f"event: log\ndata: {json.dumps({'text': text, 'progress': progress, 'job_id': job_id})}\n\n"
+
+
+        finally:
+            stderr_task.cancel()
+            try:
+                await stderr_task
+            except asyncio.CancelledError:
+                pass
+            if proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+
+        final_status = "completed" if proc.returncode == 0 else "failed"
+        ingestion_jobs[job_id]["status"] = final_status
+        ingestion_jobs[job_id]["progress"] = 100
+        ingestion_jobs[job_id]["updated_at"] = time.time()
+
+        yield f"event: complete\ndata: {json.dumps({'job_id': job_id, 'status': final_status, 'returncode': proc.returncode})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/ingest/jobs")
+def list_ingest_jobs():
+    """Return active and recently-completed ingestion jobs."""
+    cutoff = time.time() - 3600  # keep 1 hour
+    active = {k: v for k, v in ingestion_jobs.items() if v.get("updated_at", 0) > cutoff}
+    return {"jobs": list(active.values())}
+
+
+@app.get("/api/ingest/jobs/{job_id}")
+def get_ingest_job(job_id: str):
+    """Return a single ingestion job with full logs."""
+    if job_id not in ingestion_jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return ingestion_jobs[job_id]
 
 
 # ── Webhook endpoints (P1-2 URL Clip + P1-6 Automation) ──

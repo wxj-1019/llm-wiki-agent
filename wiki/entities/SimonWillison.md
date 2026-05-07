@@ -21,6 +21,6 @@ Simon Willison is a prolific blogger, software developer, and creator of the [[D
 
 - [[LLM]] — his CLI tool for interacting with language models
 - [[Datasette]] — his data exploration tool
-- [[Things We Learned About LLMs in 2024|things-we-learned-about-llms-in-2024]] — his comprehensive 2024 review
+- [[things-we-learned-about-llms-in-2024|things-we-learned-about-llms-in-2024]] — his comprehensive 2024 review
 - [[Claude]] — his favorite model of 2024 ([[Claude|Claude 3.5 Sonnet]])
 - [[Evaluation]] — advocate for test-driven development of prompts

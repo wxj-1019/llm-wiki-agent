@@ -19,7 +19,7 @@ budget: 3000
 
 # Transformer
 
-The **Transformer** is a deep learning architecture introduced in the paper "[[Attention Is All You Need]]" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, and Łukasz Kaiser.
+The **Transformer** is a deep learning architecture introduced in the paper "[[attention-is-all-you-need]]" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, and Łukasz Kaiser.
 
 ## Architecture
 

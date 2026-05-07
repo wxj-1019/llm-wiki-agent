@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { motion } from 'framer-motion';
@@ -50,7 +50,7 @@ function logEntryToEvent(entry: LogEntry, t: (key: string) => string): TimelineE
     date: entry.date,
     type: entry.operation,
     title: entry.title,
-    description: typeDesc[entry.operation] || t('timeline.type.unknown', 'Wiki operation'),
+    description: typeDesc[entry.operation] || t('timeline.type.unknown') || 'Wiki operation',
   };
 }
 
@@ -263,3 +263,5 @@ export function TimelinePage() {
     </div>
   );
 }
+
+

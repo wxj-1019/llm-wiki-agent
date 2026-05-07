@@ -32,8 +32,8 @@ import hashlib
 
 # Fix Windows GBK console encoding for emoji output
 if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 import re
 import shutil
 import tempfile
@@ -326,7 +326,7 @@ def validate_ingest(changed_pages: list[str] | None = None) -> dict:
             # Handle [[PageName|display alias]] format — extract page name before |
             link_target = link.split("|")[0].strip()
             # Normalize: strip paths (both / and \), check stem only
-            link_stem = Path(link_target.replace("\\", "/")).stem.lower()
+            link_stem = link_target.replace("\\", "/").split("/")[-1].strip().lower()
             if link_stem not in existing_pages:
                 broken_links.append((rel, link))
 
@@ -460,6 +460,15 @@ New source to ingest (file: {source.relative_to(REPO_ROOT) if source.is_relative
 Today's date: {today}
 
 Return ONLY a valid JSON object with these fields (no markdown fences, no prose outside the JSON):
+
+CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
+- `slug` must be kebab-case (e.g., "my-source-name"), NO spaces.
+- `entity_pages[].path` must be `entities/TitleCaseNoSpaces.md` (e.g., `entities/HyperledgerFabric.md`). NEVER use spaces or hyphens inside the name.
+- `concept_pages[].path` must be `concepts/TitleCaseNoSpaces.md`, same rules.
+- Every `[[WikiLink]]` inside ALL markdown content must EXACTLY match the target file's stem.
+  - Example: if entity file is `entities/HyperledgerFabric.md`, the link must be `[[HyperledgerFabric]]`, NEVER `[[Hyperledger Fabric]]`.
+  - For Chinese names, use Chinese links exactly matching the Chinese filename: `[[能源大数据平台]]`. Do NOT use English aliases like `[[EnergyBigDataPlatform|能源大数据平台]]`.
+
 {{
   "title": "Human-readable title for this source",
   "slug": "kebab-case-slug-for-filename",
@@ -506,15 +515,31 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
         raise IngestError(f"Invalid slug: {slug!r}")
     write_file(WIKI_DIR / "sources" / f"{safe_slug}.md", data["source_page"])
 
-    # Write entity pages
+    def _extract_title_from_content(content: str, fallback: str) -> str:
+        if content.startswith("---"):
+            fm_end = content.find("---", 3)
+            if fm_end != -1:
+                fm = content[3:fm_end]
+                m = re.search(r'^title:\s*"?([^"\n]+)"?', fm, re.MULTILINE)
+                if m:
+                    return m.group(1).strip()
+        return fallback
+
+    # Write entity pages and auto-index
     for page in data.get("entity_pages", []):
         page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
         write_file(page_path, page["content"])
+        title = _extract_title_from_content(page["content"], page_path.stem)
+        entry = f"- [{title}]({page_path.relative_to(WIKI_DIR).as_posix()}) — auto-created entity"
+        update_index(entry, section="Entities")
 
-    # Write concept pages
+    # Write concept pages and auto-index
     for page in data.get("concept_pages", []):
         page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
         write_file(page_path, page["content"])
+        title = _extract_title_from_content(page["content"], page_path.stem)
+        entry = f"- [{title}]({page_path.relative_to(WIKI_DIR).as_posix()}) — auto-created concept"
+        update_index(entry, section="Concepts")
 
     # Update overview
     if data.get("overview_update"):
@@ -542,6 +567,25 @@ Return ONLY a valid JSON object with these fields (no markdown fences, no prose 
     updated_pages = ["index.md", "log.md"]
     if data.get("overview_update"):
         updated_pages.append("overview.md")
+
+    # Normalize wikilinks to match actual filenames
+    from tools.shared.wiki import normalize_wikilinks
+
+    canonical_map = {}
+    for p in WIKI_DIR.rglob("*.md"):
+        if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
+            continue
+        stem = p.stem
+        canonical_map[stem.lower()] = stem
+        canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
+
+    for page_path in created_pages + updated_pages:
+        full_path = WIKI_DIR / page_path
+        if full_path.exists():
+            c = read_file(full_path)
+            nc = normalize_wikilinks(c, canonical_map)
+            if nc != c:
+                write_file(full_path, nc)
 
     validation = validate_ingest(created_pages)
     if validation.get("broken_links"):

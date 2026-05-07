@@ -16,5 +16,8 @@ uvicorn[standard]>=0.30.0
 pydantic>=2.0.0
 pyyaml>=6.0.0
 
+# Document conversion (PDF/docx/pptx → markdown)
+markitdown[all]>=0.1.5,<0.2.0
+
 # Web article extraction (primary engine for web_fetcher.py)
 trafilatura>=1.12.0

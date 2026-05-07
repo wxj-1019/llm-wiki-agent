@@ -14,7 +14,7 @@ Apple is a technology company whose AI initiatives in 2024 had a mixed reception
 
 - [[MLX]] — excellent array framework for Apple Silicon with Python library
 - [[AppleIntelligence]] — underwhelming LLM features (notification summaries, writing tools, Genmoji)
-- [[MLX-vlm]] — community project for vision LLMs on Apple Silicon
+- [[MLXvlm]] — community project for vision LLMs on Apple Silicon
 
 ## Connections
 

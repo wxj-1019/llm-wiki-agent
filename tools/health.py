@@ -207,7 +207,7 @@ def check_broken_links(pages: list[Path]) -> list[dict]:
         content = read_file(p)
         for link in extract_wikilinks(content):
             link_target = link.split("|")[0].strip()
-            link_stem = Path(link_target.replace("\\", "/")).stem.lower()
+            link_stem = link_target.replace("\\", "/").split("/")[-1].strip().lower()
             if link_stem not in existing_stems:
                 broken.append({
                     "page": str(p.relative_to(REPO_ROOT)),

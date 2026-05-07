@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -63,9 +63,9 @@ function parseYaml(raw: string): { urls: CrawlUrl[]; settings: CrawlSettings } {
         const key = m[1] as keyof CrawlSettings;
         const val = m[2].trim().replace(/^["']|["']$/g, '');
         if (key === 'timeout' || key === 'request_delay' || key === 'max_retries' || key === 'content_min_length') {
-          (settings as Record<string, unknown>)[key] = parseInt(val, 10) || settings[key];
+          ((settings as unknown) as Record<string, unknown>)[key] = parseInt(val, 10) || settings[key];
         } else if (key === 'respect_robots_txt' || key === 'fallback_to_markitdown') {
-          (settings as Record<string, unknown>)[key] = val === 'true';
+          ((settings as unknown) as Record<string, unknown>)[key] = val === 'true';
         } else if (key === 'user_agent') {
           settings.user_agent = val;
         }
@@ -128,7 +128,8 @@ export function CrawlerPage() {
   const [showOutput, setShowOutput] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  const terminalRef = useBodyScrollLock<HTMLDivElement>(showOutput);
+  useBodyScrollLock(showOutput);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   const loadConfig = useCallback(async () => {
     try {
@@ -372,7 +373,7 @@ export function CrawlerPage() {
                     <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{label}</label>
                     <input
                       type={type}
-                      value={(settings as Record<string, unknown>)[key] as string | number}
+                      value={((settings as unknown) as Record<string, unknown>)[key] as string | number}
                       onChange={(e) => {
                         const val = type === 'number' ? parseInt(e.target.value, 10) || 0 : e.target.value;
                         setSettings(prev => ({ ...prev, [key]: val }));
@@ -389,7 +390,7 @@ export function CrawlerPage() {
                   <label key={key} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={(settings as Record<string, unknown>)[key] as boolean}
+                      checked={((settings as unknown) as Record<string, unknown>)[key] as boolean}
                       onChange={(e) => {
                         setSettings(prev => ({ ...prev, [key]: e.target.checked }));
                         setDirty(true);

@@ -155,7 +155,8 @@ def find_orphans(pages: list[Path]) -> list[Path]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            resolved = page_name_to_path(link, pages)
+            target = link.split("|")[0].strip()
+            resolved = page_name_to_path(target, pages)
             for r in resolved:
                 inbound[r] += 1
     return [p for p in pages if inbound[p] == 0 and p != WIKI_DIR / "overview.md"]
@@ -166,7 +167,8 @@ def find_broken_links(pages: list[Path]) -> list[tuple[Path, str]]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            if not page_name_to_path(link, pages):
+            target = link.split("|")[0].strip()
+            if not page_name_to_path(target, pages):
                 broken.append((p, link))
     return broken
 
@@ -180,8 +182,9 @@ def find_missing_entities(pages: list[Path]) -> list[str]:
         # Deduplicate links per-page before counting
         links = set(extract_wikilinks(content))
         for link in links:
-            if link.lower() not in existing_pages:
-                mention_counts[link] += 1
+            target = link.split("|")[0].strip()
+            if target.lower() not in existing_pages:
+                mention_counts[target] += 1
     return [name for name, count in mention_counts.items() if count >= 3]
 
 

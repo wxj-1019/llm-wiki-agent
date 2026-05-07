@@ -116,3 +116,31 @@ def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:
         if p.stem.lower() == name.lower() or p.stem == name:
             candidates.append(p)
     return candidates
+
+
+def normalize_wikilinks(content: str, canonical_map: dict[str, str] | None = None) -> str:
+    """Replace wikilink targets with canonical forms matching actual file stems.
+
+    Fixes common LLM mismatches like ``[[Hyperledger Fabric]]`` → ``[[HyperledgerFabric]]``
+    by looking up the space-stripped / dash-stripped target against known page stems.
+    """
+    if canonical_map is None:
+        canonical_map = {}
+        for p in all_wiki_pages():
+            stem = p.stem
+            canonical_map[stem.lower()] = stem
+            canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
+
+    def _repl(m: re.Match) -> str:
+        inner = m.group(1)
+        if "|" in inner:
+            target, alias = inner.split("|", 1)
+        else:
+            target, alias = inner, None
+        norm = target.lower().replace(" ", "").replace("-", "")
+        if norm in canonical_map and canonical_map[norm] != target:
+            new_target = canonical_map[norm]
+            return f"[[{new_target}|{alias}]]" if alias else f"[[{new_target}]]"
+        return m.group(0)
+
+    return re.sub(r'\[\[([^\]]+)\]\]', _repl, content)

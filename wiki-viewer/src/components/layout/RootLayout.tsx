@@ -7,6 +7,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { ToastContainer } from '@/components/ui/ToastContainer';
+import { IngestProgress } from '@/components/upload/IngestProgress';
 import { AlertTriangle, RefreshCw, WifiOff, Download, Sparkles, ServerOff } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -92,6 +93,7 @@ export function RootLayout() {
       </a>
       <Header />
       <ToastContainer />
+      <IngestProgress />
       <CommandPalette />
       <div ref={bannerRef} className="fixed top-14 left-0 right-0 z-[45]">
         {!isOnline && (

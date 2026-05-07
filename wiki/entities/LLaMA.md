@@ -8,7 +8,7 @@ last_updated: 2026-05-04
 
 # LLaMA
 
-LLaMA (Large Language Model Meta AI) is a family of large language models developed by [[Meta]], designed as a research-focused alternative to proprietary closed-source models like [[OpenAI]]'s [[GPT]] series and [[Google]]'s Gemini. Architecturally, LLaMA is a decoder-only [[Transformer]]-based model using self-attention mechanisms as introduced in [[Attention Is All You Need]].
+LLaMA (Large Language Model Meta AI) is a family of large language models developed by [[Meta]], designed as a research-focused alternative to proprietary closed-source models like [[OpenAI]]'s [[GPT]] series and [[Google]]'s Gemini. Architecturally, LLaMA is a decoder-only [[Transformer]]-based model using self-attention mechanisms as introduced in [[attention-is-all-you-need]].
 
 ## Model Versions
 
