@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Critique · Wiki-Viewer Frontend</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --bg2: #f2efe9;
+    --text: #2c2a28;
+    --text2: #6b6560;
+    --text3: #a39e99;
+    --accent: #0a84ff;
+    --accent2: #2997ff;
+    --green: #34c759;
+    --orange: #ff9500;
+    --red: #ff3b30;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  [data-theme="dark"] {
+    --bg: #1e1d1b;
+    --bg2: #2a2927;
+    --text: #f2f0ed;
+    --text2: #b0aba6;
+    --text3: #6b6560;
+    --accent: #2997ff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    padding: 48px 24px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
+  header .meta { color: var(--text2); font-size: 0.875rem; }
+  header .verdict {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: var(--bg2);
+    border: 1px solid var(--text3);
+    color: var(--text2);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  /* Radar */
+  .radar-wrap {
+    display: flex; justify-content: center; margin-bottom: 48px;
+  }
+  .radar {
+    width: 280px; height: 280px;
+  }
+  .radar-poly {
+    fill: rgba(10,132,255,0.12);
+    stroke: var(--accent);
+    stroke-width: 2;
+  }
+  .radar-grid { fill: none; stroke: var(--text3); stroke-width: 0.5; opacity: 0.3; }
+  .radar-axis { stroke: var(--text3); stroke-width: 0.5; opacity: 0.2; }
+  .radar-label { font-size: 11px; fill: var(--text2); text-anchor: middle; dominant-baseline: middle; }
+  .radar-dot { fill: var(--accent); r: 3; }
+
+  /* Cards */
+  .dim-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  @media (min-width: 720px) {
+    .dim-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .dim-card {
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(0,0,0,0.04);
+  }
+  .dim-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .dim-name { font-size: 0.9375rem; font-weight: 600; }
+  .dim-score {
+    font-size: 1.5rem; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .dim-band {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+  }
+  .band-broken { background: rgba(255,59,48,0.1); color: var(--red); }
+  .band-functional { background: rgba(255,149,0,0.1); color: var(--orange); }
+  .band-strong { background: rgba(10,132,255,0.1); color: var(--accent); }
+  .band-exceptional { background: rgba(52,199,89,0.1); color: var(--green); }
+  .dim-evidence {
+    font-size: 0.8125rem;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+  .dim-evidence code {
+    font-family: 'SF Mono', monospace;
+    font-size: 0.75rem;
+    background: rgba(0,0,0,0.04);
+    padding: 1px 4px;
+    border-radius: 4px;
+  }
+
+  /* Action lists */
+  .actions { margin-bottom: 48px; }
+  .actions h2 {
+    font-size: 1.125rem; font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--text3);
+  }
+  .action-list { list-style: none; padding: 0; }
+  .action-list li {
+    position: relative;
+    padding-left: 28px;
+    margin-bottom: 10px;
+    font-size: 0.875rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .action-list li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 4px;
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--text3);
+  }
+  .keep li::before { border-color: var(--green); background: rgba(52,199,89,0.08); }
+  .fix li::before { border-color: var(--red); background: rgba(255,59,48,0.08); }
+  .quick li::before { border-color: var(--accent); background: rgba(10,132,255,0.08); }
+
+  footer {
+    text-align: center;
+    color: var(--text3);
+    font-size: 0.75rem;
+    padding-top: 24px;
+    border-top: 1px solid var(--text3);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Wiki-Viewer Frontend · 设计评审报告</h1>
+  <div class="meta">Reviewer: OD · Critique skill · 2026-05-06</div>
+  <div class="verdict">整体判断：设计方向清晰、系统成熟，但组件一致性存在「最后一公里」缺口</div>
+</header>
+
+<!-- Radar Chart -->
+<div class="radar-wrap">
+  <svg class="radar" viewBox="0 0 300 300">
+    <!-- Background grid -->
+    <g transform="translate(150,150)">
+      <polygon class="radar-grid" points="0,-100 95.11,-30.9 58.78,80.9 -58.78,80.9 -95.11,-30.9"/>
+      <polygon class="radar-grid" points="0,-75 71.33,-23.18 44.09,60.68 -44.09,60.68 -71.33,-23.18"/>
+      <polygon class="radar-grid" points="0,-50 47.55,-15.45 29.39,40.45 -29.39,40.45 -47.55,-15.45"/>
+      <polygon class="radar-grid" points="0,-25 23.78,-7.73 14.7,20.23 -14.7,20.23 -23.78,-7.73"/>
+      <!-- Axes -->
+      <line class="radar-axis" x1="0" y1="0" x2="0" y2="-100"/>
+      <line class="radar-axis" x1="0" y1="0" x2="95.11" y2="-30.9"/>
+      <line class="radar-axis" x1="0" y1="0" x2="58.78" y2="80.9"/>
+      <line class="radar-axis" x1="0" y1="0" x2="-58.78" y2="80.9"/>
+      <line class="radar-axis" x1="0" y1="0" x2="-95.11" y2="-30.9"/>
+      <!-- Data: Philosophy 7, Hierarchy 7, Detail 6, Function 8, Innovation 5 -->
+      <polygon class="radar-poly" points="0,-70 66.58,-21.63 47.02,64.72 -47.02,64.72 -76.09,-24.72"/>
+      <circle class="radar-dot" cx="0" cy="-70"/>
+      <circle class="radar-dot" cx="66.58" cy="-21.63"/>
+      <circle class="radar-dot" cx="47.02" cy="64.72"/>
+      <circle class="radar-dot" cx="-47.02" cy="64.72"/>
+      <circle class="radar-dot" cx="-76.09" cy="-24.72"/>
+      <!-- Labels -->
+      <text class="radar-label" x="0" y="-118">哲学一致性</text>
+      <text class="radar-label" x="112" y="-36">视觉层级</text>
+      <text class="radar-label" x="69" y="108">细节执行</text>
+      <text class="radar-label" x="-69" y="108">功能性</text>
+      <text class="radar-label" x="-112" y="-36">创新性</text>
+    </g>
+  </svg>
+</div>
+
+<!-- Dimension Cards -->
+<div class="dim-grid">
+
+  <div class="dim-card">
+    <div class="dim-header">
+      <span class="dim-name">1. 哲学一致性</span>
+      <span>
+        <span class="dim-score">7</span>
+        <span class="dim-band band-strong">Strong</span>
+      </span>
+    </div>
+    <p class="dim-evidence">
+      Apple 暖纸设计方向明确，<code>--bg-primary</code> / <code>--text-primary</code> 语义 token 体系完整，glassmorphism 与 pill 按钮贯穿全站。但方向在边缘页面出现漂移：CrawlerPage 的按钮混用 <code>rounded-xl</code> 与 <code>rounded-lg</code>，SettingsPage 的 tab active 状态在 core tabs 用 <code>text-apple-purple</code> 而 source tabs 用 <code>text-[var(--text-primary)]</code>，同一组件内出现两种强调色语义。Sidebar 的 active 状态在 collapsed 时用 <code>bg-apple-blue/12</code>、expanded 时用 <code>/8</code>，虽然意图区分状态，但视觉上形成了两套重量标准。
+    </p>
+  </div>
+
+  <div class="dim-card">
+    <div class="dim-header">
+      <span class="dim-name">2. 视觉层级</span>
+      <span>
+        <span class="dim-score">7</span>
+        <span class="dim-band band-strong">Strong</span>
+      </span>
+    </div>
+    <p class="dim-evidence">
+      三级文本 token（primary / secondary / tertiary）划分清晰，Header 的 <code>backdrop-blur-xl</code> 与固定层级创造了稳定的「天花板」锚点。HomePage 的 StatCard 采用 icon + value + label 三层结构，信息节奏良好。问题出在 button 层级的泛滥：<code>.apple-button</code>、<code>.apple-button-warm</code>、<code>.apple-button-ghost</code>、<code>.btn-primary</code>、<code>.btn-secondary</code> 五套按钮在同一产品内竞争，用户无法建立稳定的「主按钮 = 蓝色 pill、次按钮 = ghost」心智模型。CrawlerPage 的 save 按钮用自定义 <code>bg-apple-green/10</code> 样式，进一步稀释了层级规则。
+    </p>
+  </div>
+
+  <div class="dim-card">
+    <div class="dim-header">
+      <span class="dim-name">3. 细节执行</span>
+      <span>
+        <span class="dim-score">6</span>
+        <span class="dim-band band-functional">Functional</span>
+      </span>
+    </div>
+    <p class="dim-evidence">
+      骨架良好，但存在多处「 tape and string」级别的粗糙。<code>index.css</code> 中 <code>@theme</code> 与 <code>:root</code> 重复定义同一套颜色（如 <code>--apple-blue</code> 出现两次），存在维护隐患。RadarChart 使用硬编码 <code>rgba(10, 132, 255, 0.08)</code> 而非已定义的 <code>--chart-fill</code> CSS 变量。ToastContainer 的 progress bar track 用 <code>bg-[var(--border-default)]</code>，而 border color 映射使用 <code>/20</code> 透明度、background 用 <code>/10</code>，track 强度与边框不匹配。AppleSelect 的 trigger 同时用 Tailwind class <code>shadow-[0_0_0_4px_...]</code> 和 inline style <code>borderColor</code> 设置边框色，属于冗余声明。
+    </p>
+  </div>
+
+  <div class="dim-card">
+    <div class="dim-header">
+      <span class="dim-name">4. 功能性</span>
+      <span>
+        <span class="dim-score">8</span>
+        <span class="dim-band band-strong">Strong</span>
+      </span>
+    </div>
+    <p class="dim-evidence">
+      防御性工程做得扎实：Keyboard shortcuts（<code>g h / g b / g g</code> 等）覆盖主要导航；Skip-to-content 链接具备 <code>sr-only focus:not-sr-only</code> 模式；AppleSelect 实现了完整的 listbox 键盘协议（ArrowUp/Down、Home/End、Escape、<code>aria-activedescendant</code>）；Framer Motion 通过 <code>MotionConfig reducedMotion="user"</code> 全局响应 <code>prefers-reduced-motion</code>；Focus trap 在 CommandPalette 搜索弹窗中正确工作。三态主题（light/dark/system）配合 <code>matchMedia</code> 实时同步，FOUC 预防脚本在 <code>index.html</code> 中提前执行。唯一缺口：SettingsPage 的 tab 切换未提供键盘快捷键，且 custom segmented control 未复用 AppleSelect 的成熟键盘逻辑。
+    </p>
+  </div>
+
+  <div class="dim-card">
+    <div class="dim-header">
+      <span class="dim-name">5. 创新性</span>
+      <span>
+        <span class="dim-score">5</span>
+        <span class="dim-band band-functional">Functional</span>
+      </span>
+    </div>
+    <p class="dim-evidence">
+      整体属于「高完成度的标准品」。Apple 设计系统本身已是行业标杆，项目对其的还原度较高，但缺少一个让人「lean in」的意外时刻。 RadarChart 的自定义 SVG 实现是亮点，但数据可视化语言未形成体系（与 GrowthTrendChart 的 SVG 线表风格不统一）。Ambient blob 装饰动画（<code>.ambient-blob</code>）存在但未在核心页面大面积使用，停留在「有但不多」的尴尬地带。缺少一个标志性的品牌微交互——例如 Notion 的 loading skeleton 动画或 Linear 的命令行式快捷导航视觉反馈。作为生产级交付，保守是合理的；但作为 showcase，需要一个记忆点。
+    </p>
+  </div>
+
+</div>
+
+<!-- Action Lists -->
+<div class="actions">
+  <h2>Keep · 继续保留</h2>
+  <ul class="action-list keep">
+    <li><strong>CSS 语义 token 体系</strong> — <code>--bg-primary/secondary/tertiary</code> 与 <code>--text-primary/secondary/tertiary</code> 的三级分层清晰，不要简化成两级。</li>
+    <li><strong>Framer Motion 页面转场</strong> — 按路由类型区分 scale-fade / horizontal-slide / vertical-slide 三种动画 profile，这是专业级决策。</li>
+    <li><strong>AppleSelect 的 ARIA 完整度</strong> — <code>aria-activedescendant</code> + 方向键导航 + Home/End + Escape 返回焦点，已达到 WCAG 2.1 AA 标准。</li>
+    <li><strong>三态主题系统</strong> — light / dark / system 配合 <code>localStorage</code> 持久化与 FOUC 预防脚本，机制完整。</li>
+    <li><strong>Glassmorphism Header</strong> — <code>backdrop-blur-xl bg-[var(--bg-primary)]/75</code> 的半透明磨砂质感与内容区形成正确的景深关系。</li>
+  </ul>
+</div>
+
+<div class="actions">
+  <h2>Fix · 必须修复</h2>
+  <ul class="action-list fix">
+    <li><strong>P0 · 合并 button 变体</strong> — 将 <code>.apple-button</code> / <code>.apple-button-warm</code> / <code>.apple-button-ghost</code> / <code>.btn-primary</code> / <code>.btn-secondary</code> 收敛为 2 个语义变体（primary / secondary），删除冗余 class。CrawlerPage 的 save 按钮应使用标准 secondary 样式而非自定义绿色背景。</li>
+    <li><strong>P0 · 清理 CSS 重复定义</strong> — <code>index.css</code> 中 <code>@theme</code> 块与 <code>:root</code> 块对同一颜色的重复定义必须合并，只保留一个来源。</li>
+    <li><strong>P1 · SettingsPage tab active 色统一</strong> — core tabs 与 source tabs 的 active 颜色必须一致（建议统一为 <code>text-apple-blue</code>，与全局强调色对齐）。</li>
+    <li><strong>P1 · CrawlerPage 卡片未使用 apple-card</strong> — 将 stats grid 和配置面板迁移到 <code>.apple-card</code>，消除「CrawlerPage 看起来像另一个产品」的视觉断裂。</li>
+    <li><strong>P1 · 统一 border-radius 语义</strong> — 建立规则：交互容器（card / panel）= <code>rounded-2xl</code>，按钮 = <code>rounded-xl</code>，标签/badge = <code>rounded-full</code>，小按钮/输入框 = <code>rounded-lg</code>。当前 CrawlerPage 混用 <code>rounded-xl</code> 与 <code>rounded-lg</code> 无规则。</li>
+  </ul>
+</div>
+
+<div class="actions">
+  <h2>Quick Wins · 5-15 分钟高回报</h2>
+  <ul class="action-list quick">
+    <li><strong>替换 RadarChart 硬编码颜色</strong> — 将 <code>rgba(10, 132, 255, 0.08)</code> 改为 <code>var(--chart-fill)</code>，已定义但未使用。</li>
+    <li><strong>删除 AppleSelect 冗余 borderColor</strong> — 移除 trigger 上的 inline style <code>borderColor</code>，Tailwind class 已覆盖。</li>
+    <li><strong>Sidebar active 状态统一透明度</strong> — collapsed / expanded 统一为 <code>bg-apple-blue/10</code>，消除视觉重量差异。</li>
+    <li><strong>ToastContainer progress track 对齐</strong> — 将 track 改为 <code>bg-apple-purple/10</code> 与 toast background 同频，而非 <code>var(--border-default)</code>。</li>
+    <li><strong>添加一个品牌微交互</strong> — 在 Header 的 logo 或首页的 stat card hover 上添加一个 subtle 的 scale + glow 效果（3 行 CSS），制造记忆点。</li>
+  </ul>
+</div>
+
+<footer>
+  Critique generated by OD · 5-dimension design review skill · llm-wiki-agent frontend
+</footer>
+
+</div>
+</body>
+</html>
