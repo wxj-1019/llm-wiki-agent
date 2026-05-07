@@ -614,6 +614,7 @@
   "upload.enterUrl": "请输入 URL",
   "upload.fetchFailed": "抓取失败",
   "upload.deletedFile": "已删除: {{name}}",
+  "upload.ingested": "已摄取",
   "crawler.loadFailed": "加载配置失败",
   "crawler.saveFailed": "保存失败",
   "crawler.crawlFailed": "抓取失败",

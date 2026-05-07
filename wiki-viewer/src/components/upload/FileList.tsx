@@ -2,7 +2,7 @@ import { useRef, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FolderOpen, Search, ArrowUpDown, Filter, CheckSquare, Square,
-  Play, Loader2, X, Eye, Trash2, Clock, Inbox, Upload,
+  Play, Loader2, X, Eye, Trash2, Clock, Inbox, Upload, CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RawFile } from '@/services/dataService';
@@ -46,6 +46,7 @@ const FileListItem = memo(function FileListItem({
   isIngesting,
   isDeleting,
   isHovered,
+  isIngested,
   onToggleSelect,
   onPreview,
   onIngest,
@@ -58,6 +59,7 @@ const FileListItem = memo(function FileListItem({
   isIngesting: boolean;
   isDeleting: boolean;
   isHovered: boolean;
+  isIngested: boolean;
   onToggleSelect: (path: string) => void;
   onPreview: (file: RawFile) => void;
   onIngest: (file: RawFile) => void;
@@ -107,6 +109,12 @@ const FileListItem = memo(function FileListItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium truncate">{file.name}</span>
+          {isIngested && (
+            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 font-medium rounded-full shrink-0 bg-apple-green/10 text-apple-green">
+              <CheckCircle2 size={10} />
+              {t('upload.ingested')}
+            </span>
+          )}
           <span className={`text-[10px] px-1.5 py-0.5 font-medium rounded-full shrink-0 ${
             category === 'document' ? 'bg-blue-500/10 text-blue-600' :
             category === 'spreadsheet' ? 'bg-emerald-500/10 text-emerald-600' :
@@ -374,6 +382,7 @@ export function FileList({
                 isIngesting={ingestingPaths.has(file.path)}
                 isDeleting={deletingPaths.has(file.path)}
                 isHovered={hoveredPath === file.path}
+                isIngested={!!file.ingested}
                 onToggleSelect={onToggleSelect}
                 onPreview={onPreview}
                 onIngest={onIngest}

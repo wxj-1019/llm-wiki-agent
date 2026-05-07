@@ -614,6 +614,7 @@
   "upload.enterUrl": "Please enter a URL",
   "upload.fetchFailed": "Fetch failed",
   "upload.deletedFile": "Deleted: {{name}}",
+  "upload.ingested": "Ingested",
   "crawler.loadFailed": "Failed to load config",
   "crawler.saveFailed": "Failed to save",
   "crawler.crawlFailed": "Crawl failed",

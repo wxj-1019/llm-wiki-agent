@@ -549,6 +549,7 @@ export function HomePage() {
 
   const overallScore = Math.round(healthScores.reduce((a, b) => a + b, 0) / 5);
   const scoreColor = overallScore >= 80 ? 'text-emerald-500' : overallScore >= 60 ? 'text-amber-500' : 'text-red-500';
+  const scoreBg = overallScore >= 80 ? 'bg-emerald-500/10' : overallScore >= 60 ? 'bg-amber-500/10' : 'bg-red-500/10';
 
   return (
     <motion.div

@@ -433,74 +433,108 @@ export function UploadPage() {
         )}
       </AnimatePresence>
 
-      {/* Upload Zones */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <UploadZone
-          dragActive={dragActive}
-          uploading={uploading}
-          onDrag={handleDrag}
-          onDrop={handleDrop}
-          onFileInput={handleFileInput}
-        />
-        <PasteTextPanel
-          pasteTitle={pasteTitle}
-          pasteContent={pasteContent}
-          savingText={savingText}
-          onTitleChange={setPasteTitle}
-          onContentChange={setPasteContent}
-          onSave={handleSaveText}
-        />
+      {/* Two-column layout: Upload controls left, File list right */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-start">
+        {/* Left Column — Upload Controls */}
+        <div className="space-y-6">
+          <UploadZone
+            dragActive={dragActive}
+            uploading={uploading}
+            onDrag={handleDrag}
+            onDrop={handleDrop}
+            onFileInput={handleFileInput}
+          />
+          <PasteTextPanel
+            pasteTitle={pasteTitle}
+            pasteContent={pasteContent}
+            savingText={savingText}
+            onTitleChange={setPasteTitle}
+            onContentChange={setPasteContent}
+            onSave={handleSaveText}
+          />
 
-        {/* URL Fetch Panel */}
-        <div className="apple-card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Globe className="text-apple-blue" size={20} />
-            <h2 className="text-lg font-semibold">{t('upload.fetchFromUrl', 'Fetch from URL')}</h2>
-          </div>
-          <div className="space-y-3">
-            <input
-              type="url"
-              placeholder="https://example.com/article"
-              value={fetchUrl}
-              onChange={(e) => setFetchUrl(e.target.value)}
-              className="apple-input w-full"
-              disabled={fetchingUrl}
-            />
-            <input
-              type="text"
-              placeholder={t('upload.fetchNamePlaceholder', 'Optional display name')}
-              value={fetchName}
-              onChange={(e) => setFetchName(e.target.value)}
-              className="apple-input w-full"
-              disabled={fetchingUrl}
-            />
-            <button
-              onClick={handleFetchUrl}
-              disabled={fetchingUrl || !fetchUrl.trim()}
-              className="apple-button w-full flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {fetchingUrl ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {fetchingUrl ? t('upload.fetching', 'Fetching...') : t('upload.fetch', 'Fetch Article')}
-            </button>
-            {fetchResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-apple-green/10 border border-apple-green/30 rounded-xl px-4 py-3 text-sm"
+          {/* URL Fetch Panel */}
+          <div className="apple-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="text-apple-blue" size={20} />
+              <h2 className="text-lg font-semibold">{t('upload.fetchFromUrl', 'Fetch from URL')}</h2>
+            </div>
+            <div className="space-y-3">
+              <input
+                type="url"
+                placeholder="https://example.com/article"
+                value={fetchUrl}
+                onChange={(e) => setFetchUrl(e.target.value)}
+                className="apple-input w-full"
+                disabled={fetchingUrl}
+              />
+              <input
+                type="text"
+                placeholder={t('upload.fetchNamePlaceholder', 'Optional display name')}
+                value={fetchName}
+                onChange={(e) => setFetchName(e.target.value)}
+                className="apple-input w-full"
+                disabled={fetchingUrl}
+              />
+              <button
+                onClick={handleFetchUrl}
+                disabled={fetchingUrl || !fetchUrl.trim()}
+                className="apple-button w-full flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <div className="flex items-center gap-2 text-apple-green font-medium mb-1">
-                  <CheckCircle size={14} />
-                  <span>{t('upload.fetchSuccess', 'Article fetched')}</span>
-                </div>
-                <div className="text-[var(--text-secondary)]">
-                  <p>{fetchResult.saved}</p>
-                  {fetchResult.quality && (
-                    <p className="mt-1">{t('upload.quality', 'Quality')}: {fetchResult.quality}</p>
-                  )}
-                </div>
-              </motion.div>
-            )}
+                {fetchingUrl ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                {fetchingUrl ? t('upload.fetching', 'Fetching...') : t('upload.fetch', 'Fetch Article')}
+              </button>
+              {fetchResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-apple-green/10 border border-apple-green/30 rounded-xl px-4 py-3 text-sm"
+                >
+                  <div className="flex items-center gap-2 text-apple-green font-medium mb-1">
+                    <CheckCircle size={14} />
+                    <span>{t('upload.fetchSuccess', 'Article fetched')}</span>
+                  </div>
+                  <div className="text-[var(--text-secondary)]">
+                    <p>{fetchResult.saved}</p>
+                    {fetchResult.quality && (
+                      <p className="mt-1">{t('upload.quality', 'Quality')}: {fetchResult.quality}</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Right Column — File List */}
+        <div>
+          <FileList
+            files={files}
+            filteredFiles={filteredFiles}
+            loadingFiles={loadingFiles}
+            selectedPaths={selectedPaths}
+            searchQuery={searchQuery}
+            sortMode={sortMode}
+            fileTypeFilter={fileTypeFilter}
+            ingestingPaths={ingestingPaths}
+            deletingPaths={deletingPaths}
+            batchIngesting={batchIngesting}
+            batchDeleting={batchDeleting}
+            hoveredPath={hoveredPath}
+            onSearchChange={setSearchQuery}
+            onSortModeChange={setSortMode}
+            onFileTypeFilterChange={setFileTypeFilter}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onBatchIngest={handleBatchIngest}
+            onBatchDelete={handleBatchDelete}
+            onClearSelection={() => setSelectedPaths(new Set())}
+            onPreview={handlePreview}
+            onIngest={handleIngest}
+            onDelete={handleDelete}
+            onHover={setHoveredPath}
+            onTriggerFileInput={() => fileInputRef.current?.click()}
+          />
         </div>
       </div>
 
@@ -514,35 +548,6 @@ export function UploadPage() {
             navigator.clipboard.writeText(previewContent).then(() => showToast(t('upload.copySuccess'), 'success'));
           }
         }}
-      />
-
-      {/* Files List */}
-      <FileList
-        files={files}
-        filteredFiles={filteredFiles}
-        loadingFiles={loadingFiles}
-        selectedPaths={selectedPaths}
-        searchQuery={searchQuery}
-        sortMode={sortMode}
-        fileTypeFilter={fileTypeFilter}
-        ingestingPaths={ingestingPaths}
-        deletingPaths={deletingPaths}
-        batchIngesting={batchIngesting}
-        batchDeleting={batchDeleting}
-        hoveredPath={hoveredPath}
-        onSearchChange={setSearchQuery}
-        onSortModeChange={setSortMode}
-        onFileTypeFilterChange={setFileTypeFilter}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        onBatchIngest={handleBatchIngest}
-        onBatchDelete={handleBatchDelete}
-        onClearSelection={() => setSelectedPaths(new Set())}
-        onPreview={handlePreview}
-        onIngest={handleIngest}
-        onDelete={handleDelete}
-        onHover={setHoveredPath}
-        onTriggerFileInput={() => fileInputRef.current?.click()}
       />
 
       <AnimatePresence>

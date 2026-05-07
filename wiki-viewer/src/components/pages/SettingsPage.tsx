@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Code, Rss, BookOpen, Save, Download,
   Check, AlertTriangle, Bot, Key, ExternalLink, Trash2, Plus,
