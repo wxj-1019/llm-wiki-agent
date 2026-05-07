@@ -21,7 +21,7 @@ export function ToastContainer() {
   const dismissToast = useNotificationStore((s) => s.dismissToast);
 
   return (
-    <div className="fixed top-16 right-4 z-[60] space-y-2 w-80 pointer-events-none" aria-live="polite" aria-atomic="true" role="status">
+    <div className="fixed top-16 right-4 z-[60] space-y-2 w-[calc(100vw-2rem)] max-w-sm pointer-events-none" aria-live="polite" aria-atomic="true" role="status">
       <AnimatePresence>
         {toasts.map((toast) => {
           const Icon = iconMap[toast.type];

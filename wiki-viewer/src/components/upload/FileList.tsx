@@ -91,7 +91,7 @@ const FileListItem = memo(function FileListItem({
         onClick={() => onToggleSelect(file.path)}
         role="checkbox"
         aria-checked={isSelected}
-        className="shrink-0 text-[var(--text-tertiary)] hover:text-apple-blue transition-colors p-1 rounded-lg hover:bg-[var(--bg-secondary)]"
+        className="shrink-0 text-[var(--text-tertiary)] hover:text-apple-blue transition-colors p-2 rounded-lg hover:bg-[var(--bg-secondary)]"
       >
         {isSelected ? (
           <CheckSquare size={18} className="text-apple-blue" />
@@ -140,7 +140,7 @@ const FileListItem = memo(function FileListItem({
       }`}>
         <button
           onClick={() => onPreview(file)}
-          className="p-2 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          className="p-2.5 rounded-lg hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           title={t('upload.preview')}
           aria-label={t('upload.preview')}
         >
@@ -158,7 +158,7 @@ const FileListItem = memo(function FileListItem({
         <button
           onClick={() => onDelete(file)}
           disabled={isDeleting}
-          className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-tertiary)] hover:text-red-500 transition-colors disabled:opacity-50"
+          className="p-2.5 rounded-lg hover:bg-red-500/10 text-[var(--text-tertiary)] hover:text-red-500 transition-colors disabled:opacity-50 min-w-[44px] min-h-[44px] flex items-center justify-center"
           title={t('upload.delete')}
           aria-label={t('upload.delete')}
         >
