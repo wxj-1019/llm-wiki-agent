@@ -11,7 +11,7 @@ export function safeGet<T>(key: string, validator: (v: unknown) => v is T, fallb
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     if (validator(parsed)) return parsed;
-    console.warn(`[safeStorage] Invalid data for key "${key}", resetting to fallback.`);
+    // Invalid data detected — silently reset to fallback
     localStorage.removeItem(key);
     return fallback;
   } catch {

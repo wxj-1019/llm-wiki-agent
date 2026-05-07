@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe, Check } from 'lucide-react';
+import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
@@ -12,7 +12,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { AppleSelect } from '@/components/ui/AppleSelect';
 
 function LanguageSwitcher() {
-  const { i18n, t } = useTranslation();
+  const { i18n } = useTranslation();
 
   return (
     <div className="relative w-full sm:w-36">
