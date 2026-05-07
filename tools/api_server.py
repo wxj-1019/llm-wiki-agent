@@ -54,6 +54,10 @@ WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
 FRONTEND_DIST = REPO / "wiki-viewer" / "dist"
 
+# Prefer .venv python so subprocesses find installed deps (litellm, markitdown, etc.)
+_VENV_PY = REPO / ".venv" / "Scripts" / "python.exe"
+PYTHON_EXE = str(_VENV_PY) if _VENV_PY.exists() else sys.executable
+
 ALLOWED_EXTENSIONS = {
     ".md", ".txt", ".pdf", ".docx", ".pptx", ".xlsx", ".xls",
     ".html", ".htm", ".csv", ".json", ".xml",
@@ -708,7 +712,7 @@ async def multimodal_ingest_image(file: UploadFile = File(...)):
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [sys.executable, str(REPO / "tools" / "ingest.py"), str(md_path)],
+            [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(md_path)],
             capture_output=True,
             text=True,
             cwd=str(REPO),
@@ -766,7 +770,7 @@ async def api_ingest(payload: IngestPayload):
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [sys.executable, str(REPO / "tools" / "ingest.py"), str(target)],
+            [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(target)],
             capture_output=True,
             text=True,
             cwd=str(REPO),
@@ -859,7 +863,7 @@ source_url: "{safe_url}"
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [sys.executable, str(REPO / "tools" / "ingest.py"), str(raw_path)],
+            [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(raw_path)],
             capture_output=True,
             text=True,
             cwd=str(REPO),
@@ -906,7 +910,7 @@ async def webhook_ingest(payload: WebhookIngestPayload, _=Depends(_require_webho
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [sys.executable, str(REPO / "tools" / "ingest.py"), str(target)],
+            [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(target)],
             capture_output=True,
             text=True,
             cwd=str(REPO),
@@ -950,7 +954,7 @@ async def webhook_github(request: Request, _=Depends(_require_webhook_token)):
     try:
         result = await asyncio.to_thread(
             subprocess.run,
-            [sys.executable, str(REPO / "tools" / "refresh.py")],
+            [PYTHON_EXE, str(REPO / "tools" / "refresh.py")],
             capture_output=True,
             text=True,
             cwd=str(REPO),
@@ -1042,7 +1046,7 @@ def agent_kit_status():
 @app.post("/api/agent-kit/generate")
 async def agent_kit_generate(payload: AgentKitGeneratePayload):
     """Run export_agent_kit.py with specified options."""
-    cmd = [sys.executable, str(REPO / "tools" / "export_agent_kit.py"), "--target", payload.target]
+    cmd = [PYTHON_EXE, str(REPO / "tools" / "export_agent_kit.py"), "--target", payload.target]
     if payload.package:
         cmd.append("--package")
     if payload.incremental:
@@ -2134,7 +2138,7 @@ class ToolRunPayload(BaseModel):
 
 def _run_tool_script(script_name: str, extra_args: list[str] | None = None) -> dict:
     """Run a tool script via subprocess and return structured result."""
-    cmd = [sys.executable, str(REPO / "tools" / script_name)]
+    cmd = [PYTHON_EXE, str(REPO / "tools" / script_name)]
     if extra_args:
         cmd.extend(extra_args)
     try:

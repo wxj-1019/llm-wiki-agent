@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, HardDrive, CheckCircle, Loader2, CloudUpload, Plus, X, ChevronDown, Trash2 } from 'lucide-react';
+import { FolderOpen, HardDrive, CheckCircle, Loader2, CloudUpload, Plus, X, ChevronDown, Trash2, AlertCircle, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchRawFiles, uploadFile, uploadText, triggerIngest,
@@ -62,6 +62,10 @@ export function UploadPage() {
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
   const [expandedMethod, setExpandedMethod] = useState<AddMethod>('none');
+
+  const [ingestErrorLog, setIngestErrorLog] = useState<{ title: string; stdout: string; stderr: string; returncode: number } | null>(null);
+  const errorLogDialogRef = useFocusTrap<HTMLDivElement>(!!ingestErrorLog);
+  useBodyScrollLock(!!ingestErrorLog);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -251,7 +255,15 @@ export function UploadPage() {
         refreshGraphData();
         await loadFiles();
       } else {
-        showToast(t('upload.error.ingest'), 'error');
+        const errText = result.stderr || result.stdout || 'Unknown error';
+        const shortErr = errText.length > 120 ? errText.slice(0, 120) + '...' : errText;
+        showToast(`${t('upload.error.ingest')}: ${shortErr}`, 'error');
+        setIngestErrorLog({
+          title: file.name,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          returncode: result.returncode,
+        });
       }
     } catch (err) {
       showToast(String(err), 'error');
@@ -283,6 +295,7 @@ export function UploadPage() {
     setBatchIngesting(true);
     let successCount = 0;
     const failed: string[] = [];
+    const errorLogs: { path: string; stdout: string; stderr: string; returncode: number }[] = [];
     for (const path of selectedPaths) {
       try {
         const result = await triggerIngest(path);
@@ -290,6 +303,7 @@ export function UploadPage() {
           successCount++;
         } else {
           failed.push(path);
+          errorLogs.push({ path, stderr: result.stderr, stdout: result.stdout, returncode: result.returncode });
         }
       } catch (e) {
         failed.push(path);
@@ -297,7 +311,20 @@ export function UploadPage() {
     }
     const total = selectedPaths.size;
     if (failed.length > 0) {
-      showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed)`, successCount > 0 ? 'success' : 'error');
+      const firstErr = errorLogs[0];
+      if (firstErr) {
+        const errText = firstErr.stderr || firstErr.stdout || 'Unknown error';
+        const shortErr = errText.length > 80 ? errText.slice(0, 80) + '...' : errText;
+        showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed): ${shortErr}`, successCount > 0 ? 'success' : 'error');
+        setIngestErrorLog({
+          title: `${failed.length} 个文件摄入失败`,
+          stdout: errorLogs.map((e) => `--- ${e.path} ---\n${e.stdout}`).join('\n\n'),
+          stderr: errorLogs.map((e) => `--- ${e.path} ---\n${e.stderr}`).join('\n\n'),
+          returncode: errorLogs[0].returncode,
+        });
+      } else {
+        showToast(`${successCount}/${total} ${t('upload.success.ingest')} (${failed.length} failed)`, successCount > 0 ? 'success' : 'error');
+      }
     } else {
       showToast(`${successCount}/${total} ${t('upload.success.ingest')}`, 'success');
     }
@@ -321,6 +348,16 @@ export function UploadPage() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [showBatchDeleteConfirm]);
+
+  // Global Escape handler for error log modal
+  useEffect(() => {
+    if (!ingestErrorLog) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIngestErrorLog(null);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [ingestErrorLog]);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedPaths.size === 0) {
@@ -591,6 +628,81 @@ export function UploadPage() {
           }
         }}
       />
+
+      {/* Error Log Modal */}
+      <AnimatePresence>
+        {ingestErrorLog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+            onClick={() => setIngestErrorLog(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="error-log-title"
+          >
+            <motion.div
+              ref={errorLogDialogRef}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[var(--bg-primary)] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-[var(--border-default)] overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center">
+                    <AlertCircle size={18} className="text-red-500" />
+                  </div>
+                  <div>
+                    <h3 id="error-log-title" className="text-sm font-semibold">{t('upload.ingestErrorTitle') || '摄入失败详情'}</h3>
+                    <p className="text-xs text-[var(--text-tertiary)]">{ingestErrorLog.title} · returncode: {ingestErrorLog.returncode}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIngestErrorLog(null)}
+                  className="p-2 rounded-xl hover:bg-red-500/10 text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
+                  aria-label={t('common.close')}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {ingestErrorLog.stderr && (
+                  <div>
+                    <div className="text-xs font-semibold text-red-500 mb-1.5 flex items-center gap-1.5">
+                      <AlertCircle size={12} />
+                      stderr
+                    </div>
+                    <pre className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-words border border-[var(--border-default)] max-h-[30vh] overflow-y-auto">
+                      {ingestErrorLog.stderr}
+                    </pre>
+                  </div>
+                )}
+                {ingestErrorLog.stdout && (
+                  <div>
+                    <div className="text-xs font-semibold text-[var(--text-tertiary)] mb-1.5 flex items-center gap-1.5">
+                      <FileText size={12} />
+                      stdout
+                    </div>
+                    <pre className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-words border border-[var(--border-default)] max-h-[30vh] overflow-y-auto">
+                      {ingestErrorLog.stdout}
+                    </pre>
+                  </div>
+                )}
+              </div>
+              <div className="px-5 py-3 border-t border-[var(--border-default)] bg-[var(--bg-secondary)]/40 shrink-0 flex justify-end">
+                <button onClick={() => setIngestErrorLog(null)} className="apple-button-ghost px-4 py-2 text-sm">
+                  {t('common.close')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Batch Delete Confirm Modal */}
       <AnimatePresence>

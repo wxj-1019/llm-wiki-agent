@@ -614,6 +614,7 @@
   "upload.enterUrl": "Please enter a URL",
   "upload.fetchFailed": "Fetch failed",
   "upload.deletedFile": "Deleted: {{name}}",
+  "upload.ingestErrorTitle": "Ingest Error Details",
   "upload.addContent": "Add content another way",
   "common.characters": "characters",
   "upload.ingested": "Ingested",

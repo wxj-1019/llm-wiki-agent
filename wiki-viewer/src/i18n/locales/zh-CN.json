@@ -614,6 +614,7 @@
   "upload.enterUrl": "请输入 URL",
   "upload.fetchFailed": "抓取失败",
   "upload.deletedFile": "已删除: {{name}}",
+  "upload.ingestErrorTitle": "摄入失败详情",
   "upload.addContent": "其他方式添加",
   "common.characters": "字符",
   "upload.ingested": "已摄取",
