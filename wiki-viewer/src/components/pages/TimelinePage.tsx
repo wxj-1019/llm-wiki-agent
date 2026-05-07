@@ -35,7 +35,7 @@ const TYPE_COLORS: Record<string, string> = {
   report: 'bg-apple-yellow',
 };
 
-function logEntryToEvent(entry: LogEntry): TimelineEvent {
+function logEntryToEvent(entry: LogEntry, t: (key: string) => string): TimelineEvent {
   const typeDesc: Record<string, string> = {
     ingest: t('timeline.type.ingest'),
     query: t('timeline.type.query'),
@@ -50,7 +50,7 @@ function logEntryToEvent(entry: LogEntry): TimelineEvent {
     date: entry.date,
     type: entry.operation,
     title: entry.title,
-    description: typeDesc[entry.operation] || 'Wiki operation',
+    description: typeDesc[entry.operation] || t('timeline.type.unknown', 'Wiki operation'),
   };
 }
 
@@ -67,7 +67,7 @@ export function TimelinePage() {
     setError(null);
     try {
       const { entries } = await fetchLog(200);
-      const mapped = entries.map(logEntryToEvent);
+      const mapped = entries.map((e) => logEntryToEvent(e, t));
       setEvents(mapped);
     } catch (e) {
       setError((e as Error).message);
@@ -86,7 +86,7 @@ export function TimelinePage() {
                 date: m[1],
                 operation: m[2].toLowerCase(),
                 title: m[3].trim(),
-              }));
+              }, t));
             }
           }
           setEvents(parsed.reverse());

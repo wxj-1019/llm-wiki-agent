@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, HardDrive, CheckCircle, Loader2, Globe, Download } from 'lucide-react';
+import { FolderOpen, HardDrive, CheckCircle, Loader2, Globe, Download, CloudUpload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchRawFiles, uploadFile, uploadText, triggerIngest,
