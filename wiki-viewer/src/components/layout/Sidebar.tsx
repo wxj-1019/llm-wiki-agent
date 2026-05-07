@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, LayoutDashboard, Network, Clock, Search, ChevronDown, Globe } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, Network, Clock, Search, ChevronDown, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,7 +35,6 @@ const navGroups: NavGroup[] = [
       { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
       { icon: Globe, translationKey: 'nav.crawler', path: '/crawler', matchPath: '/crawler' },
       { icon: MessageCircle, translationKey: 'nav.chat', path: '/chat', matchPath: '/chat' },
-      { icon: LayoutDashboard, translationKey: 'nav.dashboard', path: '/dashboard', matchPath: '/dashboard' },
     ],
   },
   {
@@ -101,8 +100,8 @@ export function Sidebar() {
             className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
               navActive
                 ? sidebarCollapsed
-                  ? 'bg-apple-blue/12 text-apple-blue font-medium'
-                  : 'bg-apple-blue/8 text-apple-blue font-medium'
+                  ? 'bg-apple-blue/10 text-apple-blue font-medium'
+                  : 'bg-apple-blue/10 text-apple-blue font-medium'
                 : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:translate-x-0.5 active:scale-[0.97]'
             }`}
             title={t(item.translationKey as string)}

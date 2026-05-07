@@ -48,7 +48,7 @@ export function ToastContainer() {
                 )}
               </div>
               {toast.type === 'progress' && typeof toast.progress === 'number' && (
-                <div className="w-full h-1 bg-[var(--border-default)] rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-apple-purple/10 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-apple-purple rounded-full"
                     initial={{ width: 0 }}

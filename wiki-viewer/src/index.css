@@ -197,46 +197,22 @@
     font-weight: 500;
     border-radius: 9999px;
     padding: 0.625rem 1.25rem;
-    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
-                background-color 0.25s ease,
-                box-shadow 0.25s ease;
-  }
-  .apple-button:hover {
-    background-color: var(--apple-blue-hover);
-    box-shadow: 0 6px 16px rgba(10, 132, 255, 0.22);
-    transform: translateY(-1px);
-  }
-  .apple-button:active {
-    box-shadow: none;
-    transform: translateY(0) scale(0.97);
-    transition-duration: 0.1s;
-  }
-  [data-theme='dark'] .apple-button:hover {
-    box-shadow: 0 6px 16px rgba(41, 151, 255, 0.28);
-  }
-
-  .apple-button-warm {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--apple-blue);
-    color: white;
-    font-weight: 500;
-    border-radius: 9999px;
-    padding: 0.625rem 1.25rem;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
                 background-color 0.3s ease,
                 box-shadow 0.3s ease;
   }
-  .apple-button-warm:hover {
+  .apple-button:hover {
     background-color: var(--apple-blue-hover);
     box-shadow: 0 8px 20px rgba(10, 132, 255, 0.2);
     transform: scale(1.03) translateY(-1px);
   }
-  .apple-button-warm:active {
+  .apple-button:active {
     box-shadow: none;
     transform: scale(0.97);
     transition-duration: 0.1s;
+  }
+  [data-theme='dark'] .apple-button:hover {
+    box-shadow: 0 6px 16px rgba(41, 151, 255, 0.28);
   }
 
   .apple-button-ghost {
@@ -267,35 +243,28 @@
     transition-duration: 0.1s;
   }
 
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 500;
-    border-radius: 9999px;
-    padding: 0.5rem 1rem;
-    transition: all 0.2s;
+  /* Button variants: apple-button (primary) + apple-button-ghost (secondary) */
+  .apple-button-purple {
+    background-color: var(--apple-purple);
   }
-
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 500;
-    border-radius: 9999px;
-    padding: 0.5rem 1rem;
-    background-color: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border-default);
-    transition: all 0.2s;
+  .apple-button-purple:hover {
+    background-color: var(--apple-purple);
+    filter: brightness(0.9);
   }
-  .btn-secondary:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
-    background-color: var(--bg-secondary);
+  .apple-button-red {
+    background-color: var(--apple-red);
   }
-  .btn-secondary:active {
-    box-shadow: none;
+  .apple-button-red:hover {
+    background-color: var(--apple-red);
+    filter: brightness(0.9);
+  }
+  .apple-button-ghost-success {
+    color: var(--apple-green);
+    border-color: color-mix(in srgb, var(--apple-green) 30%, transparent);
+  }
+  .apple-button-ghost-success:hover {
+    background-color: color-mix(in srgb, var(--apple-green) 10%, transparent);
+    border-color: var(--apple-green);
   }
 
   .apple-input {

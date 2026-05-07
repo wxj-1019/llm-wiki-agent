@@ -250,13 +250,13 @@ function InstallWizard({
             )}
 
             <div className="flex justify-end gap-2">
-              <button onClick={onClose} className="btn-secondary px-4 py-2 text-sm">
+              <button onClick={onClose} className="apple-button-ghost px-4 py-2 text-sm">
                 {t('common.close', '取消')}
               </button>
               <button
                 onClick={handleInstall}
                 disabled={installing}
-                className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                className="apple-button px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 {installing ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 {installing ? t('mcp.installing', '安装中...') : t('mcp.install.action', '安装')}
@@ -354,7 +354,7 @@ export function MCPPage() {
         </div>
         <button
           onClick={() => setShowInstallWizard(true)}
-          className="btn-primary text-sm flex items-center gap-2"
+          className="apple-button text-sm flex items-center gap-2"
         >
           <Plus size={14} />
           {t('mcp.action.install', '安装 Server')}

@@ -147,9 +147,9 @@ export function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-[var(--bg-primary)] text-apple-purple shadow-sm'
+                ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -162,7 +162,7 @@ export function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'

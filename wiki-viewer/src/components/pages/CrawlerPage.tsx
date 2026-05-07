@@ -45,7 +45,7 @@ function parseYaml(raw: string): { urls: CrawlUrl[]; settings: CrawlSettings } {
     let tags: string[] = [];
     for (const line of lines.slice(1)) {
       const trimmed = line.trim();
-      if (trimmed.startsWith('- url:') || trimmed === '') break;
+      if (!trimmed || trimmed.startsWith('- url:') || trimmed.startsWith('settings:')) break;
       if (trimmed.startsWith('name:')) name = trimmed.slice(5).trim().replace(/^["']|["']$/g, '');
       if (trimmed.startsWith('tags:')) {
         const tagStr = trimmed.slice(5).trim();
@@ -77,15 +77,23 @@ function parseYaml(raw: string): { urls: CrawlUrl[]; settings: CrawlSettings } {
 }
 
 function buildYaml(urls: CrawlUrl[], settings: CrawlSettings): string {
+  const escapeYaml = (s: string): string => {
+    if (!s) return '""';
+    if (/[\]#{}[,&*?|>!%@`:]/.test(s) || s.includes('"') || s.includes("'") || s.trim() !== s) {
+      return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    }
+    return `"${s}"`;
+  };
+
   let yaml = 'urls:\n';
   for (const item of urls) {
-    yaml += `  - url: "${item.url}"\n`;
-    if (item.name) yaml += `    name: "${item.name}"\n`;
+    yaml += `  - url: ${escapeYaml(item.url)}\n`;
+    if (item.name) yaml += `    name: ${escapeYaml(item.name)}\n`;
     if (item.tags.length) yaml += `    tags: [${item.tags.join(', ')}]\n`;
   }
   yaml += '\nsettings:\n';
   yaml += `  timeout: ${settings.timeout}\n`;
-  yaml += `  user_agent: "${settings.user_agent}"\n`;
+  yaml += `  user_agent: ${escapeYaml(settings.user_agent)}\n`;
   yaml += `  respect_robots_txt: ${settings.respect_robots_txt}\n`;
   yaml += `  fallback_to_markitdown: ${settings.fallback_to_markitdown}\n`;
   yaml += `  request_delay: ${settings.request_delay}\n`;
@@ -136,7 +144,7 @@ export function CrawlerPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadConfig(); }, [loadConfig]);
 
@@ -212,7 +220,7 @@ export function CrawlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+          <h1 className="text-heading-1 flex items-center gap-2">
             <Globe className="w-6 h-6 text-apple-blue" />
             {t('crawler.title')}
           </h1>
@@ -227,7 +235,7 @@ export function CrawlerPage() {
           <button
             onClick={handleSave}
             disabled={isBusy || !dirty}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-apple-green/10 text-apple-green hover:bg-apple-green/20 disabled:opacity-50 transition-colors"
+            className="apple-button-ghost text-sm gap-1.5 disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? t('crawler.saving') : t('crawler.save')}
@@ -242,11 +250,11 @@ export function CrawlerPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-2 p-3 rounded-lg bg-apple-red/10 text-apple-red text-sm"
+            className="flex items-center gap-2 p-3 rounded-xl bg-apple-red/10 text-apple-red text-sm"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1">{error}</span>
-            <button onClick={() => setError(null)} className="p-1 hover:bg-apple-red/20 rounded">
+            <button onClick={() => setError(null)} className="p-1 rounded-xl hover:bg-apple-red/20" aria-label={t('common.dismiss')}>
               <X className="w-3.5 h-3.5" />
             </button>
           </motion.div>
@@ -256,7 +264,7 @@ export function CrawlerPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-2 p-3 rounded-lg bg-apple-green/10 text-apple-green text-sm"
+            className="flex items-center gap-2 p-3 rounded-xl bg-apple-green/10 text-apple-green text-sm"
           >
             <CheckCircle className="w-4 h-4" />
             {success}
@@ -269,7 +277,7 @@ export function CrawlerPage() {
         <button
           onClick={handleCrawl}
           disabled={isBusy || urls.length === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-apple-blue text-white hover:bg-apple-blue/90 disabled:opacity-50 transition-colors text-sm font-medium"
+          className="apple-button text-sm gap-2 disabled:opacity-50"
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {running ? t('crawler.running') : t('crawler.crawlAll')}
@@ -277,7 +285,7 @@ export function CrawlerPage() {
         <button
           onClick={handleBatch}
           disabled={isBusy || urls.length === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-apple-purple text-white hover:bg-apple-purple/90 disabled:opacity-50 transition-colors text-sm font-medium"
+          className="apple-button text-sm gap-2 disabled:opacity-50"
         >
           {runningPipeline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
           {runningPipeline ? t('crawler.runningPipeline') : t('crawler.runPipeline')}
@@ -285,7 +293,7 @@ export function CrawlerPage() {
         <button
           onClick={loadConfig}
           disabled={isBusy}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
+          className="apple-button-ghost text-sm gap-1.5 disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           {t('crawler.reload')}
@@ -300,7 +308,7 @@ export function CrawlerPage() {
             { label: t('crawler.stats.skipped'), value: crawlResult.stats.skipped, color: 'text-apple-orange', bg: 'bg-apple-orange/10' },
             { label: t('crawler.stats.errors'), value: crawlResult.stats.errors, color: 'text-apple-red', bg: 'bg-apple-red/10' },
           ].map(({ label, value, color, bg }) => (
-            <div key={label} className={`rounded-xl ${bg} p-4 text-center`}>
+            <div key={label} className={`apple-card ${bg} p-4 text-center`}>
               <div className={`text-2xl font-bold ${color}`}>{value}</div>
               <div className="text-xs text-[var(--text-secondary)] mt-1">{label}</div>
             </div>
@@ -315,7 +323,7 @@ export function CrawlerPage() {
           {batchResult.steps.map((step) => (
             <div
               key={step.name}
-              className={`flex items-center gap-3 p-3 rounded-lg border ${
+              className={`flex items-center gap-3 p-3 rounded-xl border ${
                 step.success
                   ? 'border-apple-green/30 bg-apple-green/5'
                   : 'border-apple-red/30 bg-apple-red/5'
@@ -325,7 +333,7 @@ export function CrawlerPage() {
                 ? <CheckCircle className="w-4 h-4 text-apple-green flex-shrink-0" />
                 : <AlertCircle className="w-4 h-4 text-apple-red flex-shrink-0" />}
               <span className="text-sm font-medium text-[var(--text-primary)]">{step.name}</span>
-              <span className="text-xs text-gray-500 ml-auto">exit {step.returncode}</span>
+              <span className="text-xs text-[var(--text-tertiary)] ml-auto">exit {step.returncode}</span>
             </div>
           ))}
           {batchResult.stopped_at && (
@@ -339,6 +347,7 @@ export function CrawlerPage() {
         <button
           onClick={() => setShowSettings(!showSettings)}
           className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
+          aria-expanded={showSettings}
         >
           {showSettings ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           {t('crawler.settings')}
@@ -422,7 +431,8 @@ export function CrawlerPage() {
             <button
               onClick={handleAddUrl}
               disabled={!newUrl.trim() || isBusy}
-              className="px-3 py-2 rounded-lg bg-apple-blue text-white hover:bg-apple-blue/90 disabled:opacity-50 transition-colors"
+              className="apple-button p-2 disabled:opacity-50"
+              aria-label={t('crawler.addUrl')}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -457,7 +467,7 @@ export function CrawlerPage() {
         ) : (
           <div className="divide-y divide-[var(--border-subtle)]">
             {urls.map((item, idx) => (
-              <div key={idx} className="flex items-start gap-3 px-5 py-3 group hover:hover:bg-[var(--bg-secondary)] transition-colors">
+              <div key={idx} className="flex items-start gap-3 px-5 py-3 group hover:bg-[var(--bg-secondary)] transition-colors">
                 <Globe className="w-4 h-4 text-apple-blue mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   {item.name && (
@@ -477,7 +487,8 @@ export function CrawlerPage() {
                 <button
                   onClick={() => handleRemoveUrl(idx)}
                   disabled={isBusy}
-                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-apple-red hover:bg-apple-red/10 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-1.5 rounded-xl text-[var(--text-tertiary)] hover:text-apple-red hover:bg-apple-red/10 opacity-0 group-hover:opacity-100 transition-all"
+                  aria-label={t('common.delete')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -494,7 +505,7 @@ export function CrawlerPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="glass-card rounded-2xl overflow-hidden"
+            className="apple-card overflow-hidden"
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-default)]">
               <h3 className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2">
@@ -503,7 +514,7 @@ export function CrawlerPage() {
               </h3>
               <button
                 onClick={() => setShowOutput(false)}
-                className="p-1 rounded hover:bg-[var(--bg-secondary)]"
+                className="p-1 rounded-xl hover:bg-[var(--bg-secondary)]"
               >
                 <X className="w-4 h-4 text-[var(--text-tertiary)]" />
               </button>

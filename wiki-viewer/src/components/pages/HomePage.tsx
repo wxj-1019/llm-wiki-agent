@@ -147,10 +147,10 @@ function StatCard({ icon: Icon, label, value, color, suffix }: {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="apple-card p-5 flex items-center gap-4"
+      className="apple-card p-5 flex items-center gap-4 group"
     >
-      <div className={`p-3 rounded-xl ${color}`}>
-        <Icon size={20} />
+      <div className={`p-3 rounded-xl ${color} transition-transform duration-300 group-hover:scale-110`}>
+        <Icon size={20} className="transition-transform duration-300" />
       </div>
       <div>
         <div className="text-2xl font-semibold">{value}{suffix || ''}</div>
@@ -208,7 +208,7 @@ function RadarChart({ values }: { values: number[] }) {
         })}
         <polygon
           points={points}
-          fill="rgba(10, 132, 255, 0.08)"
+          fill="var(--chart-fill)"
           stroke="var(--apple-blue)"
           strokeWidth={1.5}
           strokeLinejoin="round"
@@ -318,7 +318,7 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
         {data.map((d, i) => (
           <text key={i} x={xScale(i)} y={height - 10} textAnchor="middle" dominantBaseline="middle" className="text-[10px] fill-[var(--text-secondary)]">{d.label}</text>
         ))}
-        <polygon points={areaPoints} fill="rgba(10, 132, 255, 0.06)" />
+        <polygon points={areaPoints} fill="var(--chart-fill-area)" />
         <polyline points={points} fill="none" stroke="var(--apple-blue)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="growth-line" />
         {data.map((d, i) => (
           <circle

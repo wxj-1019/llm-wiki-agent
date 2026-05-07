@@ -198,7 +198,7 @@ export function UploadPage() {
     } finally {
       setFetchingUrl(false);
     }
-  }, [fetchUrl, fetchName, loadFiles, showToast]);
+  }, [fetchUrl, fetchName, loadFiles, showToast, t]);
 
   const handlePreview = useCallback(async (file: RawFile) => {
     if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
@@ -571,10 +571,10 @@ export function UploadPage() {
                 {t('upload.batchDeleteConfirm', { count: selectedPaths.size })}
               </p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowBatchDeleteConfirm(false)} className="btn-secondary px-4 py-2 text-sm">
+                <button onClick={() => setShowBatchDeleteConfirm(false)} className="apple-button-ghost px-4 py-2 text-sm">
                   {t('common.close', 'Cancel')}
                 </button>
-                <button onClick={confirmBatchDelete} className="btn-primary px-4 py-2 text-sm bg-red-500 text-white hover:bg-red-600">
+                <button onClick={confirmBatchDelete} className="apple-button apple-button-red px-4 py-2 text-sm">
                   {t('upload.delete', 'Delete')}
                 </button>
               </div>
