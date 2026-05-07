@@ -539,7 +539,10 @@ async def upload_file(file: UploadFile = File(...)):
         ".yml": ["application/yaml", "text/yaml"],
     }
     allowed = expected_types.get(suffix, [])
-    if allowed and content_type and not any(content_type.startswith(a) for a in allowed):
+    # application/octet-stream is a generic fallback — skip validation
+    if content_type == "application/octet-stream":
+        pass
+    elif allowed and content_type and not any(content_type.startswith(a) for a in allowed):
         raise HTTPException(
             status_code=400,
             detail=f"Content-Type '{content_type}' does not match extension '{suffix}'"

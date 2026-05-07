@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, HardDrive, CheckCircle, Loader2, Globe, Download, CloudUpload } from 'lucide-react';
+import { FolderOpen, HardDrive, CheckCircle, Loader2, CloudUpload, Plus, X, ChevronDown, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   fetchRawFiles, uploadFile, uploadText, triggerIngest,
@@ -21,6 +21,7 @@ import { PreviewPanel } from '@/components/upload/PreviewPanel';
 import { FileList } from '@/components/upload/FileList';
 
 type SortMode = 'newest' | 'name' | 'size';
+type AddMethod = 'none' | 'paste' | 'url';
 
 export function UploadPage() {
   const { t } = useTranslation();
@@ -44,6 +45,9 @@ export function UploadPage() {
 
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [showUningestedOnly, setShowUningestedOnly] = useState(false);
 
   const [ingestingPaths, setIngestingPaths] = useState<Set<string>>(new Set());
   const [deletingPaths, setDeletingPaths] = useState<Set<string>>(new Set());
@@ -56,6 +60,8 @@ export function UploadPage() {
   const [fileTypeFilter, setFileTypeFilter] = useState<FileTypeFilter>('all');
   const [batchIngesting, setBatchIngesting] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+
+  const [expandedMethod, setExpandedMethod] = useState<AddMethod>('none');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,13 +85,17 @@ export function UploadPage() {
 
   const stats = useMemo(() => {
     const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-    return { totalFiles: files.length, totalSize };
+    const ingestedCount = files.filter((f) => f.ingested).length;
+    return { totalFiles: files.length, totalSize, ingestedCount };
   }, [files]);
 
   const animatedTotalFiles = useCountUp(stats.totalFiles);
 
   const filteredFiles = useMemo(() => {
     let result = files;
+    if (showUningestedOnly) {
+      result = result.filter((f) => !f.ingested);
+    }
     if (fileTypeFilter !== 'all') {
       result = result.filter((f) => getFileCategory(f.name) === fileTypeFilter);
     }
@@ -99,7 +109,7 @@ export function UploadPage() {
       return b.size - a.size;
     });
     return result;
-  }, [files, fileTypeFilter, searchQuery, sortMode]);
+  }, [files, fileTypeFilter, searchQuery, sortMode, showUningestedOnly]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -112,6 +122,8 @@ export function UploadPage() {
   const doUploadFiles = useCallback(async (fileList: File[]) => {
     setUploading(true);
     setUploadProgress({ current: 0, total: fileList.length });
+    let successCount = 0;
+    let failCount = 0;
     for (let i = 0; i < fileList.length; i++) {
       setUploadProgress({ current: i, total: fileList.length });
       const file = fileList[i];
@@ -119,16 +131,20 @@ export function UploadPage() {
         if (isImageFile(file.name)) {
           const result = await ingestImageFile(file);
           if (result.success) {
+            successCount++;
             showToast(t('upload.success.imageIngest', { path: result.md_path }), 'success');
             refreshGraphData();
           } else {
+            failCount++;
             showToast(t('upload.error.imageIngest', { error: result.stderr || 'Unknown' }), 'error');
           }
         } else {
           const result: UploadResult = await uploadFile(file);
+          successCount++;
           showToast(t('upload.success.upload', { path: result.path }), 'success');
         }
       } catch (err) {
+        failCount++;
         showToast(String(err), 'error');
       }
     }
@@ -138,6 +154,14 @@ export function UploadPage() {
       setUploading(false);
     }, 400);
     await loadFiles();
+    // Summary toast for batch upload
+    if (fileList.length > 1) {
+      if (failCount > 0) {
+        showToast(`${successCount}/${fileList.length} 上传成功 (${failCount} 失败)`, successCount > 0 ? 'success' : 'error');
+      } else {
+        showToast(`${successCount} 个文件上传成功`, 'success');
+      }
+    }
   }, [loadFiles, showToast, t, refreshGraphData, isImageFile]);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
@@ -201,18 +225,21 @@ export function UploadPage() {
   }, [fetchUrl, fetchName, loadFiles, showToast, t]);
 
   const handlePreview = useCallback(async (file: RawFile) => {
+    setPreviewLoading(true);
+    setPreviewName(file.name);
+    setPreviewContent(null);
     if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
       try {
         const text = await fetchRawFileContent(file.path);
         setPreviewContent(text);
-        setPreviewName(file.name);
+        setPreviewLoading(false);
         return;
       } catch { /* fallback */ }
     }
     setPreviewContent(
       `# ${file.name}\n\n- **${t('upload.preview.path')}**: ${file.path}\n- **${t('upload.preview.size')}**: ${formatBytes(file.size)}\n- **${t('upload.preview.type')}**: ${t('upload.preview.binaryDesc')}`
     );
-    setPreviewName(file.name);
+    setPreviewLoading(false);
   }, [t]);
 
   const handleIngest = useCallback(async (file: RawFile) => {
@@ -222,6 +249,7 @@ export function UploadPage() {
       if (result.success) {
         showToast(t('upload.success.ingest'), 'success');
         refreshGraphData();
+        await loadFiles();
       } else {
         showToast(t('upload.error.ingest'), 'error');
       }
@@ -230,7 +258,7 @@ export function UploadPage() {
     } finally {
       setIngestingPaths((prev) => { const n = new Set(prev); n.delete(file.path); return n; });
     }
-  }, [showToast, t, refreshGraphData]);
+  }, [showToast, t, refreshGraphData, loadFiles]);
 
   const handleDelete = useCallback(async (file: RawFile) => {
     if (!confirm(t('upload.deleteConfirm'))) return;
@@ -276,12 +304,23 @@ export function UploadPage() {
     setSelectedPaths(new Set());
     setBatchIngesting(false);
     refreshGraphData();
-  }, [selectedPaths, showToast, t, refreshGraphData]);
+    await loadFiles();
+  }, [selectedPaths, showToast, t, refreshGraphData, loadFiles]);
 
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const deleteDialogRef = useFocusTrap<HTMLDivElement>(showBatchDeleteConfirm);
   useBodyScrollLock(showBatchDeleteConfirm);
+
+  // Global Escape handler for batch delete modal (motion.div doesn't auto-focus)
+  useEffect(() => {
+    if (!showBatchDeleteConfirm) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowBatchDeleteConfirm(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showBatchDeleteConfirm]);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedPaths.size === 0) {
@@ -333,16 +372,38 @@ export function UploadPage() {
 
   const uploadPercent = uploadProgress ? (uploadProgress.current / uploadProgress.total) * 100 : 0;
 
+  const statsBar = (
+    <div className="flex items-center gap-4 sm:gap-6 text-xs text-[var(--text-tertiary)]">
+      <div className="flex items-center gap-1.5">
+        <FolderOpen size={13} className="text-apple-blue" />
+        <span className="font-medium text-[var(--text-secondary)]">{animatedTotalFiles}</span>
+        <span>{t('upload.stats.totalFiles')}</span>
+      </div>
+      <div className="w-px h-3 bg-[var(--border-default)]" />
+      <div className="flex items-center gap-1.5">
+        <HardDrive size={13} className="text-apple-purple" />
+        <span className="font-medium text-[var(--text-secondary)]">{formatBytes(stats.totalSize)}</span>
+      </div>
+      <div className="w-px h-3 bg-[var(--border-default)] hidden sm:block" />
+      <div className="hidden sm:flex items-center gap-1.5">
+        <CheckCircle size={13} className="text-apple-green" />
+        <span className="font-medium text-[var(--text-secondary)]">{stats.ingestedCount}</span>
+        <span>{t('upload.stats.ingested')}</span>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="pb-12">
-      {/* Skip link for keyboard navigation */}
+    <div className="pb-12 max-w-5xl mx-auto">
+      {/* Skip link */}
       <a
         href="#upload-main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-apple-blue focus:text-white focus:rounded-xl"
       >
         {t('upload.skipToContent') || 'Skip to main content'}
       </a>
-      {/* Global Drag Overlay -->
+
+      {/* Global Drag Overlay */}
       <AnimatePresence>
         {dragActive && (
           <motion.div
@@ -353,16 +414,16 @@ export function UploadPage() {
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[var(--bg-primary)] border-2 border-dashed border-apple-blue rounded-3xl p-16 text-center"
+              className="bg-[var(--bg-primary)] border-2 border-dashed border-apple-blue rounded-3xl p-14 sm:p-20 text-center shadow-2xl"
             >
-              <CloudUpload size={64} className="mx-auto mb-4 text-apple-blue" />
-              <p className="text-xl font-semibold text-apple-blue">{t('upload.dragActive')}</p>
+              <CloudUpload size={72} className="mx-auto mb-5 text-apple-blue" />
+              <p className="text-2xl font-bold text-apple-blue">{t('upload.dragActive')}</p>
               <p className="text-sm text-[var(--text-tertiary)] mt-2">{t('upload.dragFormatHint')}</p>
             </motion.div>
           </motion.div>
@@ -370,34 +431,14 @@ export function UploadPage() {
       </AnimatePresence>
 
       {/* Page Header */}
-      <div id="upload-main" className="mb-8" tabIndex={-1}>
-        <h1 className="text-heading-1">{t('upload.title')}</h1>
-        <p className="text-sm text-[var(--text-tertiary)] mt-1">{t('upload.dragFormatHint')}</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: t('upload.stats.totalFiles'), value: animatedTotalFiles, icon: FolderOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10', suffix: '' },
-          { label: t('upload.stats.totalSize'), value: formatBytes(stats.totalSize), icon: HardDrive, color: 'text-apple-purple', bg: 'bg-apple-purple/10', suffix: '', raw: true },
-          { label: t('upload.stats.ingested'), value: files.filter((f) => f.ingested).length, icon: CheckCircle, color: 'text-apple-green', bg: 'bg-apple-green/10', suffix: '' },
-        ].map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`apple-card p-5 flex items-center gap-4 ${s.bg} group`}
-          >
-            <div className={`p-3 rounded-xl bg-[var(--bg-primary)] ${s.color} transition-transform duration-300 group-hover:scale-110`}>
-              <s.icon size={22} />
-            </div>
-            <div>
-              <div className="text-2xl font-bold tracking-tight">{s.raw ? s.value : s.value + s.suffix}</div>
-              <div className="text-xs text-[var(--text-tertiary)] font-medium">{s.label}</div>
-            </div>
-          </motion.div>
-        ))}
+      <div id="upload-main" className="mb-6" tabIndex={-1}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-heading-1">{t('upload.title')}</h1>
+            <p className="text-sm text-[var(--text-tertiary)] mt-1">{t('upload.dragFormatHint')}</p>
+          </div>
+          {statsBar}
+        </div>
       </div>
 
       {/* Upload Progress */}
@@ -414,7 +455,7 @@ export function UploadPage() {
                 <div className="flex items-center gap-3">
                   <Loader2 size={18} className="animate-spin text-apple-blue" />
                   <span className="text-sm font-semibold">{t('upload.uploading')}</span>
-                  <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-secondary)] px-2 py-0.5 font-mono">
+                  <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-secondary)] px-2 py-0.5 font-mono rounded-lg">
                     {uploadProgress.current}/{uploadProgress.total}
                   </span>
                 </div>
@@ -433,116 +474,117 @@ export function UploadPage() {
         )}
       </AnimatePresence>
 
-      {/* Two-column layout: Upload controls left, File list right */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 items-start">
-        {/* Left Column — Upload Controls */}
-        <div className="space-y-6">
-          <UploadZone
-            dragActive={dragActive}
-            uploading={uploading}
-            onDrag={handleDrag}
-            onDrop={handleDrop}
-            onFileInput={handleFileInput}
-          />
-          <PasteTextPanel
-            pasteTitle={pasteTitle}
-            pasteContent={pasteContent}
-            savingText={savingText}
-            onTitleChange={setPasteTitle}
-            onContentChange={setPasteContent}
-            onSave={handleSaveText}
-          />
+      {/* Main Upload Zone */}
+      <UploadZone
+        dragActive={dragActive}
+        uploading={uploading}
+        onDrag={handleDrag}
+        onDrop={handleDrop}
+        onFileInput={handleFileInput}
+      />
 
-          {/* URL Fetch Panel */}
-          <div className="apple-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Globe className="text-apple-blue" size={20} />
-              <h2 className="text-lg font-semibold">{t('upload.fetchFromUrl', 'Fetch from URL')}</h2>
-            </div>
-            <div className="space-y-3">
-              <input
-                type="url"
-                placeholder="https://example.com/article"
-                value={fetchUrl}
-                onChange={(e) => setFetchUrl(e.target.value)}
-                className="apple-input w-full"
-                disabled={fetchingUrl}
-              />
-              <input
-                type="text"
-                placeholder={t('upload.fetchNamePlaceholder', 'Optional display name')}
-                value={fetchName}
-                onChange={(e) => setFetchName(e.target.value)}
-                className="apple-input w-full"
-                disabled={fetchingUrl}
-              />
-              <button
-                onClick={handleFetchUrl}
-                disabled={fetchingUrl || !fetchUrl.trim()}
-                className="apple-button w-full flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {fetchingUrl ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                {fetchingUrl ? t('upload.fetching', 'Fetching...') : t('upload.fetch', 'Fetch Article')}
-              </button>
-              {fetchResult && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-apple-green/10 border border-apple-green/30 rounded-xl px-4 py-3 text-sm"
-                >
-                  <div className="flex items-center gap-2 text-apple-green font-medium mb-1">
-                    <CheckCircle size={14} />
-                    <span>{t('upload.fetchSuccess', 'Article fetched')}</span>
-                  </div>
-                  <div className="text-[var(--text-secondary)]">
-                    <p>{fetchResult.saved}</p>
-                    {fetchResult.quality && (
-                      <p className="mt-1">{t('upload.quality', 'Quality')}: {fetchResult.quality}</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </div>
+      {/* Secondary Add Methods */}
+      <div className="mt-4">
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => setExpandedMethod(expandedMethod === 'none' ? 'paste' : 'none')}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-all"
+          >
+            {expandedMethod === 'none' ? (
+              <>
+                <Plus size={15} />
+                <span>{t('upload.addContent')}</span>
+                <ChevronDown size={14} className="transition-transform" />
+              </>
+            ) : (
+              <>
+                <X size={15} />
+                <span>{t('common.close')}</span>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Right Column — File List */}
-        <div>
-          <FileList
-            files={files}
-            filteredFiles={filteredFiles}
-            loadingFiles={loadingFiles}
-            selectedPaths={selectedPaths}
-            searchQuery={searchQuery}
-            sortMode={sortMode}
-            fileTypeFilter={fileTypeFilter}
-            ingestingPaths={ingestingPaths}
-            deletingPaths={deletingPaths}
-            batchIngesting={batchIngesting}
-            batchDeleting={batchDeleting}
-            hoveredPath={hoveredPath}
-            onSearchChange={setSearchQuery}
-            onSortModeChange={setSortMode}
-            onFileTypeFilterChange={setFileTypeFilter}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-            onBatchIngest={handleBatchIngest}
-            onBatchDelete={handleBatchDelete}
-            onClearSelection={() => setSelectedPaths(new Set())}
-            onPreview={handlePreview}
-            onIngest={handleIngest}
-            onDelete={handleDelete}
-            onHover={setHoveredPath}
-            onTriggerFileInput={() => fileInputRef.current?.click()}
-          />
-        </div>
+        <AnimatePresence>
+          {expandedMethod !== 'none' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden"
+            >
+              <PasteTextPanel
+                pasteTitle={pasteTitle}
+                pasteContent={pasteContent}
+                savingText={savingText}
+                fetchUrl={fetchUrl}
+                fetchName={fetchName}
+                fetchingUrl={fetchingUrl}
+                fetchResult={fetchResult}
+                activeTab={expandedMethod === 'paste' ? 'paste' : 'url'}
+                onTitleChange={setPasteTitle}
+                onContentChange={setPasteContent}
+                onSave={handleSaveText}
+                onFetchUrl={handleFetchUrl}
+                onFetchUrlChange={setFetchUrl}
+                onFetchNameChange={setFetchName}
+                onTabChange={(tab) => setExpandedMethod(tab === 'paste' ? 'paste' : 'url')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* File List — Full Width */}
+      <div className="mt-8">
+        <FileList
+          files={files}
+          filteredFiles={filteredFiles}
+          loadingFiles={loadingFiles}
+          selectedPaths={selectedPaths}
+          searchQuery={searchQuery}
+          sortMode={sortMode}
+          fileTypeFilter={fileTypeFilter}
+          showUningestedOnly={showUningestedOnly}
+          ingestingPaths={ingestingPaths}
+          deletingPaths={deletingPaths}
+          batchIngesting={batchIngesting}
+          batchDeleting={batchDeleting}
+          hoveredPath={hoveredPath}
+          onSearchChange={setSearchQuery}
+          onSortModeChange={setSortMode}
+          onFileTypeFilterChange={setFileTypeFilter}
+          onToggleUningested={() => setShowUningestedOnly((v) => !v)}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
+          onBatchIngest={handleBatchIngest}
+          onBatchDelete={handleBatchDelete}
+          onClearSelection={() => setSelectedPaths(new Set())}
+          onPreview={handlePreview}
+          onIngest={handleIngest}
+          onDelete={handleDelete}
+          onHover={setHoveredPath}
+          onTriggerFileInput={() => fileInputRef.current?.click()}
+        />
+      </div>
+
+      {/* Hidden file input for empty-state CTA */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileInput}
+        accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.html,.csv,.json,.xml,.rst,.rtf,.epub,.ipynb,.yaml,.yml,.tsv,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg"
+      />
 
       {/* Preview Panel */}
       <PreviewPanel
         previewContent={previewContent}
         previewName={previewName}
-        onClose={() => { setPreviewContent(null); setPreviewName(''); }}
+        isLoading={previewLoading}
+        onClose={() => { setPreviewContent(null); setPreviewName(''); setPreviewLoading(false); }}
         onCopy={() => {
           if (previewContent) {
             navigator.clipboard.writeText(previewContent).then(() => showToast(t('upload.copySuccess'), 'success'));
@@ -550,13 +592,14 @@ export function UploadPage() {
         }}
       />
 
+      {/* Batch Delete Confirm Modal */}
       <AnimatePresence>
         {showBatchDeleteConfirm && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowBatchDeleteConfirm(false)}
             role="dialog"
             aria-modal="true"
@@ -565,22 +608,25 @@ export function UploadPage() {
           >
             <motion.div
               ref={deleteDialogRef}
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass rounded-2xl p-6 w-full max-w-sm space-y-4"
+              className="glass rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl"
             >
-              <h3 id="batch-delete-title" className="text-lg font-semibold">{t('upload.batchDeleteTitle', 'Batch Delete')}</h3>
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-1">
+                <Trash2 size={22} className="text-red-500" />
+              </div>
+              <h3 id="batch-delete-title" className="text-lg font-semibold">{t('upload.batchDeleteTitle')}</h3>
               <p className="text-sm text-[var(--text-secondary)]">
                 {t('upload.batchDeleteConfirm', { count: selectedPaths.size })}
               </p>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setShowBatchDeleteConfirm(false)} className="apple-button-ghost px-4 py-2 text-sm">
-                  {t('common.close', 'Cancel')}
+                  {t('common.close')}
                 </button>
                 <button onClick={confirmBatchDelete} className="apple-button apple-button-red px-4 py-2 text-sm">
-                  {t('upload.delete', 'Delete')}
+                  {t('upload.delete')}
                 </button>
               </div>
             </motion.div>
