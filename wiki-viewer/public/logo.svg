@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Transparent background - no fill for dark mode compatibility -->
+  
+  <!-- 8 rays -->
+  <g fill="#0a84ff">
+    <!-- Top ray -->
+    <polygon points="92,70 100,70 98,18 94,18"/>
+    <!-- Top-right ray -->
+    <polygon points="113,79 119,73 154,38 150,34"/>
+    <!-- Right ray -->
+    <polygon points="122,92 122,100 174,98 174,94"/>
+    <!-- Bottom-right ray -->
+    <polygon points="113,113 119,119 154,154 150,158"/>
+    <!-- Bottom ray -->
+    <polygon points="92,122 100,122 98,174 94,174"/>
+    <!-- Bottom-left ray -->
+    <polygon points="79,113 73,119 38,154 34,150"/>
+    <!-- Left ray -->
+    <polygon points="70,92 70,100 18,98 18,94"/>
+    <!-- Top-left ray -->
+    <polygon points="79,79 73,73 38,38 34,42"/>
+  </g>
+  
+  <!-- Outer blue circle -->
+  <circle cx="96" cy="96" r="22" fill="#0a84ff"/>
+  
+  <!-- Middle white ring -->
+  <circle cx="96" cy="96" r="14" fill="#ffffff"/>
+  
+  <!-- Inner blue dot -->
+  <circle cx="96" cy="96" r="7" fill="#0a84ff"/>
+</svg>

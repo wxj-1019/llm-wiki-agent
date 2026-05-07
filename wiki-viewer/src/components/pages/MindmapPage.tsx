@@ -114,7 +114,7 @@ export function MindmapPage() {
   const { slug } = useParams();
   const graphData = useWikiStore((s) => s.graphData);
   const addNotification = useNotificationStore((s) => s.addNotification);
-  const nodes = graphData?.nodes || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
   const loading = useWikiStore((s) => s.loading);
   useDocumentTitle('Mindmap');
 

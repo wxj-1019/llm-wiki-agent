@@ -35,22 +35,22 @@ const TYPE_COLORS: Record<string, string> = {
   report: 'bg-apple-yellow',
 };
 
-function logEntryToEvent(entry: LogEntry): TimelineEvent {
+function logEntryToEvent(entry: LogEntry, t: (key: string) => string): TimelineEvent {
   const typeDesc: Record<string, string> = {
-    ingest: 'Ingested a new source document',
-    query: 'Ran a knowledge query',
-    health: 'Performed a health check',
-    lint: 'Ran content quality lint',
-    graph: 'Built or updated the knowledge graph',
-    heal: 'Auto-healed missing entities',
-    refresh: 'Refreshed stale source pages',
-    report: 'Generated a report',
+    ingest: t('timeline.type.ingest'),
+    query: t('timeline.type.query'),
+    health: t('timeline.type.health'),
+    lint: t('timeline.type.lint'),
+    graph: t('timeline.type.graph'),
+    heal: t('timeline.type.heal'),
+    refresh: t('timeline.type.refresh'),
+    report: t('timeline.type.report'),
   };
   return {
     date: entry.date,
     type: entry.operation,
     title: entry.title,
-    description: typeDesc[entry.operation] || 'Wiki operation',
+    description: typeDesc[entry.operation] || t('timeline.type.unknown', 'Wiki operation'),
   };
 }
 
@@ -67,7 +67,7 @@ export function TimelinePage() {
     setError(null);
     try {
       const { entries } = await fetchLog(200);
-      const mapped = entries.map(logEntryToEvent);
+      const mapped = entries.map((e) => logEntryToEvent(e, t));
       setEvents(mapped);
     } catch (e) {
       setError((e as Error).message);
@@ -86,7 +86,7 @@ export function TimelinePage() {
                 date: m[1],
                 operation: m[2].toLowerCase(),
                 title: m[3].trim(),
-              }));
+              }, t));
             }
           }
           setEvents(parsed.reverse());
@@ -162,7 +162,7 @@ export function TimelinePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">{t('nav.timeline') || 'Knowledge Timeline'}</h1>
+        <h1 className="text-heading-1">{t('nav.timeline')}</h1>
         <button
           onClick={loadEvents}
           className="apple-button-ghost flex items-center gap-2 px-3 py-2 text-sm"

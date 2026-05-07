@@ -9,7 +9,7 @@ interface Props {
 
 export function AudioOverview({ text, onClose }: Props) {
   const { t } = useTranslation();
-  const { playing, paused, rate, voice, voices, play, pause, stop, setRate, setVoice } =
+  const { playing, rate, voice, voices, play, pause, stop, setRate, setVoice } =
     useSpeechSynthesis(text);
 
   const speedOptions = [0.5, 1, 1.5, 2];

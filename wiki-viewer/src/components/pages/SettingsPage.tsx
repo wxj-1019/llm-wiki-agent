@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Code, Rss, BookOpen, Save, Download,
   Check, AlertTriangle, Bot, Key, ExternalLink, Trash2, Plus,
+  Sparkles, Flame,
 } from 'lucide-react';
+import { AppleSelect } from '@/components/ui/AppleSelect';
 import { useConfigStore } from '@/stores/configStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -39,7 +41,7 @@ export function SettingsPage() {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (llmTimerRef.current) clearTimeout(llmTimerRef.current);
     };
-  }, []);
+  }, [addNotification, t]);
 
   useEffect(() => {
     checkApi();
@@ -59,7 +61,7 @@ export function SettingsPage() {
       .catch(() => {
         addNotification(t('settings.error', 'Failed to load LLM config'), 'error');
       });
-  }, []);
+  }, [addNotification, t]);
 
   const handleSave = async () => {
     if (apiAvailable) {
@@ -127,7 +129,7 @@ export function SettingsPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-semibold flex items-center gap-3">
+        <h1 className="text-heading-1 flex items-center gap-3">
           <Settings size={28} className="text-apple-blue" />
           {t('settings.title')}
         </h1>
@@ -145,9 +147,9 @@ export function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-[var(--bg-primary)] text-apple-purple shadow-sm'
+                ? 'bg-[var(--bg-primary)] text-apple-blue shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -160,7 +162,7 @@ export function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
                 : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -172,9 +174,17 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {/* GitHub Panel */}
-      {activeTab === 'github' && (
-        <div className="space-y-6 max-w-2xl">
+      {/* Tab Panels */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'github' && (
+          <motion.div
+            key="github"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <Key size={16} className="text-apple-blue" />
@@ -283,22 +293,30 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* RSS Panel */}
-      {activeTab === 'rss' && (
-        <div className="space-y-4 max-w-2xl">
+        {activeTab === 'rss' && (
+          <motion.div
+            key="rss"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Rss size={16} className="text-orange-500" />
+              <Rss size={16} className="text-apple-orange" />
               {t('settings.tab.rss')}
             </h3>
             <div className="space-y-3">
               {config.rss.feeds.length === 0 && (
-                <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">
-                  {t('settings.rss.empty')}
-                </p>
+                <div className="py-8 text-center">
+                  <Rss size={32} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+                  <p className="text-sm text-[var(--text-tertiary)]">{t('settings.rss.empty')}</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 opacity-60">{t('settings.rss.emptyHint')}</p>
+                </div>
               )}
               {config.rss.feeds.map((feed, idx) => (
                 <div key={idx} className="flex items-start gap-3">
@@ -353,12 +371,18 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* arXiv Panel */}
-      {activeTab === 'arxiv' && (
-        <div className="space-y-4 max-w-2xl">
+        {activeTab === 'arxiv' && (
+          <motion.div
+            key="arxiv"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <BookOpen size={16} className="text-apple-red" />
@@ -366,9 +390,11 @@ export function SettingsPage() {
             </h3>
             <div className="space-y-3">
               {config.arxiv.queries.length === 0 && (
-                <p className="text-sm text-[var(--text-tertiary)] py-6 text-center">
-                  {t('settings.arxiv.empty')}
-                </p>
+                <div className="py-8 text-center">
+                  <BookOpen size={32} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+                  <p className="text-sm text-[var(--text-tertiary)]">{t('settings.arxiv.empty')}</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 opacity-60">{t('settings.arxiv.emptyHint')}</p>
+                </div>
               )}
               {config.arxiv.queries.map((q, idx) => (
                 <div key={idx} className="flex items-start gap-3">
@@ -423,27 +449,30 @@ export function SettingsPage() {
               {saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* LLM Panel */}
-      {activeTab === 'llm' && (
-        <div className="space-y-6 max-w-2xl">
+        {activeTab === 'llm' && (
+          <motion.div
+            key="llm"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6 max-w-2xl"
+          >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Bot size={16} className="text-purple-500" />
+              <Bot size={16} className="text-apple-purple" />
               {t('settings.llm.title')}
             </h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="llm-provider" className="block text-sm text-[var(--text-secondary)] mb-2">
-                  {t('settings.llm.provider')}
-                </label>
-                <select
+                <AppleSelect
                   id="llm-provider"
+                  label={t('settings.llm.provider')}
                   value={llmProvider}
-                  onChange={(e) => {
-                    const p = e.target.value;
+                  onChange={(p) => {
                     setLlmProvider(p);
                     if (p === 'deepseek') {
                       setLlmModel('deepseek/deepseek-chat');
@@ -456,12 +485,12 @@ export function SettingsPage() {
                       setLlmModelFast('openai/gpt-3.5-turbo');
                     }
                   }}
-                  className="apple-input"
-                >
-                  <option value="anthropic">Anthropic (Claude)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                  <option value="deepseek">DeepSeek</option>
-                </select>
+                  options={[
+                    { value: 'anthropic', label: 'Anthropic (Claude)', icon: <Sparkles size={14} /> },
+                    { value: 'openai', label: 'OpenAI (GPT)', icon: <Bot size={14} /> },
+                    { value: 'deepseek', label: 'DeepSeek', icon: <Flame size={14} /> },
+                  ]}
+                />
               </div>
 
               <div>
@@ -549,8 +578,9 @@ export function SettingsPage() {
               {llmSaveStatus === 'success' ? t('settings.saved') : llmSaveStatus === 'error' ? t('settings.error') : t('settings.save')}
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </motion.div>
   );
 }

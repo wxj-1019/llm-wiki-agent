@@ -26,8 +26,14 @@ The LLM reads the source, extracts knowledge, and updates the wiki:
 
 import os
 import sys
+import io
 import json
 import hashlib
+
+# Fix Windows GBK console encoding for emoji output
+if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 import re
 import shutil
 import tempfile

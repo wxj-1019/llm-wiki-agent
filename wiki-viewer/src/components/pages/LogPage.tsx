@@ -41,7 +41,7 @@ export function LogPage() {
     try { return parseInt(localStorage.getItem('wiki-log-tail') || '100', 10) || 100; } catch { return 100; }
   });
   const graphData = useWikiStore((s) => s.graphData);
-  const nodes = graphData?.nodes || [];
+  const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
   const nodeLabelMap = useMemo(() => {
     const map = new Map<string, typeof nodes[0]>();
     for (const n of nodes) {
@@ -103,7 +103,7 @@ export function LogPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-semibold mb-6">{t('log.title')}</h1>
+      <h1 className="text-heading-1 mb-6">{t('log.title')}</h1>
 
       {!loading && !error && entries.length > 0 && (
         <div className="flex items-center gap-2 mb-6 flex-wrap">

@@ -15,8 +15,8 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: 'text-apple-green',
-  error: 'text-apple-red',
+  success: 'text-emerald-500',
+  error: 'text-red-500',
   info: 'text-apple-blue',
   progress: 'text-apple-purple',
 };
@@ -56,9 +56,14 @@ export function NotificationDropdown() {
       >
         <Bell size={16} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-apple-red text-white text-[10px] font-bold flex items-center justify-center">
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+          >
             {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
+          </motion.span>
         )}
       </button>
 
@@ -72,7 +77,7 @@ export function NotificationDropdown() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.96 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-default)] z-50 shadow-xl overflow-hidden"
+              className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-default)] z-50 shadow-2xl overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)]">

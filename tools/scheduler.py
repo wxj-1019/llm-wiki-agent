@@ -52,6 +52,10 @@ def fetch_github() -> None:
     _run([PYTHON, "tools/fetchers/github_fetcher.py", "--config", "config/github_sources.yaml"])
 
 
+def fetch_web() -> None:
+    _run([PYTHON, "tools/fetchers/web_fetcher.py", "--config", "config/web_sources.yaml"])
+
+
 def compile_and_ingest() -> None:
     _run(
         [PYTHON, "tools/batch_compiler.py"],
@@ -77,9 +81,10 @@ def maintenance() -> None:
 # GitHub trending: every day at 00:00, then auto compile & ingest at 00:30
 schedule.every().day.at("00:00").do(fetch_github_and_ingest)
 
-# RSS & arXiv: every morning
+# RSS & arXiv & Web: every morning
 schedule.every().day.at("08:00").do(fetch_rss)
 schedule.every().day.at("08:30").do(fetch_arxiv)
+schedule.every().day.at("08:45").do(fetch_web)
 
 # Weekly maintenance: Sunday night
 schedule.every().sunday.at("22:00").do(maintenance)

@@ -1,4 +1,4 @@
-import { FileText, FileSpreadsheet, FileCode, File, FileArchive, FileImage, FileType } from 'lucide-react';
+import { FileText, FileSpreadsheet, FileCode, FileArchive, FileImage, FileType } from 'lucide-react';
 
 export type FileTypeFilter = 'all' | 'document' | 'spreadsheet' | 'code' | 'other';
 

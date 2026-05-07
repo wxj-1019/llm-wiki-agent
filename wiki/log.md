@@ -6,6 +6,29 @@
 
 ---
 
+## [2026-05-07] ingest | A股常见量化交易策略指南
+
+Added source: 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点。Key claims: A股量化策略需单独理解市场特征；四种优先策略（主力资金流入、板块轮动、趋势+动量复合、多因子评分）最适合当前AI选股系统；"多因子底座 + A股特色信号 + 严格风控"为最优组合架构。无矛盾。
+
+## [2026-05-07] ingest | A股常见量化交易策略指南
+
+Added source. Key claims: 全面梳理了14种A股常见量化交易策略，分析了每种策略的核心逻辑、常见信号、适用市场状态和实战要点；指出A股量化策略需特别考虑涨跌停、T+1、做空限制、政策驱动等独特特征；推荐主力资金流入、板块轮动、趋势+动量复合、多因子评分四类策略优先工程化；为当前主力选股系统提供了完整的策略理论框架和风控建议。
+
+## [2026-05-07] ingest | 主力选股系统整体分析文档
+
+Added source. Key claims: AI-driven stock selection system with 6-layer pipeline (data acquisition → multi-level filtering → quant scoring → 5 AI analysts → senior researcher → backtesting); 7 strategies (main force accumulation, short-term breakout, value stable, growth potential, sector rotation, low risk income, controlled pullback); Quant Scorer with 4 dimensions (capital intensity 35%, price-capital match 30%, fundamental quality 20%, valuation safety 15%); 5 parallel AI analysts (CapitalFlow, IndustrySector, Financials, TechnicalPatterns, Quant); tiered recommendation system (strict vs caution); backtesting engine with T+1 open price, 0.23% total cost model. New entities: WencaiAPI, Tushare, MainFundSelection. New concepts: QuantitativeAnalysis, Backtesting, RiskManagement, DataPipeline.
+
+## [2026-05-07] ingest | 主力选股系统整体分析文档
+
+Added source. Key claims: AI驱动的旗舰智能选股系统采用六层流水线架构（数据获取→多层级筛选→量化预评分→AI五维分析→资深研究员综合→回测验证），内置7种选股策略，5位AI分析师并行分析，量化预评分系统控制Token成本，推荐分层双轨制（strict/caution），以及完善的降级策略体系。
+
+New entities: QuantitativeAnalysis, Backtesting
+New concepts: StockSelectionStrategy, QuantPreScoring, AIMultiAgentStockAnalysis
+
+## [2026-05-04] ingest | Things We Learned About LLMs in 2024
+
+Ingested via web crawler. Source: Lilian Weng blog post covering model capabilities, multimodal advances, reasoning, synthetic data, and agent frameworks.
+
 ## [2026-05-04] graph | Knowledge graph rebuilt
 
 32 nodes, 182 edges (182 extracted, 0 inferred).

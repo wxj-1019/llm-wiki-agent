@@ -1,0 +1,13 @@
+urls:
+  - url: "https://news.sina.com.cn/"
+    name: "新浪新闻"
+    tags: [ai, llm, agent]
+
+settings:
+  timeout: 30
+  user_agent: "llm-wiki-agent/1.0"
+  respect_robots_txt: true
+  fallback_to_markitdown: true
+  request_delay: 1
+  max_retries: 3
+  content_min_length: 200

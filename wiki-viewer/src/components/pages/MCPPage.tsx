@@ -273,7 +273,7 @@ export function MCPPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('mcp.title', 'MCP 管理'));
   const [servers, setServers] = useState<MCPServer[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [actioningServer, setActioningServer] = useState<string | null>(null);
   const [error, setError] = useState('');

@@ -2,7 +2,7 @@
 
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-[var(--bg-tertiary)] rounded-xl ${className}`} />
+    <div className={`animate-soft-pulse bg-[var(--bg-tertiary)] rounded-xl ${className}`} />
   );
 }
 

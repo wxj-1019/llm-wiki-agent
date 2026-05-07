@@ -79,10 +79,7 @@ export function useKeyboardShortcuts() {
           break;
         case '?':
           e.preventDefault();
-          // eslint-disable-next-line no-console
-          console.log(
-            'Keyboard shortcuts: / = search, g h = home, g b = browse, g g = graph, g d = dashboard, g c = chat, g u = upload, g s = settings'
-          );
+          // Keyboard shortcuts help is displayed in the UI; no console output needed
           break;
       }
     };

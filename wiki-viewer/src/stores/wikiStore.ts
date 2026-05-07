@@ -13,6 +13,7 @@ interface WikiState {
   readingProgress: Record<string, number>;
   favorites: string[];
   commandPaletteOpen: boolean;
+  apiConnected: boolean;
   initialize: () => Promise<void>;
   refreshGraphData: () => Promise<void>;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -27,15 +28,34 @@ interface WikiState {
   isFavorite: (pageId: string) => boolean;
   setReadingProgress: (pageId: string, progress: number) => void;
   stopPolling: () => void;
+  checkApiHealth: () => Promise<boolean>;
 }
 
 function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+let _systemThemeListener: ((e: MediaQueryListEvent) => void) | null = null;
+
 function applyTheme(theme: 'light' | 'dark' | 'system') {
   const effective = theme === 'system' ? getSystemTheme() : theme;
   document.documentElement.setAttribute('data-theme', effective);
+
+  // Listen for system theme changes when in "system" mode
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  if (theme === 'system') {
+    if (!_systemThemeListener) {
+      _systemThemeListener = (e: MediaQueryListEvent) => {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      };
+      mql.addEventListener('change', _systemThemeListener);
+    }
+  } else {
+    if (_systemThemeListener) {
+      mql.removeEventListener('change', _systemThemeListener);
+      _systemThemeListener = null;
+    }
+  }
 }
 
 import { safeGet, safeSet, isObject } from '@/lib/safeStorage';
@@ -85,6 +105,11 @@ let _pollInterval: ReturnType<typeof setInterval> | null = null;
 let _persistTimer: ReturnType<typeof setTimeout> | null = null;
 let _lastEtag = '0';
 let _pollFetching = false;
+let _consecutiveFailures = 0;
+let _currentPollInterval = 30000; // ms, starts at 30s
+const BASE_POLL_INTERVAL = 30000;
+const MAX_POLL_INTERVAL = 300000; // 5 min cap
+const MAX_FAILURES_BEFORE_STOP = 10;
 
 export function stopPolling() {
   if (_pollInterval) {
@@ -93,13 +118,18 @@ export function stopPolling() {
   }
 }
 
-function _startPolling() {
-  if (_pollInterval) return;
+function _schedulePoll() {
+  if (_pollInterval) clearInterval(_pollInterval);
   _pollInterval = setInterval(async () => {
     if (document.hidden || _pollFetching) return;
     _pollFetching = true;
     try {
       const newEtag = await fetchIndexEtag();
+      _consecutiveFailures = 0;
+      _currentPollInterval = BASE_POLL_INTERVAL;
+      // Reschedule with normal interval if it was backed off
+      _schedulePoll();
+      useWikiStore.setState({ apiConnected: true, error: null });
       if (newEtag !== _lastEtag && _lastEtag !== '0') {
         const data = await fetchGraphData();
         initSearch(data.nodes);
@@ -108,11 +138,27 @@ function _startPolling() {
       }
       _lastEtag = newEtag;
     } catch {
-      // Ignore polling errors
+      _consecutiveFailures++;
+      // Exponential backoff: 30s -> 60s -> 120s -> 240s -> 300s cap
+      _currentPollInterval = Math.min(BASE_POLL_INTERVAL * Math.pow(2, _consecutiveFailures), MAX_POLL_INTERVAL);
+      if (_consecutiveFailures >= MAX_FAILURES_BEFORE_STOP) {
+        stopPolling();
+        useWikiStore.setState({ apiConnected: false, error: 'Backend server unreachable. Polling stopped.' });
+      } else {
+        _schedulePoll();
+        useWikiStore.setState({ apiConnected: false });
+      }
     } finally {
       _pollFetching = false;
     }
-  }, 30000);
+  }, _currentPollInterval);
+}
+
+function _startPolling() {
+  if (_pollInterval) return;
+  _consecutiveFailures = 0;
+  _currentPollInterval = BASE_POLL_INTERVAL;
+  _schedulePoll();
 }
 
 export const useWikiStore = create<WikiState>((set, get) => ({
@@ -125,6 +171,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   readingProgress: (persisted.readingProgress as Record<string, number>) || {},
   favorites: (persisted.favorites as string[]) || [],
   commandPaletteOpen: false,
+  apiConnected: true,
 
   initialize: async () => {
     stopPolling(); // Clean up any existing interval before re-initializing
@@ -173,6 +220,23 @@ export const useWikiStore = create<WikiState>((set, get) => ({
 
   stopPolling: () => {
     stopPolling();
+  },
+
+  checkApiHealth: async () => {
+    try {
+      const etag = await fetchIndexEtag();
+      const connected = etag !== '0' && etag !== '';
+      set({ apiConnected: connected, error: connected ? null : get().error });
+      if (connected && !_pollInterval) {
+        _consecutiveFailures = 0;
+        _currentPollInterval = BASE_POLL_INTERVAL;
+        _startPolling();
+      }
+      return connected;
+    } catch {
+      set({ apiConnected: false });
+      return false;
+    }
   },
 
   refreshGraphData: async () => {

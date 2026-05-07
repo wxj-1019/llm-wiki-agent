@@ -6,9 +6,12 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点
+- [主力选股系统整体分析文档](sources/main-fund-selection-system-analysis.md) — AI驱动的旗舰智能选股系统六层架构详解，包含7种策略、量化评分、5位AI分析师、回测验证等
 - [Attention Is All You Need](sources/attention-is-all-you-need.md) — seminal paper introducing the Transformer architecture
 - [Introduction to Large Language Models](sources/intro-to-llms.md) — comprehensive overview of LLMs from tokenization to autoregressive generation
 - [GitHub Hermes 生态系统综述](sources/github-hermes-ecosystem.md) — GitHub 上 Hermes 相关项目的全面调研，涵盖 AI Agent、JS 引擎、WebUI 等生态
+- [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
 - [LargeLanguageModels](entities/LargeLanguageModels.md) — auto-healed entity
@@ -31,6 +34,12 @@ This file is maintained by the LLM. Updated on every ingest.
 - [HermesJSEngine](entities/HermesJSEngine.md) — Meta 开发的 React Native 优化 JS 引擎
 - [Meta](entities/Meta.md) — 科技巨头，React Native 和 Hermes JS 引擎的开发者
 - [ReactNative](entities/ReactNative.md) — Meta 的跨平台移动应用开发框架
+- [Amanda Askell](entities/AmandaAskell.md) — researcher at Anthropic, working on AI alignment and evaluation
+- [Anthropic](entities/Anthropic.md) — AI safety company; creator of Claude
+- [Apple](entities/Apple.md) — technology company; Apple Intelligence and on-device ML
+- [DeepSeek](entities/DeepSeek.md) — Chinese AI lab; creator of DeepSeek-V3 and DeepSeek-R1
+- [Google DeepMind](entities/GoogleDeepMind.md) — Google AI research division
+- [Simon Willison](entities/SimonWillison.md) — developer and prolific LLM tools explorer
 
 ## Concepts
 - [Attention Mechanism](concepts/AttentionMechanism.md) — neural network technique for focusing on specific parts of input
@@ -40,11 +49,14 @@ This file is maintained by the LLM. Updated on every ingest.
 - [AI Alignment](concepts/AIAlignment.md) — AI 安全与价值对齐技术
 - [State Space Models](concepts/StateSpaceModels.md) — Transformer 之外的序列建模架构
 - [Agent Framework Comparison](concepts/AgentFrameworkComparison.md) — 主流 AI Agent 框架横向对比
+- [Chain of Thought](concepts/ChainOfThought.md) — explicit intermediate reasoning steps in LLM prompting
+- [Inference Scaling / Reasoning](concepts/InferenceScalingReasoning.md) — scaling test-time compute for better reasoning
+- [Slop](concepts/Slop.md) — low-quality AI-generated content polluting training data
+- [Synthetic Data](concepts/SyntheticData.md) — artificially generated training data for model improvement
 
 ## Syntheses
 - [Foundation Models Overview](syntheses/foundation-models-overview.md) — overview of large-scale AI foundation models and the Transformer era
 
 ## Memory
-- [Decisions Log](memory/decisions.md) — cross-session agent decision ledger
 - [Decisions Log](memory/decisions.md) — cross-session agent decision ledger
 - [Context Pack: transformer-architecture](memory/context-packs/pack-transformer-architecture-20260505-043224.md) — context pack for transformer architecture

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Undo2, Heart, Link2, Calendar, Tag, List, MessageCircle, FileQuestion, Edit3, Save, X, Download, Eye, Columns, Users, Headphones, ChevronDown, FileText, Globe, Printer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -100,7 +100,7 @@ export function PageDetailPage({ type }: Props) {
       setIsEditing(false);
       setCollaborate(false);
     }
-  }, [type, param]);
+  }, [type, param, node]);
   const backlinks = useMemo(() => node ? getBacklinks(node.id) : [], [node, getBacklinks]);
 
   useEffect(() => {
@@ -174,7 +174,7 @@ export function PageDetailPage({ type }: Props) {
       {/* Reading Progress */}
       {node && (readingProgress[node.id] || 0) > 0 && (
         <div
-          className="fixed top-14 left-0 right-0 z-40 h-[2px] bg-[var(--bg-secondary)]"
+          className="fixed top-14 left-0 right-0 z-40 h-[2.5px] bg-[var(--bg-secondary)] overflow-hidden"
           role="progressbar"
           aria-label="Reading progress"
           aria-valuemin={0}
@@ -182,7 +182,7 @@ export function PageDetailPage({ type }: Props) {
           aria-valuenow={Math.round((readingProgress[node.id] || 0) * 100)}
         >
           <div
-            className="h-full bg-apple-blue transition-all duration-150"
+            className="h-full bg-apple-blue transition-all duration-300 ease-out"
             style={{ width: `${(readingProgress[node.id] || 0) * 100}%` }}
           />
         </div>
@@ -208,13 +208,13 @@ export function PageDetailPage({ type }: Props) {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <span className={`text-xs font-semibold px-2.5 py-1 border border-[var(--border-default)] rounded-full ${typeColors[type] || ''}`}>
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[type] || 'text-apple-blue bg-apple-blue/10'}`}>
             {t(typeLabelKey(type) as string)}
           </span>
           <Link
             to={`/chat?context=${encodeURIComponent(node.id)}`}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full active:scale-[0.97]"
             title={t('detail.askAbout')}
           >
             <MessageCircle size={14} />
@@ -234,10 +234,10 @@ export function PageDetailPage({ type }: Props) {
                 setCollaborate(false);
               }
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-all border rounded-full active:scale-[0.97] ${
               isEditing
                 ? 'text-apple-orange bg-apple-orange/10 border-apple-orange/30'
-                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border-[var(--border-default)]'
             }`}
             title={isEditing ? t('detail.cancel') : t('detail.edit')}
           >
@@ -247,7 +247,7 @@ export function PageDetailPage({ type }: Props) {
           <div className="relative">
             <button
               onClick={() => setShowExportMenu((v) => !v)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full active:scale-[0.97]"
               title={t('detail.export')}
             >
               <Download size={14} />
@@ -258,7 +258,7 @@ export function PageDetailPage({ type }: Props) {
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 top-full mt-1 glass rounded-xl p-1 min-w-[160px] z-50 shadow-lg"
+                className="absolute right-0 top-full mt-1 glass rounded-xl p-1 min-w-[160px] z-50 shadow-xl border border-[var(--border-subtle)]"
               >
                 <button
                   onClick={() => { if (!node) return; const blob = new Blob([node.markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${node.label || 'page'}.md`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
@@ -286,10 +286,10 @@ export function PageDetailPage({ type }: Props) {
           </div>
           <button
             onClick={() => setShowAudio((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors border border-[var(--border-default)] rounded-full ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-all border rounded-full active:scale-[0.97] ${
               showAudio
                 ? 'text-apple-blue bg-apple-blue/10 border-apple-blue/30'
-                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border-[var(--border-default)]'
             }`}
             title={t('audio.listen')}
             aria-pressed={showAudio}
@@ -299,7 +299,7 @@ export function PageDetailPage({ type }: Props) {
           </button>
           <button
             onClick={() => setTocOpen(true)}
-            className="xl:hidden flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full"
+            className="xl:hidden flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-all text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-default)] rounded-full active:scale-[0.97]"
             title={t('detail.toc.title')}
           >
             <List size={14} />
@@ -314,7 +314,7 @@ export function PageDetailPage({ type }: Props) {
             t={t}
           />
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight mb-4">{node.label}</h1>
+        <h1 className="text-display mb-4">{node.label}</h1>
 
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)]">
@@ -351,9 +351,9 @@ export function PageDetailPage({ type }: Props) {
               {/* Edit mode toolbar */}
               <div className="flex items-center gap-2">
                 {([
-                  { mode: 'edit' as const, icon: Edit3, label: 'Edit' },
-                  { mode: 'preview' as const, icon: Eye, label: 'Preview' },
-                  { mode: 'split' as const, icon: Columns, label: 'Split' },
+                  { mode: 'edit' as const, icon: Edit3, label: t('detail.editMode.edit') },
+                  { mode: 'preview' as const, icon: Eye, label: t('detail.editMode.preview') },
+                  { mode: 'split' as const, icon: Columns, label: t('detail.editMode.split') },
                 ]).map(({ mode, icon: Icon, label }) => (
                   <button
                     key={mode}
@@ -376,13 +376,13 @@ export function PageDetailPage({ type }: Props) {
                       ? 'bg-apple-blue/10 text-apple-blue'
                       : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                   }`}
-                  title={collaborate ? 'Stop collaborating' : 'Collaborate'}
+                  title={collaborate ? t('detail.collaborate.stop') : t('detail.collaborate.start')}
                 >
                   <Users size={14} />
-                  <span className="hidden sm:inline">{collaborate ? 'Collaborating' : 'Collaborate'}</span>
+                  <span className="hidden sm:inline">{collaborate ? t('detail.collaborate.active') : t('detail.collaborate.start')}</span>
                 </button>
                 {draftKey && hasDraft && (
-                  <span className="text-xs text-apple-blue ml-2">Draft saved</span>
+                  <span className="text-xs text-apple-blue ml-2">{t('detail.draftSaved')}</span>
                 )}
               </div>
 
@@ -476,18 +476,24 @@ export function PageDetailPage({ type }: Props) {
         </h2>
         {backlinks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {backlinks.map((link) => (
+            {backlinks.map((link, i) => (
+              <motion.div
+                key={link.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.2 }}
+              >
                 <Link
-                  key={link.id}
                   to={getPagePath(link)}
                   className="apple-card p-3 flex items-center gap-3"
                 >
-                  <span className={`text-xs font-medium px-2 py-0.5 border border-[var(--border-default)] rounded-full ${typeColors[link.type] || ''}`}>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColors[link.type] || 'text-apple-blue bg-apple-blue/10'}`}>
                     {t(typeLabelKey(link.type) as string)}
                   </span>
                   <span className="font-medium text-sm">{link.label}</span>
                 </Link>
-              ))}
+              </motion.div>
+            ))}
           </div>
         ) : (
           <div className="apple-card p-6 text-center">
@@ -672,7 +678,7 @@ function MobileTocDrawer({ content, isOpen, onClose }: { content: string; isOpen
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 xl:hidden"
+            className="fixed inset-0 bg-black/25 backdrop-blur-md z-40 xl:hidden"
             onClick={onClose}
           />
           <motion.div

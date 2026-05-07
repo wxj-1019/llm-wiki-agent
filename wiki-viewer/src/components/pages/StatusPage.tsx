@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, Database, Network, Bot, FileText, Clock,
   Server, HardDrive, Zap, CheckCircle, AlertCircle, RefreshCw,
-  Wrench, Sparkles, Layers, Terminal, ChevronDown, ChevronUp, X,
+  Wrench, Sparkles, Layers, Terminal, X,
 } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';

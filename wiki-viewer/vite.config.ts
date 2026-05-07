@@ -16,7 +16,7 @@ export default defineConfig({
         name: 'LLM Wiki Agent',
         short_name: 'WikiAgent',
         description: 'Agent-driven knowledge management system',
-        theme_color: '#007AFF',
+        theme_color: '#0a84ff',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
