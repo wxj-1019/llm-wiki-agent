@@ -339,16 +339,16 @@ export function FileList({
             {t('upload.loading')}
           </div>
         ) : files.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="empty-state-warm m-2">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[var(--bg-secondary)] mb-5"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--bg-secondary)] mb-4"
             >
-              <Inbox size={36} className="text-[var(--text-tertiary)]" />
+              <Inbox size={28} className="text-[var(--text-tertiary)]" />
             </motion.div>
-            <h3 className="text-lg font-semibold text-[var(--text-secondary)] mb-1">{t('upload.empty.title')}</h3>
+            <h3 className="text-base font-semibold text-[var(--text-secondary)] mb-1">{t('upload.empty.title')}</h3>
             <p className="text-sm text-[var(--text-tertiary)] max-w-sm mx-auto leading-relaxed mb-4">
               {t('upload.empty.description')}
             </p>

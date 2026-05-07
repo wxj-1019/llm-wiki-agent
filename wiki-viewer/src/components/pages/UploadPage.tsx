@@ -378,18 +378,18 @@ export function UploadPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
-          { label: t('upload.stats.totalFiles'), value: animatedTotalFiles, icon: FolderOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/8', suffix: '' },
-          { label: t('upload.stats.totalSize'), value: formatBytes(stats.totalSize), icon: HardDrive, color: 'text-apple-purple', bg: 'bg-apple-purple/8', suffix: '', raw: true },
-          { label: t('upload.stats.ingested'), value: files.filter((f) => f.ingested).length, icon: CheckCircle, color: 'text-apple-green', bg: 'bg-apple-green/8', suffix: '' },
+          { label: t('upload.stats.totalFiles'), value: animatedTotalFiles, icon: FolderOpen, color: 'text-apple-blue', bg: 'bg-apple-blue/10', suffix: '' },
+          { label: t('upload.stats.totalSize'), value: formatBytes(stats.totalSize), icon: HardDrive, color: 'text-apple-purple', bg: 'bg-apple-purple/10', suffix: '', raw: true },
+          { label: t('upload.stats.ingested'), value: files.filter((f) => f.ingested).length, icon: CheckCircle, color: 'text-apple-green', bg: 'bg-apple-green/10', suffix: '' },
         ].map((s, i) => (
           <motion.div
             key={s.label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className={`apple-card p-5 flex items-center gap-4 ${s.bg}`}
+            className={`apple-card p-5 flex items-center gap-4 ${s.bg} group`}
           >
-            <div className={`p-3 rounded-xl bg-[var(--bg-primary)] ${s.color}`}>
+            <div className={`p-3 rounded-xl bg-[var(--bg-primary)] ${s.color} transition-transform duration-300 group-hover:scale-110`}>
               <s.icon size={22} />
             </div>
             <div>
