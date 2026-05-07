@@ -6,6 +6,8 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点
+- [主力选股系统整体分析文档](sources/main-fund-selection-system-analysis.md) — AI驱动的旗舰智能选股系统六层架构详解，包含7种策略、量化评分、5位AI分析师、回测验证等
 - [Attention Is All You Need](sources/attention-is-all-you-need.md) — seminal paper introducing the Transformer architecture
 - [Introduction to Large Language Models](sources/intro-to-llms.md) — comprehensive overview of LLMs from tokenization to autoregressive generation
 - [GitHub Hermes 生态系统综述](sources/github-hermes-ecosystem.md) — GitHub 上 Hermes 相关项目的全面调研，涵盖 AI Agent、JS 引擎、WebUI 等生态

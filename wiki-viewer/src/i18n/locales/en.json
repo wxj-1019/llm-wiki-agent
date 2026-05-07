@@ -168,6 +168,7 @@
   "error.tryAgain": "An unexpected error occurred. Please try refreshing the page.",
   "error.refresh": "Refresh",
   "error.offline": "You are offline. Some features may be unavailable.",
+  "error.backendOffline": "Backend server unreachable",
   "pwa.updateAvailable": "A new version is available",
   "pwa.updateNow": "Update now",
   "pwa.installPrompt": "Install this app for offline access",

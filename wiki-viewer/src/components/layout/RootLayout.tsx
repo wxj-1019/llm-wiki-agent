@@ -7,7 +7,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { ToastContainer } from '@/components/ui/ToastContainer';
-import { AlertTriangle, RefreshCw, WifiOff, Download, Sparkles } from 'lucide-react';
+import { AlertTriangle, RefreshCw, WifiOff, Download, Sparkles, ServerOff } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -45,6 +45,8 @@ export function RootLayout() {
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
+  const apiConnected = useWikiStore((s) => s.apiConnected);
+  const checkApiHealth = useWikiStore((s) => s.checkApiHealth);
   const location = useLocation();
   const element = useOutlet();
   const isGraphPage = location.pathname === '/graph';
@@ -96,6 +98,19 @@ export function RootLayout() {
           <div className="bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue" role="alert">
             <WifiOff size={14} aria-hidden="true" />
             <span>{t('error.offline')}</span>
+          </div>
+        )}
+        {isOnline && !apiConnected && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-center gap-3 text-sm text-amber-700 dark:text-amber-400" role="alert">
+            <ServerOff size={14} aria-hidden="true" />
+            <span>{t('error.backendOffline', 'Backend server unreachable')}</span>
+            <button
+              onClick={() => checkApiHealth()}
+              className="font-semibold underline hover:no-underline flex items-center gap-1"
+            >
+              <RefreshCw size={12} />
+              {t('error.retry')}
+            </button>
           </div>
         )}
         {updateAvailable && (
