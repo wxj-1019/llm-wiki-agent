@@ -6,6 +6,10 @@
 
 ---
 
+## [2026-05-04] ingest | Things We Learned About LLMs in 2024
+
+Ingested via web crawler. Source: Lilian Weng blog post covering model capabilities, multimodal advances, reasoning, synthetic data, and agent frameworks.
+
 ## [2026-05-04] graph | Knowledge graph rebuilt
 
 32 nodes, 182 edges (182 extracted, 0 inferred).
