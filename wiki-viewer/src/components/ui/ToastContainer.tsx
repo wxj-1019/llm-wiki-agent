@@ -10,8 +10,8 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-  error: 'text-red-500 bg-red-500/10 border-red-500/20',
+  success: 'text-apple-green bg-apple-green/10 border-apple-green/20',
+  error: 'text-apple-red bg-apple-red/10 border-apple-red/20',
   info: 'text-apple-blue bg-apple-blue/10 border-apple-blue/20',
   progress: 'text-apple-purple bg-apple-purple/10 border-apple-purple/20',
 };

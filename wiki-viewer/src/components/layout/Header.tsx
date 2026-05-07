@@ -15,7 +15,7 @@ function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
 
   return (
-    <div className="relative w-36">
+    <div className="relative w-full sm:w-36">
       <AppleSelect
         value={i18n.language}
         onChange={(code) => i18n.changeLanguage(code)}

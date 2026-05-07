@@ -371,7 +371,7 @@ export function UploadPage() {
 
       {/* Page Header */}
       <div id="upload-main" className="mb-8" tabIndex={-1}>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('upload.title')}</h1>
+        <h1 className="text-heading-1">{t('upload.title')}</h1>
         <p className="text-sm text-[var(--text-tertiary)] mt-1">{t('upload.dragFormatHint')}</p>
       </div>
 

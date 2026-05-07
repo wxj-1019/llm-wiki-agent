@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, Network, Sparkles, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers, Shuffle, Compass, GitBranch, Upload, MessageCircle, BarChart3, FileText, Users, Lightbulb, Link2, Calendar, Activity, Frown, ScrollText, TrendingUp } from 'lucide-react';
+import { Search, ArrowRight, Clock, Copy, Check, RefreshCw, Heart, Inbox, Layers, Shuffle, Compass, GitBranch, Upload, MessageCircle, BarChart3, FileText, Users, Lightbulb, Link2, Calendar, Activity, Frown, ScrollText, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -149,7 +149,7 @@ function StatCard({ icon: Icon, label, value, color, suffix }: {
       animate={{ opacity: 1, y: 0 }}
       className="apple-card p-5 flex items-center gap-4"
     >
-      <div className={`p-3 rounded-xl ${color} bg-opacity-60`}>
+      <div className={`p-3 rounded-xl ${color}`}>
         <Icon size={20} />
       </div>
       <div>
@@ -514,7 +514,7 @@ export function HomePage() {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-8">
         <div className="mb-10">
-          <div className="text-3xl font-bold tracking-tight text-[var(--text-primary)] mb-2 font-rounded">{t(greetingKey)}</div>
+          <div className="text-display text-[var(--text-primary)] mb-2 font-rounded">{t(greetingKey)}</div>
           <p className="text-[var(--text-secondary)]">{t('home.subtitle')}</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -568,7 +568,7 @@ export function HomePage() {
           className="mb-10 flex items-start justify-between"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] mb-2 font-rounded">
+            <h1 className="text-display text-[var(--text-primary)] mb-2 font-rounded">
               {t(greetingKey)}
             </h1>
             <p className="text-[var(--text-secondary)]">
@@ -767,6 +767,7 @@ export function HomePage() {
         </motion.div>
 
         {/* Stat Cards — Secondary */}
+        {nodes.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -776,8 +777,9 @@ export function HomePage() {
           <StatCard icon={BarChart3} label={t('stat.nodes')} value={stats.pages} color="text-apple-indigo bg-apple-indigo/10" />
           <StatCard icon={Link2} label={t('stat.edges')} value={stats.edges} color="text-apple-teal bg-apple-teal/10" />
           <StatCard icon={Calendar} label={t('home.rawFiles')} value={stats.rawFiles} color="text-apple-pink bg-apple-pink/10" />
-          <StatCard icon={Activity} label={t('home.healthScore')} value={overallScore} color={`${scoreColor} ${scoreColor.replace('text-', 'bg-').replace('500', '500/10')}`} suffix="/100" />
+          <StatCard icon={Activity} label={t('home.healthScore')} value={overallScore} color={`${scoreColor} ${scoreBg}`} suffix="/100" />
         </motion.div>
+        )}
 
         {/* Charts Row — Page Distribution + Health Radar */}
         {nodes.length > 0 && (

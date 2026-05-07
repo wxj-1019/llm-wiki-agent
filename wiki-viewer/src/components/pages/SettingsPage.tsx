@@ -129,7 +129,7 @@ export function SettingsPage() {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-semibold flex items-center gap-3">
+        <h1 className="text-heading-1 flex items-center gap-3">
           <Settings size={28} className="text-apple-blue" />
           {t('settings.title')}
         </h1>
@@ -307,7 +307,7 @@ export function SettingsPage() {
           >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Rss size={16} className="text-orange-500" />
+              <Rss size={16} className="text-apple-orange" />
               {t('settings.tab.rss')}
             </h3>
             <div className="space-y-3">
@@ -344,7 +344,7 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setRssFeeds(config.rss.feeds.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-apple-red/60 hover:text-apple-red hover:bg-apple-red/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
                     aria-label={t('settings.remove')}
                   >
@@ -385,7 +385,7 @@ export function SettingsPage() {
           >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <BookOpen size={16} className="text-red-500" />
+              <BookOpen size={16} className="text-apple-red" />
               {t('settings.tab.arxiv')}
             </h3>
             <div className="space-y-3">
@@ -422,7 +422,7 @@ export function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setArxivQueries(config.arxiv.queries.filter((_, i) => i !== idx))}
-                    className="mt-2 p-2 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="mt-2 p-2 text-apple-red/60 hover:text-apple-red hover:bg-apple-red/10 rounded-lg transition-colors"
                     title={t('settings.remove')}
                     aria-label={t('settings.remove')}
                   >
@@ -463,7 +463,7 @@ export function SettingsPage() {
           >
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Bot size={16} className="text-purple-500" />
+              <Bot size={16} className="text-apple-purple" />
               {t('settings.llm.title')}
             </h3>
             <div className="space-y-4">
@@ -526,7 +526,7 @@ export function SettingsPage() {
 
           <div className="apple-card p-5">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Key size={16} className="text-emerald-500" />
+              <Key size={16} className="text-apple-green" />
               {t('settings.llm.apiKey')}
             </h3>
             <div className="space-y-4">

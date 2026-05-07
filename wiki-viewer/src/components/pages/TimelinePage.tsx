@@ -162,7 +162,7 @@ export function TimelinePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">{t('nav.timeline') || 'Knowledge Timeline'}</h1>
+        <h1 className="text-heading-1">{t('nav.timeline')}</h1>
         <button
           onClick={loadEvents}
           className="apple-button-ghost flex items-center gap-2 px-3 py-2 text-sm"

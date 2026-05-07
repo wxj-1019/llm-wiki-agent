@@ -139,7 +139,7 @@ export function AppleSelect({
                       role="option"
                       aria-selected={isSelected}
                       onClick={() => handleSelect(option.value)}
-                      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors duration-150 ${
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-apple-blue/30 focus-visible:inset ${
                         isSelected
                           ? 'bg-apple-blue text-white'
                           : 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'

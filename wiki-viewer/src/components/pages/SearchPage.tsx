@@ -121,7 +121,7 @@ export function SearchPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-semibold mb-6">{t('search.title')}</h1>
+      <h1 className="text-heading-1 mb-6">{t('search.title')}</h1>
 
       <div className="relative mb-8 max-w-2xl">
         <div className="flex items-center gap-3 w-full px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_4px_rgba(10,132,255,0.08)] transition-all duration-200 rounded-2xl">

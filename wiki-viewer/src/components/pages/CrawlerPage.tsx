@@ -335,7 +335,7 @@ export function CrawlerPage() {
       )}
 
       {/* Settings (collapsible) */}
-      <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="apple-card overflow-hidden">
         <button
           onClick={() => setShowSettings(!showSettings)}
           className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
@@ -369,7 +369,7 @@ export function CrawlerPage() {
                         setSettings(prev => ({ ...prev, [key]: val }));
                         setDirty(true);
                       }}
-                      className="w-full px-3 py-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+                      className="apple-input w-full py-1.5 text-sm"
                     />
                   </div>
                 ))}
@@ -385,7 +385,7 @@ export function CrawlerPage() {
                         setSettings(prev => ({ ...prev, [key]: e.target.checked }));
                         setDirty(true);
                       }}
-                      className="w-4 h-4 rounded border-gray-300 text-apple-blue focus:ring-apple-blue/50"
+                      className="w-4 h-4 rounded border-[var(--border-default)] text-apple-blue accent-apple-blue"
                     />
                     <span className="text-sm text-[var(--text-secondary)]">{label}</span>
                   </label>
@@ -397,7 +397,7 @@ export function CrawlerPage() {
       </div>
 
       {/* Add URL */}
-      <div className="glass-card rounded-2xl p-5 space-y-3">
+      <div className="apple-card p-5 space-y-3">
         <h3 className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2">
           <Plus className="w-4 h-4" />
           {t('crawler.addUrl')}
@@ -408,7 +408,7 @@ export function CrawlerPage() {
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder={t('crawler.urlPlaceholder')}
-            className="sm:col-span-2 px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+            className="sm:col-span-2 apple-input py-2 text-sm"
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddUrl(); }}
           />
           <div className="flex gap-2">
@@ -417,7 +417,7 @@ export function CrawlerPage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={t('crawler.namePlaceholder')}
-              className="flex-1 px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+              className="flex-1 apple-input py-2 text-sm"
             />
             <button
               onClick={handleAddUrl}
@@ -433,24 +433,24 @@ export function CrawlerPage() {
           value={newTags}
           onChange={(e) => setNewTags(e.target.value)}
           placeholder={t('crawler.tagsPlaceholder')}
-          className="w-full px-3 py-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder-gray-400 focus:ring-2 focus:ring-apple-blue/50 focus:border-transparent"
+          className="w-full apple-input py-2 text-sm"
         />
       </div>
 
       {/* URL List */}
-      <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="apple-card overflow-hidden">
         <div className="px-5 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[var(--text-secondary)]">
             {t('crawler.urlList')} ({urls.length})
           </h3>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-gray-400">
+          <div className="flex items-center justify-center py-12 text-[var(--text-tertiary)]">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             {t('crawler.loading')}
           </div>
         ) : urls.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-12 text-[var(--text-tertiary)]">
             <Globe className="w-8 h-8 mb-2 opacity-40" />
             <p className="text-sm">{t('crawler.empty')}</p>
           </div>
@@ -477,7 +477,7 @@ export function CrawlerPage() {
                 <button
                   onClick={() => handleRemoveUrl(idx)}
                   disabled={isBusy}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-apple-red hover:bg-apple-red/10 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-apple-red hover:bg-apple-red/10 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -505,7 +505,7 @@ export function CrawlerPage() {
                 onClick={() => setShowOutput(false)}
                 className="p-1 rounded hover:bg-[var(--bg-secondary)]"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <X className="w-4 h-4 text-[var(--text-tertiary)]" />
               </button>
             </div>
             <div ref={terminalRef} className="p-4 max-h-80 overflow-y-auto bg-gray-950 text-green-400 font-mono text-xs leading-relaxed">

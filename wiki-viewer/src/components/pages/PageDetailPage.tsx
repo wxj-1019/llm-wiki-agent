@@ -208,7 +208,7 @@ export function PageDetailPage({ type }: Props) {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${typeColors[type] || 'text-apple-blue bg-apple-blue/10'}`}>
             {t(typeLabelKey(type) as string)}
           </span>
@@ -314,7 +314,7 @@ export function PageDetailPage({ type }: Props) {
             t={t}
           />
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight mb-4">{node.label}</h1>
+        <h1 className="text-display mb-4">{node.label}</h1>
 
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--text-secondary)]">
@@ -495,7 +495,7 @@ export function PageDetailPage({ type }: Props) {
               </motion.div>
             ))}
           </div>
-        )} : (
+        ) : (
           <div className="apple-card p-6 text-center">
             <p className="text-sm text-[var(--text-secondary)] mb-1">{t('detail.backlinks.zero')}</p>
             <p className="text-xs text-[var(--text-tertiary)]">{t('detail.backlinks.hint')}</p>

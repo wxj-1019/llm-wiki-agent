@@ -348,7 +348,7 @@ export function GraphPage() {
       <GraphStats nodes={nodes} edges={edges} />
 
       {/* Controls */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-2xl px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-3">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-2xl px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-3 max-w-[calc(100vw-2rem)] overflow-x-auto">
         {typeFilters.map((tf) => (
           <button
             key={tf.key}
