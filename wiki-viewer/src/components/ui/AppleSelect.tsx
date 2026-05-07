@@ -2,6 +2,50 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
 
+function useListboxKeyboard({
+  open,
+  options,
+  selectedIndex,
+  onSelect,
+  onClose,
+}: {
+  open: boolean;
+  options: AppleSelectOption[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'Escape':
+          e.preventDefault();
+          onClose();
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          onSelect((selectedIndex + 1) % options.length);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          onSelect((selectedIndex - 1 + options.length) % options.length);
+          break;
+        case 'Home':
+          e.preventDefault();
+          onSelect(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          onSelect(options.length - 1);
+          break;
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, options.length, selectedIndex, onSelect, onClose]);
+}
+
 export interface AppleSelectOption {
   value: string;
   label: string;
@@ -28,16 +72,40 @@ export function AppleSelect({
   disabled = false,
 }: AppleSelectProps) {
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const selectedOption = options.find((o) => o.value === value);
+  const selectedIndex = options.findIndex((o) => o.value === value);
 
   const handleSelect = useCallback(
     (optionValue: string) => {
       onChange(optionValue);
       setOpen(false);
+      triggerRef.current?.focus();
     },
     [onChange]
   );
+
+  const handleHighlight = useCallback(
+    (index: number) => {
+      setHighlightedIndex(index);
+      optionRefs.current[index]?.focus();
+    },
+    []
+  );
+
+  useListboxKeyboard({
+    open,
+    options,
+    selectedIndex: highlightedIndex,
+    onSelect: handleHighlight,
+    onClose: () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    },
+  });
 
   // Close on click outside
   useEffect(() => {
@@ -51,15 +119,12 @@ export function AppleSelect({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Keyboard support
+  // Sync highlighted index with selected index when opening
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [open]);
+    if (open) {
+      setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    }
+  }, [open, selectedIndex]);
 
   return (
     <div ref={containerRef} className="relative">
@@ -74,12 +139,14 @@ export function AppleSelect({
 
       {/* Trigger */}
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-activedescendant={open && options[highlightedIndex] ? `${id}-option-${options[highlightedIndex].value}` : undefined}
         className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
           disabled
             ? 'opacity-50 cursor-not-allowed'
@@ -130,15 +197,18 @@ export function AppleSelect({
               role="listbox"
             >
               <div className="py-1.5 max-h-72 overflow-y-auto">
-                {options.map((option) => {
+                {options.map((option, idx) => {
                   const isSelected = option.value === value;
                   return (
                     <button
                       key={option.value}
+                      id={`${id}-option-${option.value}`}
                       type="button"
                       role="option"
                       aria-selected={isSelected}
+                      ref={(el) => { optionRefs.current[idx] = el; }}
                       onClick={() => handleSelect(option.value)}
+                      tabIndex={-1}
                       className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-apple-blue/30 focus-visible:inset ${
                         isSelected
                           ? 'bg-apple-blue text-white'

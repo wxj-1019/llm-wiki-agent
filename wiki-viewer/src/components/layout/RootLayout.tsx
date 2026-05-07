@@ -18,7 +18,7 @@ function getPageAnimation(pathname: string) {
   if (pathname === '/graph' || pathname.startsWith('/mindmap')) {
     return { initial: { opacity: 0, scale: 0.98 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.98 }, transition: { duration: 0.25 } };
   }
-  if (pathname.startsWith('/upload') || pathname.startsWith('/chat') || pathname.startsWith('/settings') || pathname.startsWith('/status') || pathname.startsWith('/mcp') || pathname.startsWith('/skills') || pathname.startsWith('/dashboard') || pathname.startsWith('/timeline')) {
+  if (pathname.startsWith('/upload') || pathname.startsWith('/chat') || pathname.startsWith('/settings') || pathname.startsWith('/status') || pathname.startsWith('/mcp') || pathname.startsWith('/skills') || pathname.startsWith('/dashboard') || pathname.startsWith('/crawler') || pathname.startsWith('/timeline')) {
     return { initial: { opacity: 0, x: 16 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -16 }, transition: { duration: 0.2 } };
   }
   return { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 }, transition: { duration: 0.2 } };

@@ -429,7 +429,7 @@ def get_system_status():
                         last_ingest = match.group(1)
                         break
         except Exception as e:
-            logger.warning("File conversion failed: %s", e)
+            logger.warning("Log parse failed: %s", e)
 
     cfg = _load_llm_config()
     return {
@@ -1191,13 +1191,18 @@ def _load_llm_config() -> dict:
     now = time.time()
     if _llm_config_cache and (now - _llm_config_cache_ts) < _LLM_CONFIG_TTL:
         return _llm_config_cache
+    defaults = {"provider": "anthropic", "model": "anthropic/claude-3-5-sonnet-latest", "api_key": ""}
     if not yaml or not LLM_CONFIG_PATH.exists():
-        return {}
+        _llm_config_cache = defaults
+        _llm_config_cache_ts = now
+        return defaults
     try:
         cfg = yaml.safe_load(LLM_CONFIG_PATH.read_text(encoding="utf-8")) or {}
     except Exception as e:
         logger.warning("LLM config load failed: %s", e)
-        return {}
+        _llm_config_cache = defaults
+        _llm_config_cache_ts = now
+        return defaults
     # Load API key from separate secure location
     if LLM_API_KEY_PATH.exists():
         api_key = LLM_API_KEY_PATH.read_text(encoding="utf-8").strip()

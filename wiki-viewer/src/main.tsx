@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { router } from './router';
 import { stopPolling } from './stores/wikiStore';
 import { registerSW } from 'virtual:pwa-register';
@@ -31,6 +32,8 @@ if (!rootEl) {
 }
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <MotionConfig reducedMotion="user">
+      <RouterProvider router={router} />
+    </MotionConfig>
   </React.StrictMode>
 );
