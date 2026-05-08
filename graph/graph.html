@@ -97,6 +97,29 @@
     padding: 10px 14px; border-radius: 10px; font-size: 12px;
     backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
   }
+  /* Loading overlay */
+  #loading-overlay {
+    position: fixed; inset: 0; background: #1a1a2e; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease;
+  }
+  #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader-ring {
+    width: 56px; height: 56px; border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #FF5722; border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { margin-top: 16px; font-size: 14px; color: #bbb; }
+  .loader-progress { margin-top: 8px; font-size: 12px; color: #888; min-height: 18px; }
+  .loader-bar {
+    width: 220px; height: 3px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; margin-top: 12px; overflow: hidden;
+  }
+  .loader-bar-inner {
+    height: 100%; background: #FF5722; border-radius: 2px;
+    transition: width 0.3s ease;
+  }
 </style>
 </head>
 <body>
@@ -118,6 +141,12 @@
     </div>
   </div>
   <p>Click a node to highlight its connected neighbors and view the markdown on the right. Click the background to restore the full graph.</p>
+</div>
+<div id="loading-overlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Building knowledge graph...</div>
+  <div class="loader-progress" id="loader-progress">0 / 0 nodes</div>
+  <div class="loader-bar"><div class="loader-bar-inner" id="loader-bar-inner" style="width:0%"></div></div>
 </div>
 <div id="graph"></div>
 <aside id="drawer">
@@ -145,18 +174,18 @@ const originalNodes = [
     "id": "overview",
     "label": "Overview",
     "type": "synthesis",
-    "color": "#673AB7",
+    "color": "#9C27B0",
     "path": "wiki/overview.md",
     "preview": "# Overview *This page is maintained by the LLM. It is updated on every ingest to reflect the current synthesis across all sources.* ## Current Wiki State",
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 10
   },
   {
     "id": "concepts/AgentFrameworkComparison",
     "label": "Agent Framework Comparison",
     "type": "concept",
-    "color": "#F44336",
+    "color": "#FF9800",
     "path": "wiki/concepts/AgentFrameworkComparison.md",
     "preview": "# Agent Framework Comparison The AI Agent ecosystem has rapidly diversified, with frameworks targeting different use cases—from single autonomous agents to multi-agent orchestration systems. This page provides a structur",
     "tags": [
@@ -165,14 +194,14 @@ const originalNodes = [
       "comparison"
     ],
     "last_updated": "2026-05-04",
-    "group": 7,
+    "group": -1,
     "value": 8
   },
   {
     "id": "concepts/AIAgent",
     "label": "AIAgent",
     "type": "concept",
-    "color": "#F44336",
+    "color": "#FF9800",
     "path": "wiki/concepts/AIAgent.md",
     "preview": "## Overview AI Agent（人工智能代理）是一种能够自主感知环境、做出决策并执行行动以实现特定目标的 AI 系统。与传统聊天机器人不同，AI Agent 具备工具调用、记忆持久化、多步推理和自我改进等能力。 ## Key Characteristics",
     "tags": [
@@ -182,14 +211,14 @@ const originalNodes = [
       "llm"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 24
   },
   {
     "id": "concepts/AIAlignment",
     "label": "AI Alignment",
     "type": "concept",
-    "color": "#F44336",
+    "color": "#FF9800",
     "path": "wiki/concepts/AIAlignment.md",
     "preview": "# AI Alignment **AI Alignment** is the study and practice of ensuring that artificial intelligence systems behave in accordance with human intentions, values, and ethical constraints. As LLMs and AI agents grow more capa",
     "tags": [
@@ -199,14 +228,14 @@ const originalNodes = [
       "ethics"
     ],
     "last_updated": "2026-05-04",
-    "group": 7,
+    "group": -1,
     "value": 7
   },
   {
     "id": "concepts/AIMultiAgentStockAnalysis",
     "label": "AIMultiAgentStockAnalysis",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/AIMultiAgentStockAnalysis.md",
     "preview": "# AIMultiAgentStockAnalysis [[AIAgent|AI多智能体]]在股票分析中的应用范式。在[[MainFundSelectionSystem|主力选股系统]]中，5位AI分析师（资金流向、行业板块、财务基本面、技术形态、量化）通过asyncio.Semaphore并行执行，资深研究员汇总输出推荐。 ## Multi-Agent vs Single-Agent",
     "tags": [
@@ -215,14 +244,14 @@ const originalNodes = [
       "multi-agent"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 5
   },
   {
     "id": "concepts/AttentionMechanism",
     "label": "Attention Mechanism",
     "type": "concept",
-    "color": "#FF5722",
+    "color": "#FF9800",
     "path": "wiki/concepts/AttentionMechanism.md",
     "preview": "## Summary The attention mechanism is a neural network technique that allows the model to focus on specific parts of the input sequence when generating output. It was first introduced for machine translation and later be",
     "tags": [
@@ -230,14 +259,14 @@ const originalNodes = [
       "attention"
     ],
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 17
   },
   {
     "id": "concepts/Backtesting",
     "label": "Backtesting",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/Backtesting.md",
     "preview": "# Backtesting 回测验证是[[MainFundSelectionSystem|主力选股系统]]六层架构的最后一环，用于验证推荐质量。 ## 回测引擎核心设计",
     "tags": [
@@ -246,14 +275,14 @@ const originalNodes = [
       "stock-selection"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 13
   },
   {
     "id": "concepts/ChainOfThought",
     "label": "Chain-of-Thought",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/ChainOfThought.md",
     "preview": "# Chain-of-Thought Chain-of-Thought (CoT) prompting is a technique where an LLM is prompted to \"think out loud\" — producing intermediate reasoning steps before arriving at a final answer. First explored in the May 2022 p",
     "tags": [
@@ -262,14 +291,14 @@ const originalNodes = [
       "llm"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "concepts/ConvertibleBondArbitrage",
     "label": "ConvertibleBondArbitrage",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/ConvertibleBondArbitrage.md",
     "preview": "# ConvertibleBondArbitrage 可转债套利策略利用可转债兼具债性和股性的特点，通过转股溢价率、正股联动、波动率错配、回售/赎回博弈等方式获取收益。 ## 为什么在国内常见",
     "tags": [
@@ -278,14 +307,14 @@ const originalNodes = [
       "convertible-bond"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "concepts/DataPipeline",
     "label": "DataPipeline",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/DataPipeline.md",
     "preview": "# DataPipeline [[MainFundSelectionSystem|主力选股系统]]的数据管道从多种来源获取并处理数据。 ## 数据源",
     "tags": [
@@ -294,14 +323,14 @@ const originalNodes = [
       "stock-market"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 10
   },
   {
     "id": "concepts/EnterpriseBlockchain",
     "label": "EnterpriseBlockchain",
     "type": "concept",
-    "color": "#673AB7",
+    "color": "#FF9800",
     "path": "wiki/concepts/EnterpriseBlockchain.md",
     "preview": "# Enterprise Blockchain (企业级区块链) 企业级区块链指面向商业场景的许可区块链，区别于公共区块链（如[[Bitcoin]]、[[Ethereum]]）。典型代表是[[HyperledgerFabric]]，特点包括权限控制、模块化架构、智能合约支持。在[[慧公寓管理系统]]中用于数据安全保护。 ## Key Characteristics",
     "tags": [
@@ -311,14 +340,14 @@ const originalNodes = [
       "hyperledger"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 6
   },
   {
     "id": "concepts/EventDriven",
     "label": "EventDriven",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/EventDriven.md",
     "preview": "# EventDriven 事件驱动策略利用某个\"事件\"带来的定价重估机会，比如业绩超预期、重组、回购、政策刺激、指数纳入、分红送转等。 ## 常见事件",
     "tags": [
@@ -327,14 +356,14 @@ const originalNodes = [
       "event-driven"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "concepts/FeatureFlagDeadCodeElimination",
     "label": "Feature Flag Dead Code Elimination",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/FeatureFlagDeadCodeElimination.md",
     "preview": "# Feature Flag Dead Code Elimination (DCE) **Feature Flag DCE** 是一种编译时优化技术，通过条件编译将未启用的功能代码在构建时彻底移除，从而减小二进制体积并提高运行时性能。 ## 在 [[Latte]] 中的实现",
     "tags": [
@@ -343,14 +372,14 @@ const originalNodes = [
       "feature-flags"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "concepts/GrowthStrategy",
     "label": "GrowthStrategy",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/GrowthStrategy.md",
     "preview": "# GrowthStrategy 成长策略重视未来盈利扩张，愿意为高增长支付更高估值。核心是找\"高景气 + 高增长 + 增长可持续\"的公司。 ## 典型指标",
     "tags": [
@@ -359,14 +388,14 @@ const originalNodes = [
       "growth-investing"
     ],
     "last_updated": "2026-05-07",
-    "group": 10,
+    "group": -1,
     "value": 10
   },
   {
     "id": "concepts/HighDividendLowVol",
     "label": "HighDividendLowVol",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/HighDividendLowVol.md",
     "preview": "# HighDividendLowVol 高股息低波策略追求\"稳\"，主要目标是提高持有体验、控制回撤、争取长期复利，常见于类红利、类固收增强配置。 ## 常见指标",
     "tags": [
@@ -376,14 +405,14 @@ const originalNodes = [
       "low-volatility"
     ],
     "last_updated": "2026-05-07",
-    "group": 10,
+    "group": -1,
     "value": 11
   },
   {
     "id": "concepts/InferenceScalingReasoning",
     "label": "Inference-Scaling Reasoning",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/InferenceScalingReasoning.md",
     "preview": "# Inference-Scaling Reasoning Inference-scaling reasoning (also called \"test-time compute scaling\") is a new paradigm for LLM capability improvement introduced in late 2024. Instead of improving a model's performance pur",
     "tags": [
@@ -393,14 +422,14 @@ const originalNodes = [
       "scaling"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 12
   },
   {
     "id": "concepts/MeanReversion",
     "label": "MeanReversion",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/MeanReversion.md",
     "preview": "# MeanReversion 均值回归策略认为，价格短期偏离合理区间后，未来有较大概率向均值回归。常见做法是买超跌、卖超涨。 ## 常见信号",
     "tags": [
@@ -409,14 +438,14 @@ const originalNodes = [
       "reversal"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 6
   },
   {
     "id": "concepts/MomentumStrategy",
     "label": "MomentumStrategy",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/MomentumStrategy.md",
     "preview": "# MomentumStrategy 动量策略强调\"过去一段时间涨得好的，未来一段时间可能继续强\"。它与[[TrendTracking|趋势跟踪]]很像，但更偏向截面比较，也就是在同一批股票中找相对最强的。 ## 常见信号",
     "tags": [
@@ -425,14 +454,14 @@ const originalNodes = [
       "momentum"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 12
   },
   {
     "id": "concepts/MoneyFlowStrategy",
     "label": "MoneyFlowStrategy",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/MoneyFlowStrategy.md",
     "preview": "# MoneyFlowStrategy 资金流策略是一种跟踪主力资金流向的量化交易方法。其核心逻辑是：如果主力资金持续净流入，而股价涨幅尚未完全反映，后续可能还有上行动力。 ## 常见信号",
     "tags": [
@@ -441,14 +470,14 @@ const originalNodes = [
       "money-flow"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 12
   },
   {
     "id": "concepts/MultiFactorSelection",
     "label": "MultiFactorSelection",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/MultiFactorSelection.md",
     "preview": "# MultiFactorSelection 多因子选股策略是一种同时从估值、成长、质量、动量、波动率、资金流等多个维度给股票打分，再综合排序选股的量化方法。它不押注单一逻辑，而是通过多因子的综合评分实现更稳健的选择。 ## 常见因子",
     "tags": [
@@ -457,14 +486,14 @@ const originalNodes = [
       "scoring-system"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 7
   },
   {
     "id": "concepts/NeuralNetworks",
     "label": "NeuralNetworks",
     "type": "concept",
-    "color": "#F44336",
+    "color": "#FF9800",
     "path": "wiki/concepts/NeuralNetworks.md",
     "preview": "## Summary A minimum stub for the [[NeuralNetworks]] concept, added during ingest of [[final-iteration-test|Final Iteration Test]]. ## Related",
     "tags": [
@@ -473,14 +502,14 @@ const originalNodes = [
       "machine-learning"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 8
   },
   {
     "id": "concepts/PlatformSubpackagePublishing",
     "label": "Platform Subpackage Publishing",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/PlatformSubpackagePublishing.md",
     "preview": "# Platform Subpackage Publishing **平台分包发布**是一种将跨平台二进制托管到 NPM 的行业标准做法，与 esbuild、prisma 等工具的发布模式相同。 ## 在 [[Latte]] 中的实现",
     "tags": [
@@ -489,14 +518,14 @@ const originalNodes = [
       "cross-platform"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "concepts/QualityStrategy",
     "label": "QualityStrategy",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/QualityStrategy.md",
     "preview": "# QualityStrategy 质量策略偏好经营稳健、盈利能力强、财务结构健康的公司。它追求的不是最便宜、也不是涨最快，而是\"长期胜率高\"。 ## 常见指标",
     "tags": [
@@ -505,14 +534,14 @@ const originalNodes = [
       "quality-investing"
     ],
     "last_updated": "2026-05-07",
-    "group": 10,
+    "group": -1,
     "value": 13
   },
   {
     "id": "concepts/QuantitativeAnalysis",
     "label": "QuantitativeAnalysis",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/QuantitativeAnalysis.md",
     "preview": "# QuantitativeAnalysis 量化分析在[[MainFundSelection|主力选股系统]]中通过量化预评分系统（Quant Scorer）实现，在AI分析前对股票进行客观评分。 ## Key Components",
     "tags": [
@@ -521,14 +550,14 @@ const originalNodes = [
       "scoring"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 16
   },
   {
     "id": "concepts/QuantPreScoring",
     "label": "QuantPreScoring",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/QuantPreScoring.md",
     "preview": "# QuantPreScoring 量化预评分系统（Quant Scorer）是AI分析前的股票客观评分机制。在[[MainFundSelectionSystem|主力选股系统]]中，它从资金强度35分、量价配合30分、基本面20分、估值安全15分四个维度综合评分，并叠加策略专属公式Overlay。 ## 评分维度",
     "tags": [
@@ -537,14 +566,14 @@ const originalNodes = [
       "stock-selection"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "concepts/RiskManagement",
     "label": "RiskManagement",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/RiskManagement.md",
     "preview": "# RiskManagement [[MainFundSelectionSystem|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。 ## 多层防御式筛选",
     "tags": [
@@ -553,14 +582,14 @@ const originalNodes = [
       "stock-selection"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 17
   },
   {
     "id": "concepts/SectorRotation",
     "label": "SectorRotation",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/SectorRotation.md",
     "preview": "# SectorRotation 板块轮动策略是一种先判断当前市场最强行业或主题，再从强板块中挑选最强个股的量化方法。核心是\"先选赛道，再选个股\"。 ## 常见信号",
     "tags": [
@@ -569,14 +598,14 @@ const originalNodes = [
       "sector-analysis"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 13
   },
   {
     "id": "concepts/SelfImprovingAI",
     "label": "SelfImprovingAI",
     "type": "concept",
-    "color": "#F44336",
+    "color": "#FF9800",
     "path": "wiki/concepts/SelfImprovingAI.md",
     "preview": "## Overview 自我改进 AI（Self-Improving AI）是指能够从自身运行经验中学习并持续优化性能的 AI 系统。这一概念是 [[HermesAgent]] 的核心设计理念。 ## Key Mechanisms",
     "tags": [
@@ -586,14 +615,14 @@ const originalNodes = [
       "learning"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 13
   },
   {
     "id": "concepts/Slop",
     "label": "Slop",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/Slop.md",
     "preview": "# Slop \"Slop\" is a term that became a term of art in 2024 to describe unwanted AI-generated content, analogous to \"spam\" for unwanted email. Coined and popularized by Simon Willison, it refers specifically to AI-generate",
     "tags": [
@@ -602,14 +631,14 @@ const originalNodes = [
       "quality"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 6
   },
   {
     "id": "concepts/StateSpaceModels",
     "label": "State Space Models",
     "type": "concept",
-    "color": "#FF5722",
+    "color": "#FF9800",
     "path": "wiki/concepts/StateSpaceModels.md",
     "preview": "# State Space Models **State Space Models (SSMs)** are a class of sequence models that offer a principled alternative to the [[Transformer]] architecture. Instead of relying on pairwise attention (which scales quadratica",
     "tags": [
@@ -619,14 +648,14 @@ const originalNodes = [
       "sequence-modeling"
     ],
     "last_updated": "2026-05-04",
-    "group": 3,
+    "group": -1,
     "value": 7
   },
   {
     "id": "concepts/StatisticalArbitrage",
     "label": "StatisticalArbitrage",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/StatisticalArbitrage.md",
     "preview": "# StatisticalArbitrage 统计套利/配对交易策略寻找两只历史相关性较强的资产，当价差异常扩大时，赌它们未来重新收敛。 ## 常见做法",
     "tags": [
@@ -635,14 +664,14 @@ const originalNodes = [
       "arbitrage"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "concepts/StockSelectionStrategy",
     "label": "StockSelectionStrategy",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/StockSelectionStrategy.md",
     "preview": "# StockSelectionStrategy AI驱动的股票选择策略框架。在[[MainFundSelectionSystem|主力选股系统]]中，选股策略定义了从数据过滤到量化评分的全套规则。 ## 7种内置策略",
     "tags": [
@@ -651,14 +680,14 @@ const originalNodes = [
       "quant"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 6
   },
   {
     "id": "concepts/SyntheticData",
     "label": "Synthetic Data",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/SyntheticData.md",
     "preview": "# Synthetic Data Synthetic data refers to AI-generated training data deliberately created to train or fine-tune other AI models. In 2024, this became a deliberate advantage rather than a cheap substitute, contradicting [",
     "tags": [
@@ -667,14 +696,14 @@ const originalNodes = [
       "efficiency"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 11
   },
   {
     "id": "concepts/Transformer",
     "label": "Transformer",
     "type": "concept",
-    "color": "#FF5722",
+    "color": "#FF9800",
     "path": "wiki/concepts/Transformer.md",
     "preview": "# Transformer The **Transformer** is a deep learning architecture introduced in the paper \"[[attention-is-all-you-need]]\" by [[Vaswani]] et al. (2017) at [[Google]] Research. The author list includes Ashish Vaswani, Noam",
     "tags": [
@@ -683,14 +712,14 @@ const originalNodes = [
       "deep-learning"
     ],
     "last_updated": "2024-03-15",
-    "group": 3,
+    "group": -1,
     "value": 35
   },
   {
     "id": "concepts/TrendTracking",
     "label": "TrendTracking",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/TrendTracking.md",
     "preview": "# TrendTracking 趋势跟踪策略的本质是：股价一旦形成上升趋势，往往不会立刻结束，而是会沿着趋势持续一段时间。策略不去预测底部，而是在趋势已经明确后跟随。 ## 常见信号",
     "tags": [
@@ -699,14 +728,14 @@ const originalNodes = [
       "technical-analysis"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 15
   },
   {
     "id": "concepts/ValueStrategy",
     "label": "ValueStrategy",
     "type": "concept",
-    "color": "#E91E63",
+    "color": "#FF9800",
     "path": "wiki/concepts/ValueStrategy.md",
     "preview": "# ValueStrategy 价值策略认为低估值且基本面稳定的公司，最终会回归合理估值。常见选股标准是低 PE、低 PB、高股息、稳定盈利。 ## 典型指标",
     "tags": [
@@ -715,14 +744,14 @@ const originalNodes = [
       "value-investing"
     ],
     "last_updated": "2026-05-07",
-    "group": 10,
+    "group": -1,
     "value": 14
   },
   {
     "id": "concepts/VolumePriceBreakout",
     "label": "VolumePriceBreakout",
     "type": "concept",
-    "color": "#00BCD4",
+    "color": "#FF9800",
     "path": "wiki/concepts/VolumePriceBreakout.md",
     "preview": "# VolumePriceBreakout 量价突破策略的核心是：股价在关键压力位附近震荡后，如果伴随放量突破，说明新的资金愿意在更高价格成交，往往意味着新一轮上涨开始。 ## 常见信号",
     "tags": [
@@ -731,14 +760,14 @@ const originalNodes = [
       "technical-analysis"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 9
   },
   {
     "id": "concepts/混合AI优化模型",
     "label": "HybridAIOptimizationModel",
     "type": "concept",
-    "color": "#673AB7",
+    "color": "#FF9800",
     "path": "wiki/concepts/混合AI优化模型.md",
     "preview": "# Hybrid AI Optimization Model (混合AI优化模型) 混合AI优化模型指将[[DeepLearning|深度学习]]与[[GeneticAlgorithm|遗传算法]]等优化方法结合的技术路线。深度学习负责模式识别和预测，遗传算法负责全局搜索和优化。在[[慧公寓管理系统]]中用于动态宿舍分配：深度学习分析入住需求和优先级，遗传算法优化分配方案，实现空置率从30%降至10%。 ## Key Advantage",
     "tags": [
@@ -749,14 +778,14 @@ const originalNodes = [
       "genetic-algorithm"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 5
   },
   {
     "id": "entities/AmandaAskell",
     "label": "Amanda Askell",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/AmandaAskell.md",
     "preview": "# Amanda Askell Amanda Askell is a researcher at [[Anthropic]], responsible for much of the work behind [[Claude]]'s character. She is known for advocating test-driven development for system prompts: \"You don't write dow",
     "tags": [
@@ -765,14 +794,14 @@ const originalNodes = [
       "safety"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 6
   },
   {
     "id": "entities/Anthropic",
     "label": "Anthropic",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Anthropic.md",
     "preview": "# Anthropic Anthropic is an AI safety company behind the [[Claude]] model family. In 2024, they released the Claude 3 series (Haiku, Sonnet, Opus) in March, followed by Claude 3.5 Sonnet in June — which remained [[SimonW",
     "tags": [
@@ -781,14 +810,14 @@ const originalNodes = [
       "llm"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/Apple",
     "label": "Apple",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Apple.md",
     "preview": "# Apple Apple is a technology company whose AI initiatives in 2024 had a mixed reception. Their [[MLX]] library for Apple Silicon received high praise, enabling GPT-4 class models on Mac hardware. However, their [[AppleI",
     "tags": [
@@ -797,25 +826,25 @@ const originalNodes = [
       "ai"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/AppleIntelligence",
     "label": "AppleIntelligence",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/AppleIntelligence.md",
     "preview": "# AppleIntelligence Stub page for **AppleIntelligence**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/Attention Is All You Need",
     "label": "Attention Is All You Need",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Attention Is All You Need.md",
     "preview": "# Attention Is All You Need **Attention Is All You Need** is a landmark research paper published by Vaswani et al. from Google Research in June 2017, which introduced the **Transformer** architecture. In the context of t",
     "tags": [
@@ -824,14 +853,14 @@ const originalNodes = [
       "transformer"
     ],
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/A股市场",
     "label": "A股市场",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/A股市场.md",
     "preview": "[[A股市场]]（A-share market）是中国大陆的股票市场，以人民币计价，面向境内投资者和符合条件的境外投资者。与美股、期货、外汇等市场相比，A股有涨跌停制度、T+1交割、做空工具有限、题材轮动和政策驱动等鲜明特征。散户占比高，量价异动和板块扩散效应明显。 ## Key Characteristics - **涨跌停制度**：10%涨跌幅限制（ST股5%），很多策略因无法成交而失真",
     "tags": [
@@ -840,14 +869,14 @@ const originalNodes = [
       "china"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/Backtesting",
     "label": "Backtesting",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/Backtesting.md",
     "preview": "# Backtesting 回测验证系统是[[main-fund-selection-system-analysis|主力选股系统]]的重要组成部分，用于验证选股策略和AI推荐的有效性。使用T+1开盘价作为买入价，支持1/3/5/10日持有期，双边总成本模型为0.23%（含滑点、市场冲击、佣金和印花税）。输出指标包括胜率、平均收益率、最大/最小收益等，支持按策略版本对比分析。",
     "tags": [
@@ -856,14 +885,14 @@ const originalNodes = [
       "stock-selection"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/Bahdanau",
     "label": "Bahdanau",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Bahdanau.md",
     "preview": "# Dzmitry Bahdanau **Dzmitry Bahdanau** is a machine learning researcher known for introducing the attention mechanism for recurrent neural networks (RNNs) in neural machine translation. His 2014 paper proposed \"Bahdanau",
     "tags": [
@@ -871,14 +900,14 @@ const originalNodes = [
       "researcher"
     ],
     "last_updated": "2026-04-28",
-    "group": 3,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/BERT",
     "label": "BERT",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/BERT.md",
     "preview": "# BERT **BERT (Bidirectional Encoder Representations from Transformers)** is a foundational natural language processing model developed by [[Google]] that introduced an **encoder-only** [[Transformer]] architecture, dist",
     "tags": [
@@ -888,25 +917,25 @@ const originalNodes = [
       "google"
     ],
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 12
   },
   {
     "id": "entities/Bitcoin",
     "label": "Bitcoin",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/Bitcoin.md",
     "preview": "# Bitcoin Stub page for **Bitcoin**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/Bun",
     "label": "Bun",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Bun.md",
     "preview": "# Bun **Bun** 是一个高性能 JavaScript/TypeScript 运行时和打包工具，由 Jarred Sumner 创建。在 [[latte-claude-code-fork|Latte]] 项目中，Bun >= 1.3.11 是必需的运行时和构建工具。 ## Key Facts",
     "tags": [
@@ -915,14 +944,14 @@ const originalNodes = [
       "build-tool"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/ChatGPT",
     "label": "ChatGPT",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/ChatGPT.md",
     "preview": "# ChatGPT ChatGPT is a conversational AI model developed by [[OpenAI]], based on the Generative Pre-trained Transformer ([[GPT]]) architecture. In the context of this wiki, ChatGPT represents a landmark entity in the evo",
     "tags": [
@@ -934,14 +963,14 @@ const originalNodes = [
       "artificial intelligence"
     ],
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/Claude",
     "label": "Claude",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Claude.md",
     "preview": "# Claude Claude is a family of large language models (LLMs) developed by Anthropic, positioned as a key competitor in the post-GPT-4 LLM landscape. In the context of 2024's rapid model proliferation, Claude represents a ",
     "tags": [
@@ -951,25 +980,25 @@ const originalNodes = [
       "ai-model",
       "2024"
     ],
-    "group": 0,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/ClaudeArtifacts",
     "label": "Claude Artifacts",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/ClaudeArtifacts.md",
     "preview": "# Claude Artifacts Stub page for **Claude Artifacts**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/ClaudeCode",
     "label": "Claude Code",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/ClaudeCode.md",
     "preview": "# Claude Code **Claude Code** 是 [[Anthropic]] 开发的 AI 编程助手 CLI 工具，基于 [[Claude]] 模型。[[Latte]] 项目是其一个可构建分支（fork），版本号 2.1.90。 ## Key Facts",
     "tags": [
@@ -979,25 +1008,25 @@ const originalNodes = [
       "anthropic"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/ControlledPullback",
     "label": "ControlledPullback",
     "type": "entity",
-    "color": "#8BC34A",
+    "color": "#2196F3",
     "path": "wiki/entities/ControlledPullback.md",
     "preview": "# ControlledPullback Stub page for **ControlledPullback**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 2,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/ConvertibleBondArbitrage",
     "label": "ConvertibleBondArbitrage",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/ConvertibleBondArbitrage.md",
     "preview": "可转债套利策略利用可转债兼具债性和股性的特点，通过转股溢价率、正股联动、波动率错配、回售/赎回博弈等方式获取收益。 ## Why Popular in China - 参与门槛相对低",
     "tags": [
@@ -1006,25 +1035,25 @@ const originalNodes = [
       "arbitrage"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/Datasette",
     "label": "Datasette",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Datasette.md",
     "preview": "# Datasette Stub page for **Datasette**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/DeepLearning",
     "label": "DeepLearning",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/DeepLearning.md",
     "preview": "# DeepLearning DeepLearning refers to a subset of machine learning that utilizes multi-layered artificial neural networks to model complex patterns and representations in data. In the context of this wiki, DeepLearning i",
     "tags": [
@@ -1033,14 +1062,14 @@ const originalNodes = [
       "ai",
       "backpropagation"
     ],
-    "group": 14,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/DeepSeek",
     "label": "DeepSeek",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/DeepSeek.md",
     "preview": "# DeepSeek DeepSeek is a Chinese AI research lab that released [[DeepSeekV3]] on Christmas Day 2024 — a 685B parameter model trained for only ~$5.6M (2.78M H800 GPU hours), 11x less than [[LLaMA|Llama 3.1 405B]] yet benc",
     "tags": [
@@ -1050,14 +1079,14 @@ const originalNodes = [
       "china"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/DeepSeekR1",
     "label": "DeepSeekR1",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/DeepSeekR1.md",
     "preview": "# DeepSeekR1 DeepSeekR1 is a reasoning-oriented large language model developed by DeepSeek, introduced in 2024 as part of the wave of \"inference-scaling\" models that emerged alongside OpenAI's [[o1]]. Its main significan",
     "tags": [
@@ -1066,25 +1095,25 @@ const originalNodes = [
       "inference-scaling",
       "open-source"
     ],
-    "group": 0,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/DeepSeekR1LitePreview",
     "label": "DeepSeekR1-Lite-Preview",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/DeepSeekR1LitePreview.md",
     "preview": "# DeepSeekR1-Lite-Preview Stub page for **DeepSeekR1-Lite-Preview**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/DeepSeekV3",
     "label": "DeepSeekV3",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/DeepSeekV3.md",
     "preview": "# DeepSeekV3 DeepSeekV3 is a large language model developed by the Chinese AI company DeepSeek, released in late 2024. Its primary significance lies in being a landmark open-weight model that broke the GPT-4 barrier—achi",
     "tags": [
@@ -1094,25 +1123,25 @@ const originalNodes = [
       "mixture-of-experts",
       "chat"
     ],
-    "group": 0,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/Ethereum",
     "label": "Ethereum",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/Ethereum.md",
     "preview": "# Ethereum Stub page for **Ethereum**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/Evaluation",
     "label": "Evaluation",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Evaluation.md",
     "preview": "# Evaluation **Evaluation** is the systematic process of assessing the performance, quality, or behavior of an entity — such as a large language model (LLM), an agent, a prompt, or a system component — against a defined ",
     "tags": [
@@ -1121,14 +1150,14 @@ const originalNodes = [
       "monitoring",
       "feedback loop"
     ],
-    "group": 0,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/EventDriven",
     "label": "EventDriven",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/EventDriven.md",
     "preview": "事件驱动策略（Event-Driven Strategy）利用某个\"事件\"带来的定价重估机会，如业绩超预期、重组、回购、政策刺激、指数纳入、分红送转等。 ## Common Events - 财报超预期",
     "tags": [
@@ -1137,47 +1166,47 @@ const originalNodes = [
       "catalysts"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/Gemini",
     "label": "Gemini",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Gemini.md",
     "preview": "# Gemini Stub page for **Gemini**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/Gemini2.0Flash",
     "label": "Gemini 2.0 Flash",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Gemini2.0Flash.md",
     "preview": "# Gemini 2.0 Flash Stub page for **Gemini 2.0 Flash**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/Gemini2.0FlashThinking",
     "label": "Gemini 2.0 Flash Thinking",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Gemini2.0FlashThinking.md",
     "preview": "# Gemini 2.0 Flash Thinking Stub page for **Gemini 2.0 Flash Thinking**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/GeneticAlgorithm",
     "label": "GeneticAlgorithm",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/GeneticAlgorithm.md",
     "preview": "# Genetic Algorithm (遗传算法) **GeneticAlgorithm** — 受自然选择启发的优化算法，模拟进化过程。在[[慧公寓管理系统]]中与[[DeepLearning|深度学习]]结合，用于动态分析入住需求和优先级分配，显著降低空置率。 ## Connections",
     "tags": [
@@ -1186,14 +1215,14 @@ const originalNodes = [
       "ai"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/Google",
     "label": "Google",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Google.md",
     "preview": "# Google **Google** (now Alphabet) is a technology company that has made foundational contributions to artificial intelligence and machine learning. ## AI Research",
     "tags": [
@@ -1202,14 +1231,14 @@ const originalNodes = [
       "research"
     ],
     "last_updated": "2024-02-10",
-    "group": 3,
+    "group": -1,
     "value": 19
   },
   {
     "id": "entities/GoogleDeepMind",
     "label": "Google DeepMind",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/GoogleDeepMind.md",
     "preview": "# Google DeepMind Google DeepMind is the AI research division of [[Google]]. In 2024, they released [[Gemini|Gemini 1.5 Pro]] (February 2024) with up to 2 million token context and video input — the first model to surpas",
     "tags": [
@@ -1218,14 +1247,14 @@ const originalNodes = [
       "llm"
     ],
     "last_updated": "2026-05-06",
-    "group": 3,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/GPT",
     "label": "GPT",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/GPT.md",
     "preview": "# GPT **GPT** (Generative Pre-trained Transformer) is a family of decoder-only large language models developed by OpenAI that pioneered the modern era of foundation models and autoregressive text generation. Unlike encod",
     "tags": [
@@ -1235,14 +1264,14 @@ const originalNodes = [
       "decoder-only"
     ],
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 19
   },
   {
     "id": "entities/GPT4",
     "label": "GPT4",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/GPT4.md",
     "preview": "# GPT4 GPT-4 (Generative Pre-trained Transformer 4) is a large multimodal language model developed by [[OpenAI]], released in March 2023. In the context of this wiki, GPT-4 represents a significant advancement in the lin",
     "tags": [
@@ -1253,14 +1282,14 @@ const originalNodes = [
       "transformer"
     ],
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 15
   },
   {
     "id": "entities/GraphRebuildVerify",
     "label": "GraphRebuildVerify",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/GraphRebuildVerify.md",
     "preview": "# GraphRebuildVerify A test entity representing documents that verify automatic graph rebuild after ingestion. ## Connections",
     "tags": [
@@ -1269,14 +1298,14 @@ const originalNodes = [
       "rebuild"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/GregBrockman",
     "label": "Greg Brockman",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/GregBrockman.md",
     "preview": "# Greg Brockman **Greg Brockman** is a co-founder and former CTO of [[OpenAI]]. He was previously the CTO of Stripe before joining [[SamAltman]], [[IlyaSutskever]], and others to found OpenAI in 2015. At OpenAI, he playe",
     "tags": [
@@ -1284,25 +1313,25 @@ const originalNodes = [
       "engineer"
     ],
     "last_updated": "2026-04-28",
-    "group": 3,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/GrowthPotential",
     "label": "GrowthPotential",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/GrowthPotential.md",
     "preview": "# GrowthPotential Stub page for **GrowthPotential**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 4,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/GrowthStrategy",
     "label": "GrowthStrategy",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/GrowthStrategy.md",
     "preview": "成长策略（Growth Strategy）重视未来盈利扩张，愿意为高增长支付更高估值。核心是找\"高景气 + 高增长 + 增长可持续\"的公司。 ## Typical Indicators - 营收同比高增长",
     "tags": [
@@ -1311,14 +1340,14 @@ const originalNodes = [
       "fundamental"
     ],
     "last_updated": "2026-05-08",
-    "group": 10,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/HermesAgent",
     "label": "HermesAgent",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/HermesAgent.md",
     "preview": "> **Disambiguation**: This page is about **Hermes Agent**, an AI Agent framework by [[NousResearch]]. For Meta's JavaScript engine also named Hermes, see [[HermesJSEngine]]. ## Overview Hermes Agent 是由 NousResearch 开发的开源",
     "tags": [
@@ -1328,14 +1357,14 @@ const originalNodes = [
       "nous-research"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 15
   },
   {
     "id": "entities/HermesJSEngine",
     "label": "HermesJSEngine",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/HermesJSEngine.md",
     "preview": "> **Disambiguation**: This page is about **Hermes**, the JavaScript engine by [[Meta]] for [[ReactNative]]. For the AI Agent framework also named Hermes, see [[HermesAgent]]. ## Overview Hermes 是由 Meta（Facebook）开发的 JavaS",
     "tags": [
@@ -1345,14 +1374,14 @@ const originalNodes = [
       "mobile"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/HighDividendLowVol",
     "label": "HighDividendLowVol",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/HighDividendLowVol.md",
     "preview": "高股息低波策略（High Dividend Low Volatility）追求\"稳\"，主要目标是提高持有体验、控制回撤、争取长期复利。常见于类红利、类固收增强配置。 ## Common Indicators - 股息率较高",
     "tags": [
@@ -1362,14 +1391,14 @@ const originalNodes = [
       "defensive"
     ],
     "last_updated": "2026-05-08",
-    "group": 10,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/HyperledgerFabric",
     "label": "Hyperledger Fabric",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/HyperledgerFabric.md",
     "preview": "# Hyperledger Fabric **Hyperledger Fabric** — Linux基金会旗下的企业级区块链框架，支持模块化架构、智能合约和权限管理。在[[慧公寓管理系统]]中用于数据安全和隐私保护，结合[[ZKP]]零知识证明降低数据泄露风险。 ## Connections",
     "tags": [
@@ -1378,14 +1407,14 @@ const originalNodes = [
       "framework"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/IlyaSutskever",
     "label": "Ilya Sutskever",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/IlyaSutskever.md",
     "preview": "# Ilya Sutskever **Ilya Sutskever** is a co-founder and former Chief Scientist of [[OpenAI]]. He was previously a researcher at [[Google]] Brain, where he contributed to the sequence-to-sequence learning framework and ea",
     "tags": [
@@ -1393,14 +1422,14 @@ const originalNodes = [
       "researcher"
     ],
     "last_updated": "2026-04-28",
-    "group": 3,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/Ink",
     "label": "Ink",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Ink.md",
     "preview": "# Ink **Ink** 是一个使用 [[React]] 构建命令行界面（CLI）的框架，由 Vadim Demedes 开发。在 [[latte-claude-code-fork|Latte]] 项目中，Ink 用于构建终端用户界面（TUI），包括主交互界面（REPL）和各种命令的 UI 组件。 ## Key Facts",
     "tags": [
@@ -1409,14 +1438,14 @@ const originalNodes = [
       "cli"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 6
   },
   {
     "id": "entities/LargeLanguageModels",
     "label": "LargeLanguageModels",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/LargeLanguageModels.md",
     "preview": "# LargeLanguageModels A **Large Language Model (LLM)** is a type of neural network model, typically based on the [[Transformer]] architecture, trained on massive text corpora to predict and generate human-like text. In t",
     "tags": [
@@ -1426,14 +1455,14 @@ const originalNodes = [
       "language-model"
     ],
     "last_updated": "2026-05-04",
-    "group": 3,
+    "group": -1,
     "value": 21
   },
   {
     "id": "entities/Latte",
     "label": "Latte",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Latte.md",
     "preview": "# Latte **Latte** 是 [[Anthropic]] [[ClaudeCode]] CLI（版本 2.1.90）的一个可构建分支（fork），由 wxj-1019 在 GitHub（https://github.com/wxj-1019/latte-code）上维护。核心差异包括移除遥测、移除安全硬编码守卫、解锁 54 个实验性功能、内置中文界面与多模型支持。 ## Key Facts",
     "tags": [
@@ -1443,14 +1472,14 @@ const originalNodes = [
       "cli"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 14
   },
   {
     "id": "entities/LLaMA",
     "label": "LLaMA",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/LLaMA.md",
     "preview": "# LLaMA LLaMA (Large Language Model Meta AI) is a family of large language models developed by [[Meta]], designed as a research-focused alternative to proprietary closed-source models like [[OpenAI]]'s [[GPT]] series and",
     "tags": [
@@ -1460,25 +1489,25 @@ const originalNodes = [
       "foundation-model"
     ],
     "last_updated": "2026-05-04",
-    "group": 3,
+    "group": -1,
     "value": 19
   },
   {
     "id": "entities/LLM",
     "label": "LLM",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/LLM.md",
     "preview": "# LLM Stub page for **LLM**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/LogVerifyTest",
     "label": "LogVerifyTest",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/LogVerifyTest.md",
     "preview": "# LogVerifyTest A test entity representing a set of documents that verify logging mechanisms in the background graph rebuild pipeline. ## Connections",
     "tags": [
@@ -1487,36 +1516,36 @@ const originalNodes = [
       "log"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 5
   },
   {
     "id": "entities/LowRiskIncome",
     "label": "LowRiskIncome",
     "type": "entity",
-    "color": "#FFC107",
+    "color": "#2196F3",
     "path": "wiki/entities/LowRiskIncome.md",
     "preview": "# LowRiskIncome Stub page for **LowRiskIncome**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 5,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/MainForceAccumulation",
     "label": "MainForceAccumulation",
     "type": "entity",
-    "color": "#009688",
+    "color": "#2196F3",
     "path": "wiki/entities/MainForceAccumulation.md",
     "preview": "# MainForceAccumulation Stub page for **MainForceAccumulation**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 6,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/MainFundSelection",
     "label": "MainFundSelection",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MainFundSelection.md",
     "preview": "# MainFundSelection 主力选股系统，一个[[AIAgent|AI驱动的]]旗舰智能选股系统，采用六层流水线架构，从全市场主力资金流入股票中每日精选3-10只最优标的。 ## Key Facts",
     "tags": [
@@ -1525,14 +1554,14 @@ const originalNodes = [
       "finance"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 13
   },
   {
     "id": "entities/MainFundSelectionSystem",
     "label": "MainFundSelectionSystem",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MainFundSelectionSystem.md",
     "preview": "# MainFundSelectionSystem 主力选股系统是一个[[AIAgent|AI驱动的]]旗舰智能选股系统，采用六层流水线架构，从全市场主力资金流入股票中每日精选3-10只最优标的。 ## 核心架构",
     "tags": [
@@ -1541,14 +1570,14 @@ const originalNodes = [
       "quant"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 29
   },
   {
     "id": "entities/MeanReversion",
     "label": "MeanReversion",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MeanReversion.md",
     "preview": "均值回归策略（Mean Reversion）认为价格短期偏离合理区间后，未来有较大概率向均值回归。常见做法是买超跌、卖超涨。 ## Common Signals - RSI低于20或30",
     "tags": [
@@ -1557,14 +1586,14 @@ const originalNodes = [
       "contrarian"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 6
   },
   {
     "id": "entities/Meta",
     "label": "Meta",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/Meta.md",
     "preview": "## Overview **Meta Platforms, Inc.**（原名 Facebook, Inc.）是一家全球性的科技巨头，专注于社交媒体、虚拟现实（VR）和人工智能研究。Meta 拥有 Facebook、Instagram、WhatsApp 等产品，并在 AI 领域投入大量资源，开发了包括 LLaMA 系列大语言模型在内的开源模型。 ## Key Contributions",
     "tags": [
@@ -1574,58 +1603,58 @@ const originalNodes = [
       "ai-research"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 9
   },
   {
     "id": "entities/Microsoft",
     "label": "Microsoft",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Microsoft.md",
     "preview": "# Microsoft Stub page for **Microsoft**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/MLX",
     "label": "MLX",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/MLX.md",
     "preview": "# MLX Stub page for **MLX**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/MLXvlm",
     "label": "MLX-vlm",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/MLXvlm.md",
     "preview": "# MLX-vlm Stub page for **MLX-vlm**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/ModelCollapse",
     "label": "ModelCollapse",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/ModelCollapse.md",
     "preview": "# ModelCollapse Stub page for **ModelCollapse**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/MomentumStrategy",
     "label": "MomentumStrategy",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MomentumStrategy.md",
     "preview": "动量策略（Momentum Strategy）强调\"过去一段时间涨得好的，未来一段时间可能继续强\"。它和[[TrendTracking]]很像，但更偏向截面比较，在同一批股票中找相对最强的。 ## Common Signals - 过去20日、60日、120日涨幅排名靠前",
     "tags": [
@@ -1634,14 +1663,14 @@ const originalNodes = [
       "cross-section"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 12
   },
   {
     "id": "entities/MoneyFlowStrategy",
     "label": "MoneyFlowStrategy",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MoneyFlowStrategy.md",
     "preview": "主力资金流入策略（Money Flow Strategy）是一种跟踪大资金流向的量化交易方法。其核心逻辑是：如果主力资金持续净流入，而股价涨幅尚未完全反映，后续可能还有上行动力。 ## Key Signals - 主力净流入连续多日为正",
     "tags": [
@@ -1650,14 +1679,14 @@ const originalNodes = [
       "quantitative-trading"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 14
   },
   {
     "id": "entities/MultiFactorSelection",
     "label": "MultiFactorSelection",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/MultiFactorSelection.md",
     "preview": "多因子选股策略（Multi-Factor Selection）是一种同时从估值、成长、质量、动量、波动率、资金流等多个维度给股票打分，再综合排序选股的量化方法。 ## Common Factors - **估值因子**：PE、PB、PS、股息率",
     "tags": [
@@ -1666,25 +1695,25 @@ const originalNodes = [
       "quantitative-trading"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/NotebookLM",
     "label": "NotebookLM",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/NotebookLM.md",
     "preview": "# NotebookLM Stub page for **NotebookLM**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/NousResearch",
     "label": "NousResearch",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/NousResearch.md",
     "preview": "## Overview NousResearch is a decentralized, open-source AI research collective known for pushing the boundaries of autonomous AI agents and openly shared model fine-tunes. Unlike traditional corporate labs, NousResearch",
     "tags": [
@@ -1693,14 +1722,14 @@ const originalNodes = [
       "open-source"
     ],
     "last_updated": "2026-05-04",
-    "group": 7,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/o1",
     "label": "o1",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/o1.md",
     "preview": "# o1 `o1` refers to OpenAI’s series of large language models introduced in 2024 that pioneer a new paradigm known as **inference-scaling** (or \"test-time compute\") reasoning. Unlike previous models (such as GPT-4) which ",
     "tags": [
@@ -1709,25 +1738,25 @@ const originalNodes = [
       "inference-scaling",
       "openai"
     ],
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/o3",
     "label": "o3",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/o3.md",
     "preview": "# o3 Stub page for **o3**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/OpenAI",
     "label": "OpenAI",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/OpenAI.md",
     "preview": "# OpenAI **OpenAI** is an artificial intelligence research laboratory founded in 2015 by [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], and others. ## Key Products",
     "tags": [
@@ -1736,25 +1765,25 @@ const originalNodes = [
       "research"
     ],
     "last_updated": "2024-03-20",
-    "group": 3,
+    "group": -1,
     "value": 29
   },
   {
     "id": "entities/Phi4",
     "label": "Phi4",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Phi4.md",
     "preview": "# Phi4 Stub page for **Phi4**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/QualityStrategy",
     "label": "QualityStrategy",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/QualityStrategy.md",
     "preview": "质量策略（Quality Strategy）偏好经营稳健、盈利能力强、财务结构健康的公司。追求的是\"长期胜率高\"，而不是最便宜或涨最快。 ## Common Indicators - 高ROE",
     "tags": [
@@ -1763,14 +1792,14 @@ const originalNodes = [
       "defensive"
     ],
     "last_updated": "2026-05-08",
-    "group": 10,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/QuantitativeAnalysis",
     "label": "QuantitativeAnalysis",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/QuantitativeAnalysis.md",
     "preview": "# QuantitativeAnalysis 系统性量化分析方法论在金融选股中的应用。在[[main-fund-selection-system-analysis|主力选股系统]]中，量化预评分（Quant Scorer）是AI分析前的关键过滤层，从资金强度、量价配合、基本面质量、估值安全四个维度对股票进行客观评分，并结合策略自适应权重和公式Overlay，为AI分析师提供排名基准和候选池截断。",
     "tags": [
@@ -1779,25 +1808,25 @@ const originalNodes = [
       "stock-selection"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 12
   },
   {
     "id": "entities/QvQ",
     "label": "QvQ",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/QvQ.md",
     "preview": "# QvQ Stub page for **QvQ**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/Qwen",
     "label": "Qwen",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/Qwen.md",
     "preview": "# Qwen Qwen is a family of large language models developed by Alibaba Cloud, emerging as a key player in the 2024 LLM landscape. In the context of Simon Willison's \"Things we learned about LLMs in 2024\" source, Qwen is s",
     "tags": [
@@ -1807,14 +1836,14 @@ const originalNodes = [
       "alibaba",
       "2024"
     ],
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/QwQ",
     "label": "QwQ",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/QwQ.md",
     "preview": "# QwQ **QwQ** is an open-source reasoning model developed by Alibaba Cloud's Qwen team, released in late 2024 as part of the wave of \"inference-scaling\" models that followed the introduction of [[o1]] by [[OpenAI]]. Like",
     "tags": [
@@ -1822,14 +1851,14 @@ const originalNodes = [
       "reasoning",
       "open-source"
     ],
-    "group": 0,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/ReactNative",
     "label": "ReactNative",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/ReactNative.md",
     "preview": "## Overview **React Native** 是 Meta（Facebook）开发的开源跨平台移动应用开发框架，允许开发者使用 JavaScript 和 React 构建原生 iOS 和 Android 应用。自 React Native 0.69.0 起，[[HermesJSEngine]] 成为其默认捆绑的 JavaScript 引擎，显著改善了应用启动性能和内存占用。 ## Core Features",
     "tags": [
@@ -1839,14 +1868,14 @@ const originalNodes = [
       "meta"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 6
   },
   {
     "id": "entities/Redis",
     "label": "Redis",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/Redis.md",
     "preview": "# Redis **Redis** — 高性能内存数据库，常用于缓存和分布式锁。王信杰在项目中通过Redis集群实现5000 QPS并发支持。 ## Connections",
     "tags": [
@@ -1855,14 +1884,14 @@ const originalNodes = [
       "nosql"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/RocketMQ",
     "label": "RocketMQ",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/RocketMQ.md",
     "preview": "# RocketMQ **RocketMQ** — 阿里巴巴开源的分布式消息队列中间件，王信杰熟练掌握其使用。 ## Connections",
     "tags": [
@@ -1871,14 +1900,14 @@ const originalNodes = [
       "middleware"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 5
   },
   {
     "id": "entities/SamAltman",
     "label": "Sam Altman",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/SamAltman.md",
     "preview": "# Sam Altman **Sam Altman** is the CEO of [[OpenAI]], which he has led since 2019. Under his leadership, OpenAI launched [[ChatGPT]] (2022) and [[GPT4]] (2023), catalyzing the widespread adoption of [[LargeLanguageModels",
     "tags": [
@@ -1886,25 +1915,25 @@ const originalNodes = [
       "entrepreneur"
     ],
     "last_updated": "2026-04-28",
-    "group": 3,
+    "group": -1,
     "value": 10
   },
   {
     "id": "entities/ScalingLaws",
     "label": "ScalingLaws",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/ScalingLaws.md",
     "preview": "# ScalingLaws Stub page for **ScalingLaws**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 2
   },
   {
     "id": "entities/SectorRotation",
     "label": "SectorRotation",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/SectorRotation.md",
     "preview": "板块轮动策略（Sector Rotation）是先判断当前市场最强行业或主题，再从强板块中挑选最强个股的量化方法。核心是\"先选赛道，再选个股\"。 ## Common Signals - 板块涨幅排名靠前",
     "tags": [
@@ -1913,25 +1942,25 @@ const originalNodes = [
       "rotation"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/ShortTermBreakout",
     "label": "ShortTermBreakout",
     "type": "entity",
-    "color": "#3F51B5",
+    "color": "#2196F3",
     "path": "wiki/entities/ShortTermBreakout.md",
     "preview": "# ShortTermBreakout Stub page for **ShortTermBreakout**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 8,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/SimonWillison",
     "label": "Simon Willison",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/SimonWillison.md",
     "preview": "# Simon Willison Simon Willison is a prolific blogger, software developer, and creator of the [[Datasette]] ecosystem. He published the comprehensive review \"Things we learned about LLMs in 2024\" summarizing the year's d",
     "tags": [
@@ -1940,14 +1969,14 @@ const originalNodes = [
       "llm-tools"
     ],
     "last_updated": "2026-05-06",
-    "group": 0,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/SpringBoot",
     "label": "SpringBoot",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/SpringBoot.md",
     "preview": "# Spring Boot **Spring Boot** — Java后端开发的主流框架，简化Spring应用配置。王信杰在[[能源大数据平台]]和[[慧公寓管理系统]]中均使用此框架。 ## Connections",
     "tags": [
@@ -1956,14 +1985,14 @@ const originalNodes = [
       "backend"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/SpringCloudAlibaba",
     "label": "SpringCloudAlibaba",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/SpringCloudAlibaba.md",
     "preview": "# Spring Cloud Alibaba **Spring Cloud Alibaba** — 阿里巴巴微服务治理框架全家桶，王信杰熟练掌握其常用组件的使用。 ## Connections",
     "tags": [
@@ -1973,14 +2002,14 @@ const originalNodes = [
       "alibaba"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 5
   },
   {
     "id": "entities/StatisticalArbitrage",
     "label": "StatisticalArbitrage",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/StatisticalArbitrage.md",
     "preview": "统计套利/配对交易策略（Statistical Arbitrage）寻找两只历史相关性较强的资产，当价差异常扩大时，赌它们未来重新收敛。 ## Common Approaches - 同行业龙头之间配对",
     "tags": [
@@ -1989,25 +2018,25 @@ const originalNodes = [
       "pairs-trading"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 8
   },
   {
     "id": "entities/T5",
     "label": "T5",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/T5.md",
     "preview": "# T5 T5, or Text-to-Text Transfer Transformer, is a family of encoder-decoder models developed by [[Google]]. Its defining innovation is reformulating all natural language processing (NLP) tasks—including translation, su",
     "last_updated": "2026-04-30",
-    "group": 3,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/TechnicalAnalysis",
     "label": "TechnicalAnalysis",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/TechnicalAnalysis.md",
     "preview": "# TechnicalAnalysis **TechnicalAnalysis** is a methodology for evaluating and forecasting the direction of prices in financial markets—including stocks, cryptocurrencies, commodities, and forex—through the study of histo",
     "tags": [
@@ -2016,14 +2045,14 @@ const originalNodes = [
       "analysis",
       "market-patterns"
     ],
-    "group": 1,
+    "group": -1,
     "value": 5
   },
   {
     "id": "entities/ThreadingRebuildTest",
     "label": "ThreadingRebuildTest",
     "type": "entity",
-    "color": "#F44336",
+    "color": "#2196F3",
     "path": "wiki/entities/ThreadingRebuildTest.md",
     "preview": "# ThreadingRebuildTest A test entity representing documents that test background graph rebuild using threading mechanisms. ## Connections",
     "tags": [
@@ -2032,14 +2061,14 @@ const originalNodes = [
       "threading"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 4
   },
   {
     "id": "entities/TrendMomentum",
     "label": "TrendMomentum",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/TrendMomentum.md",
     "preview": "趋势+动量复合策略（Trend + Momentum Composite）是将[[TrendTracking]]和[[MomentumStrategy]]结合的策略。趋势提供方向判断（均线排列、MACD金叉等），动量提供相对强度筛选（截面排名筛选）。 ## Why Combine - 趋势跟踪解决\"方向\"问题",
     "tags": [
@@ -2049,14 +2078,14 @@ const originalNodes = [
       "composite"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 14
   },
   {
     "id": "entities/TrendTracking",
     "label": "TrendTracking",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/TrendTracking.md",
     "preview": "趋势跟踪策略（Trend Tracking）是一种跟随上涨趋势的量化交易策略。其本质是：股价一旦形成上升趋势，往往不会立刻结束，而是会沿着趋势持续一段时间。策略不去预测底部，而是在趋势已经明确后跟随。 ## Common Signals - 5日均线 > 20日均线 > 60日均线",
     "tags": [
@@ -2065,14 +2094,14 @@ const originalNodes = [
       "technical-analysis"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 15
   },
   {
     "id": "entities/Tushare",
     "label": "Tushare",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/Tushare.md",
     "preview": "# Tushare Tushare是[[MainFundSelection|主力选股系统]]的备选数据源和技术指标提供者。 ## Key Facts",
     "tags": [
@@ -2081,25 +2110,25 @@ const originalNodes = [
       "china-stock"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/ValueStable",
     "label": "ValueStable",
     "type": "entity",
-    "color": "#CDDC39",
+    "color": "#2196F3",
     "path": "wiki/entities/ValueStable.md",
     "preview": "# ValueStable Stub page for **ValueStable**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 9,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/ValueStrategy",
     "label": "ValueStrategy",
     "type": "entity",
-    "color": "#E91E63",
+    "color": "#2196F3",
     "path": "wiki/entities/ValueStrategy.md",
     "preview": "价值策略（Value Strategy）认为低估值且基本面稳定的公司，最终会回归合理估值。常见选股标准是低PE、低PB、高股息、稳定盈利。 ## Typical Indicators - PE低于行业中位数",
     "tags": [
@@ -2108,14 +2137,14 @@ const originalNodes = [
       "fundamental"
     ],
     "last_updated": "2026-05-08",
-    "group": 10,
+    "group": -1,
     "value": 12
   },
   {
     "id": "entities/Vaswani",
     "label": "Vaswani",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/Vaswani.md",
     "preview": "# Ashish Vaswani **Ashish Vaswani** is the first author of the seminal paper \"[[attention-is-all-you-need]]\" (2017), which introduced the [[Transformer]] architecture. At the time of publication, he was a researcher at [",
     "tags": [
@@ -2123,14 +2152,14 @@ const originalNodes = [
       "researcher"
     ],
     "last_updated": "2026-04-28",
-    "group": 3,
+    "group": -1,
     "value": 16
   },
   {
     "id": "entities/VolumePriceBreakout",
     "label": "VolumePriceBreakout",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/VolumePriceBreakout.md",
     "preview": "量价突破策略（Volume-Price Breakout）的核心是：股价在关键压力位附近震荡后，如果伴随放量突破，说明新的资金愿意在更高价格成交，往往意味着新一轮上涨开始。 ## Common Signals - 放量突破前高、平台或箱体上沿",
     "tags": [
@@ -2139,14 +2168,14 @@ const originalNodes = [
       "volume"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/WencaiAPI",
     "label": "WencaiAPI",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/WencaiAPI.md",
     "preview": "# WencaiAPI 问财API（pywencai）是[[MainFundSelection|主力选股系统]]的主要数据源，提供A股市场的主力资金流向数据。 ## Key Facts",
     "tags": [
@@ -2155,14 +2184,14 @@ const originalNodes = [
       "china-stock"
     ],
     "last_updated": "2026-05-07",
-    "group": 1,
+    "group": -1,
     "value": 11
   },
   {
     "id": "entities/ZKP",
     "label": "ZKP",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/ZKP.md",
     "preview": "# ZKP **Zero-Knowledge Proof (零知识证明)** — 密码学技术，允许一方在不透露信息本身的情况下向另一方证明其知道某个信息。在[[慧公寓管理系统]]中与[[HyperledgerFabric]]区块链结合使用，增强数据隐私保护。 ## Connections",
     "tags": [
@@ -2171,14 +2200,14 @@ const originalNodes = [
       "security"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 7
   },
   {
     "id": "entities/中国计算机设计大赛",
     "label": "中国计算机设计大赛",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/中国计算机设计大赛.md",
     "preview": "# 中国计算机设计大赛 全国性计算机设计竞赛，王信杰于2022年8月获得国家级三等奖。 ## Connections",
     "tags": [
@@ -2187,36 +2216,36 @@ const originalNodes = [
       "chinese"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/主力资金流入策略",
     "label": "主力资金流入策略",
     "type": "entity",
-    "color": "#00BCD4",
+    "color": "#2196F3",
     "path": "wiki/entities/主力资金流入策略.md",
     "preview": "# 主力资金流入策略 Stub page for **主力资金流入策略**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 11,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/多因子评分策略",
     "label": "多因子评分策略",
     "type": "entity",
-    "color": "#8BC34A",
+    "color": "#2196F3",
     "path": "wiki/entities/多因子评分策略.md",
     "preview": "# 多因子评分策略 Stub page for **多因子评分策略**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 12,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/慧公寓管理系统",
     "label": "慧公寓管理系统",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/慧公寓管理系统.md",
     "preview": "# 慧公寓管理系统 **Smart Apartment Management System** — 王信杰负责的项目，专为学校教师公寓打造的智能化管理系统。技术栈包括Spring Boot + MySQL + [[Redis]] + MyBatis-Plus + Apache Shiro + Quartz。引入[[HyperledgerFabric]]区块链+[[ZKP]]零知识证明，数据泄露风险降低90%；设计[[DeepLearni",
     "tags": [
@@ -2226,14 +2255,14 @@ const originalNodes = [
       "ai"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 16
   },
   {
     "id": "entities/服务外包竞赛",
     "label": "服务外包竞赛",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/服务外包竞赛.md",
     "preview": "# 服务外包竞赛 中国服务外包领域的学生竞赛，王信杰于2023年5月获得地区三等奖。 ## Connections",
     "tags": [
@@ -2242,25 +2271,25 @@ const originalNodes = [
       "chinese"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/板块轮动策略",
     "label": "板块轮动策略",
     "type": "entity",
-    "color": "#FF5722",
+    "color": "#2196F3",
     "path": "wiki/entities/板块轮动策略.md",
     "preview": "# 板块轮动策略 Stub page for **板块轮动策略**. Referenced in the wiki but detailed content has not yet been written.",
     "last_updated": "2026-05-08",
-    "group": 13,
+    "group": -1,
     "value": 1
   },
   {
     "id": "entities/海康威视",
     "label": "海康威视",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/海康威视.md",
     "preview": "# 海康威视 **Hikvision** — 全球领先的安防与物联网解决方案提供商，总部位于中国杭州。以视频监控起家，现已扩展至AIoT、智能家居、工业视觉等领域。 ## Connections",
     "tags": [
@@ -2270,14 +2299,14 @@ const originalNodes = [
       "china"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 3
   },
   {
     "id": "entities/王信杰",
     "label": "王信杰",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/王信杰.md",
     "preview": "# 王信杰 **Wang Xinjie** — 浙江科技大学毕业生，后端开发工程师。曾在[[海康威视]]实习，拥有Spring Boot微服务、[[Redis]]集群、[[HyperledgerFabric]]区块链和[[DeepLearning|深度学习]]+[[GeneticAlgorithm|遗传算法]]混合模型的实战经验。 ## Key Projects",
     "tags": [
@@ -2286,14 +2315,14 @@ const originalNodes = [
       "engineer"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 17
   },
   {
     "id": "entities/能源大数据平台",
     "label": "能源大数据平台",
     "type": "entity",
-    "color": "#673AB7",
+    "color": "#2196F3",
     "path": "wiki/entities/能源大数据平台.md",
     "preview": "# 能源大数据平台 **Energy Big Data Platform** — 王信杰参与的项目，为能源企业提供综合管理解决方案，通过调度算法优化资源配置。采用Spring Boot + MySQL + [[Redis]] + MyBatis-Plus + Spring Security + OAuth2 + Spring Cloud技术栈，支持5000 QPS并发，响应时间<500ms，系统可用性99.99%。 ## Connect",
     "tags": [
@@ -2303,14 +2332,14 @@ const originalNodes = [
       "spring-boot"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 8
   },
   {
     "id": "memory/decisions",
     "label": "Agent Decisions Log",
     "type": "synthesis",
-    "color": "#FFC107",
+    "color": "#9C27B0",
     "path": "wiki/memory/decisions.md",
     "preview": "# Agent Decisions Log 跨会话持久决策记录。每条决策包含上下文、理由和后续验证状态。 ## Decision Format",
     "tags": [
@@ -2318,14 +2347,14 @@ const originalNodes = [
       "agent"
     ],
     "last_updated": "2026-05-05",
-    "group": 15,
+    "group": -1,
     "value": 1
   },
   {
     "id": "sources/a-share-quantitative-trading-strategies-guide",
     "label": "A股常见量化交易策略指南",
     "type": "source",
-    "color": "#00BCD4",
+    "color": "#4CAF50",
     "path": "wiki/sources/a-share-quantitative-trading-strategies-guide.md",
     "preview": "## Summary 本文档全面梳理了适合[[A股市场]]的14种常见量化交易策略，包括[[TrendTracking|趋势跟踪]]、[[MomentumStrategy|动量]]、[[MeanReversion|均值回归]]、[[VolumePriceBreakout|量价突破]]、[[MoneyFlowStrategy|资金流]]、[[SectorRotation|板块轮动]]、[[MultiFactorSelection|多因子选",
     "tags": [
@@ -2335,14 +2364,14 @@ const originalNodes = [
       "system-design"
     ],
     "last_updated": "2026-05-08",
-    "group": 1,
+    "group": -1,
     "value": 43
   },
   {
     "id": "sources/attention-is-all-you-need",
     "label": "Attention Is All You Need",
     "type": "source",
-    "color": "#FF5722",
+    "color": "#4CAF50",
     "path": "wiki/sources/attention-is-all-you-need.md",
     "preview": "## Summary The seminal paper by [[Vaswani]] et al. from [[Google]] Research introducing the [[Transformer]] architecture, which replaced recurrent and convolutional layers with purely attention-based mechanisms. ## Key C",
     "tags": [
@@ -2351,14 +2380,14 @@ const originalNodes = [
       "transformer"
     ],
     "last_updated": "2017-06-12",
-    "group": 3,
+    "group": -1,
     "value": 14
   },
   {
     "id": "sources/auto-graph-test",
     "label": "Auto Graph Test",
     "type": "source",
-    "color": "#FF5722",
+    "color": "#4CAF50",
     "path": "wiki/sources/auto-graph-test.md",
     "preview": "## Summary A minimal test document designed to verify automatic graph rebuilding after ingestion. It explicitly references the [[Transformer]] architecture. ## Key Claims",
     "tags": [
@@ -2366,14 +2395,14 @@ const originalNodes = [
       "test"
     ],
     "last_updated": "2026-05-08",
-    "group": 3,
+    "group": -1,
     "value": 2
   },
   {
     "id": "sources/final-iteration-test",
     "label": "Final Iteration Test",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/final-iteration-test.md",
     "preview": "## Summary A minimal test document for verifying complete ingestion and automatic graph rebuild pipeline. It references [[Transformer]] and [[NeuralNetworks]]. ## Key Claims",
     "tags": [
@@ -2382,14 +2411,14 @@ const originalNodes = [
       "graph"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 4
   },
   {
     "id": "sources/finally-block-test",
     "label": "Finally Block Test",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/finally-block-test.md",
     "preview": "## Summary A minimal test document that validates the finally block in the background graph rebuild pipeline executes correctly after ingestion. ## Key Claims",
     "tags": [
@@ -2398,14 +2427,14 @@ const originalNodes = [
       "finally"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 3
   },
   {
     "id": "sources/github-hermes-ecosystem",
     "label": "GitHub Hermes 生态系统综述",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/github-hermes-ecosystem.md",
     "preview": "## Summary GitHub 上名为 \"Hermes\" 的项目横跨多个领域：最热门的是 NousResearch 开源的 **Hermes Agent**（⭐128,747），一个自我进化的 AI Agent 框架；其次是 Meta/Facebook 的 **Hermes JavaScript 引擎**（⭐11,017），专为 React Native 优化。此外还有 Hermes WebUI、Hermes Workspace 等",
     "tags": [
@@ -2416,14 +2445,14 @@ const originalNodes = [
       "open-source"
     ],
     "last_updated": "2026-05-02",
-    "group": 7,
+    "group": -1,
     "value": 10
   },
   {
     "id": "sources/graph-rebuild-verify",
     "label": "Graph Rebuild Verify",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/graph-rebuild-verify.md",
     "preview": "## Summary A minimal test document that verifies automatic graph rebuild after ingestion. It explicitly references the [[AttentionMechanism]] and neural networks. ## Key Claims",
     "tags": [
@@ -2432,14 +2461,14 @@ const originalNodes = [
       "verification"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 8
   },
   {
     "id": "sources/intro-to-llms",
     "label": "Introduction to Large Language Models",
     "type": "source",
-    "color": "#FF5722",
+    "color": "#4CAF50",
     "path": "wiki/sources/intro-to-llms.md",
     "preview": "## Summary A comprehensive overview of how [[LargeLanguageModels]] work, from tokenization to autoregressive generation, covering [[GPT]], [[BERT]], and modern architectures. ## Key Claims",
     "tags": [
@@ -2448,14 +2477,14 @@ const originalNodes = [
       "overview"
     ],
     "last_updated": "2024-01-15",
-    "group": 3,
+    "group": -1,
     "value": 9
   },
   {
     "id": "sources/iteration-test",
     "label": "Iteration Test",
     "type": "source",
-    "color": "#009688",
+    "color": "#4CAF50",
     "path": "wiki/sources/iteration-test.md",
     "preview": "## Summary A minimal test document for verifying iteration behavior. It mentions [[ArtificialIntelligence]] and [[MachineLearning]] as key concepts. ## Key Claims",
     "tags": [
@@ -2463,14 +2492,14 @@ const originalNodes = [
       "iteration"
     ],
     "last_updated": "2026-05-08",
-    "group": 16,
+    "group": -1,
     "value": 1
   },
   {
     "id": "sources/latte-claude-code-fork",
     "label": "Latte — Claude Code 可构建分支 (AGENTS.md)",
     "type": "source",
-    "color": "#E91E63",
+    "color": "#4CAF50",
     "path": "wiki/sources/latte-claude-code-fork.md",
     "preview": "## Summary AGENTS.md 是 **latte** 项目的操作指引文件。latte 是 [[Anthropic]] [[Claude]] Code CLI（版本 2.1.90）的一个可构建分支（fork），由用户 wxj-1019 维护。核心差异包括：移除遥测、移除安全硬编码守卫、解锁 54 个实验性功能、内置中文界面与多模型支持（通过 [[OpenAI]] 兼容适配器接入 [[DeepSeek]]、Kimi、GLM、[[",
     "tags": [
@@ -2482,14 +2511,14 @@ const originalNodes = [
       "ai-agent"
     ],
     "last_updated": "2026-05-08",
-    "group": 0,
+    "group": -1,
     "value": 14
   },
   {
     "id": "sources/log-file-test",
     "label": "Log File Test",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/log-file-test.md",
     "preview": "## Summary A minimal test document that validates background graph rebuild with file logging works correctly after ingestion. ## Key Claims",
     "tags": [
@@ -2498,14 +2527,14 @@ const originalNodes = [
       "graph"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 7
   },
   {
     "id": "sources/log-verify-test",
     "label": "Log Verify Test",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/log-verify-test.md",
     "preview": "## Summary A minimal test document that verifies background graph rebuild logging is working correctly. It references [[Transformer]] and graph rebuild pipeline concepts. ## Key Claims",
     "tags": [
@@ -2514,14 +2543,14 @@ const originalNodes = [
       "graph"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 5
   },
   {
     "id": "sources/main-fund-selection-system-analysis",
     "label": "主力选股系统整体分析文档",
     "type": "source",
-    "color": "#00BCD4",
+    "color": "#4CAF50",
     "path": "wiki/sources/main-fund-selection-system-analysis.md",
     "preview": "## Summary 本文档详细描述了一套[[AIAgent|AI驱动的]]旗舰智能选股系统\"主力选股\"的完整架构。该系统采用从数据获取到回测验证的六层流水线设计，集成了7种选股策略、量化预评分系统、5位[[AIAgent|AI分析师]]并行分析、资深研究员综合决策和自动回测验证机制，目标是从全市场主力资金流入股票中每日精选3-10只最优标的。 ## Key Claims",
     "tags": [
@@ -2532,25 +2561,25 @@ const originalNodes = [
       "system-design"
     ],
     "last_updated": "2026-05-06",
-    "group": 1,
+    "group": -1,
     "value": 16
   },
   {
     "id": "sources/test-document-2",
     "label": "Test Document 2",
     "type": "source",
-    "color": "#3F51B5",
+    "color": "#4CAF50",
     "path": "wiki/sources/test-document-2.md",
     "preview": "## Summary A minimal test document intended for ingestion analysis and validation. ## Key Claims",
     "last_updated": "2026-05-08",
-    "group": 18,
+    "group": -1,
     "value": 1
   },
   {
     "id": "sources/things-we-learned-about-llms-in-2024",
     "label": "Things we learned about LLMs in 2024",
     "type": "source",
-    "color": "#E91E63",
+    "color": "#4CAF50",
     "path": "wiki/sources/things-we-learned-about-llms-in-2024.md",
     "preview": "## Summary [[SimonWillison]]'s comprehensive review of the LLM landscape in 2024, covering the breaking of the [[GPT4]] barrier, plummeting costs, multimodal capabilities, the rise of inference-scaling reasoning models (",
     "tags": [
@@ -2560,14 +2589,14 @@ const originalNodes = [
       "simon-willison"
     ],
     "last_updated": "2024-12-31",
-    "group": 0,
+    "group": -1,
     "value": 22
   },
   {
     "id": "sources/threading-rebuild-test",
     "label": "Threading Rebuild Test",
     "type": "source",
-    "color": "#F44336",
+    "color": "#4CAF50",
     "path": "wiki/sources/threading-rebuild-test.md",
     "preview": "## Summary A minimal test document designed to verify that background graph rebuild via threading works correctly. ## Key Claims",
     "tags": [
@@ -2576,14 +2605,14 @@ const originalNodes = [
       "graph"
     ],
     "last_updated": "2026-05-08",
-    "group": 17,
+    "group": -1,
     "value": 8
   },
   {
     "id": "sources/wangxinjie-backend-developer-resume",
     "label": "王信杰 — 后端开发工程师简历",
     "type": "source",
-    "color": "#673AB7",
+    "color": "#4CAF50",
     "path": "wiki/sources/wangxinjie-backend-developer-resume.md",
     "preview": "## Summary 王信杰的求职简历，浙江科技大学毕业生，曾在[[海康威视]]担任后端开发实习生。参与过[[能源大数据平台]]和[[慧公寓管理系统]]两个主要项目，具备Spring Boot微服务架构、Redis集群、区块链（[[HyperledgerFabric]]）和AI混合模型（[[DeepLearning|深度学习]]+[[GeneticAlgorithm|遗传算法]]）的实战经验。有论文被EI检索。竞赛方面获得过[[中国计算",
     "tags": [
@@ -2593,14 +2622,14 @@ const originalNodes = [
       "blockchain"
     ],
     "last_updated": "2026-05-08",
-    "group": 14,
+    "group": -1,
     "value": 15
   },
   {
     "id": "syntheses/foundation-models-overview",
     "label": "Foundation Models Overview",
     "type": "synthesis",
-    "color": "#FF5722",
+    "color": "#9C27B0",
     "path": "wiki/syntheses/foundation-models-overview.md",
     "preview": "# Foundation Models Overview Foundation models are large-scale AI models trained on broad data that can be adapted to a wide range of downstream tasks. ## The Transformer Era",
     "tags": [
@@ -2609,14 +2638,14 @@ const originalNodes = [
       "foundation-models"
     ],
     "last_updated": "2024-03-25",
-    "group": 3,
+    "group": -1,
     "value": 9
   },
   {
     "id": "memory/context-packs/pack-transformer-architecture-20260505-043224",
     "label": "Context Pack: transformer architecture",
     "type": "synthesis",
-    "color": "#FF5722",
+    "color": "#9C27B0",
     "path": "wiki/memory/context-packs/pack-transformer-architecture-20260505-043224.md",
     "preview": "# Context Pack: transformer architecture **Budget**: 3000 tokens | **Pages**: 1 | **Estimated**: 306 tokens ## Pages",
     "tags": [
@@ -2624,7 +2653,7 @@ const originalNodes = [
       "memory"
     ],
     "last_updated": "2026-05-05",
-    "group": 3,
+    "group": -1,
     "value": 11
   }
 ];
@@ -8923,11 +8952,14 @@ const originalEdges = [
   ...edge,
   id: edge.id || `${edge.from}->${edge.to}:${edge.type || "INFERRED"}`,
 }));
-const nodes = new vis.DataSet(originalNodes);
-const edges = new vis.DataSet(originalEdges);
+const nodes = new vis.DataSet();
+const edges = new vis.DataSet();
 const adjacency = new Map();
 const searchInput = document.getElementById("search");
 const stats = document.getElementById("stats");
+const loaderProgress = document.getElementById("loader-progress");
+const loaderBarInner = document.getElementById("loader-bar-inner");
+const loadingOverlay = document.getElementById("loading-overlay");
 const controls = {
   extracted: document.getElementById("cb-extracted"),
   inferred: document.getElementById("cb-inferred"),
@@ -8937,6 +8969,43 @@ const controls = {
 };
 const nodeMap = new Map(originalNodes.map(node => [node.id, node]));
 let activeNodeId = null;
+
+// Batch load data to avoid blocking the UI on large graphs
+const BATCH_SIZE = 80;
+function batchAddItems(dataSet, items, onProgress) {
+  return new Promise((resolve) => {
+    let idx = 0;
+    function addBatch() {
+      const batch = items.slice(idx, idx + BATCH_SIZE);
+      dataSet.add(batch);
+      idx += batch.length;
+      if (onProgress) onProgress(idx, items.length);
+      if (idx < items.length) {
+        requestAnimationFrame(addBatch);
+      } else {
+        resolve();
+      }
+    }
+    addBatch();
+  });
+}
+
+async function initGraph() {
+  // Phase 1: load nodes
+  await batchAddItems(nodes, originalNodes, (done, total) => {
+    loaderProgress.textContent = `Loading nodes... ${done} / ${total}`;
+    loaderBarInner.style.width = `${(done / total) * 35}%`;
+  });
+  // Phase 2: load edges
+  await batchAddItems(edges, originalEdges, (done, total) => {
+    loaderProgress.textContent = `Loading edges... ${done} / ${total}`;
+    loaderBarInner.style.width = `${35 + (done / total) * 25}%`;
+  });
+  // Phase 3: build network (triggers physics)
+  loaderProgress.textContent = "Computing layout...";
+  loaderBarInner.style.width = "65%";
+  initNetwork();
+}
 
 function hexToRgba(color, alpha) {
   if (!color) return `rgba(255, 255, 255, ${alpha})`;
@@ -9260,39 +9329,70 @@ const container = document.getElementById("graph");
 
 // Adaptive physics based on graph size
 const nodeCount = originalNodes.length;
-const gravConst = nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
-const springLen = nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
+const gravConst = nodeCount > 150 ? -12000 : nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
+const springLen = nodeCount > 150 ? 300 : nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
 
-const network = new vis.Network(container, { nodes, edges }, {
-  nodes: {
-    shape: "dot",
-    font: { color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" },
-    borderWidth: 1.5,
-    scaling: {
-      min: 8,
-      max: 40,
-      label: { enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 },
+let network = null;
+
+function initNetwork() {
+  network = new vis.Network(container, { nodes, edges }, {
+    nodes: {
+      shape: "dot",
+      font: { color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" },
+      borderWidth: 1.5,
+      scaling: {
+        min: 8,
+        max: 40,
+        label: { enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 },
+      },
     },
-  },
-  edges: {
-    width: 0.8,
-    smooth: { type: "continuous" },
-    arrows: { to: { enabled: true, scaleFactor: 0.4 } },
-    color: { inherit: false },
-    hoverWidth: 2,
-  },
-  physics: {
-    stabilization: { iterations: 250, updateInterval: 25, fit: true },
-    barnesHut: { gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 },
-    minVelocity: 0.75,
-  },
-  interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
-});
+    edges: {
+      width: 0.8,
+      smooth: { type: "continuous" },
+      arrows: { to: { enabled: true, scaleFactor: 0.4 } },
+      color: { inherit: false },
+      hoverWidth: 2,
+    },
+    physics: {
+      stabilization: { iterations: 200, updateInterval: 25, fit: true },
+      barnesHut: { gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 },
+      minVelocity: 0.75,
+    },
+    interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
+  });
 
-// Ensure the graph fits the viewport after physics stabilization
-network.once("stabilizationIterationsDone", function () {
-  network.fit({ animation: { duration: 400, easingFunction: "easeInOutQuad" } });
-});
+  // Update progress during physics stabilization
+  network.on("stabilizationProgress", function(params) {
+    const pct = Math.min(100, Math.round((params.iterations / params.total) * 100));
+    loaderBarInner.style.width = `${65 + (pct * 0.32)}%`;
+    loaderProgress.textContent = `Computing layout... ${params.iterations} / ${params.total}`;
+  });
+
+  // Hide loader when stable and fit viewport
+  network.once("stabilizationIterationsDone", function () {
+    loaderBarInner.style.width = "100%";
+    loaderProgress.textContent = "Ready!";
+    setTimeout(() => loadingOverlay.classList.add("hidden"), 500);
+    network.fit({ animation: { duration: 400, easingFunction: "easeInOutQuad" } });
+  });
+
+  network.on("click", params => {
+    if (params.nodes.length > 0) {
+      focusNode(params.nodes[0]);
+    } else {
+      clearSelection();
+    }
+  });
+
+  applyFilters();
+}
+
+// Start initialization when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initGraph);
+} else {
+  initGraph();
+}
 
 function focusNode(nodeId) {
   activeNodeId = nodeId;
@@ -9306,15 +9406,7 @@ function focusNode(nodeId) {
   });
 }
 
-network.on("click", params => {
-  if (params.nodes.length > 0) {
-    focusNode(params.nodes[0]);
-  } else {
-    clearSelection();
-  }
-});
-
-applyFilters();
+// Click handler moved into initNetwork
 </script>
 </body>
 </html>

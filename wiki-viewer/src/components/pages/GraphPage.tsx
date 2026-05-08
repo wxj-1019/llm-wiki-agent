@@ -77,6 +77,9 @@ export function GraphPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
   const [rebuilding, setRebuilding] = useState(false);
+  const [loadPhase, setLoadPhase] = useState('');
+  const [loadProgress, setLoadProgress] = useState(0);
+  const initRef = useRef(false);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   // Close onboarding on Escape
@@ -128,43 +131,32 @@ export function GraphPage() {
     return edges.filter((e) => e.from === nodeId || e.to === nodeId);
   }, [edges]);
 
-  useEffect(() => {
-    if (!containerRef.current || !graphData || nodes.length === 0) return;
-
-    // Destroy previous network if it exists
-    if (networkRef.current) {
-      networkRef.current.destroy();
-      networkRef.current = null;
-    }
-
+  // Build vis-formatted data from raw graph data
+  const buildVisData = useCallback(() => {
     const fontColor = getComputedColor('--text-primary');
-
     const themeColors = getThemeColors();
-    const visNodes = nodes
-      .filter((n) => filterTypes.has(n.type) && (!filterCommunities || filterCommunities.has(n.group ?? 0)))
-      .map((n) => {
-        const ic = themeColors[n.type] || getAppleNodeColor(n.group);
-        return {
-          id: n.id,
-          label: n.label,
-          type: n.type,
-          color: {
-            background: ic,
-            border: ic,
-            highlight: { background: ic, border: '#fff' },
-          },
-          value: n.value,
-          title: n.preview,
-          font: {
-            color: fontColor,
-            size: 13,
-            face: 'system-ui, -apple-system, sans-serif',
-            strokeWidth: 3,
-            strokeColor: getComputedColor('--bg-primary'),
-          },
-        };
-      });
-
+    const visNodes = nodes.map((n) => {
+      const ic = themeColors[n.type] || getAppleNodeColor(n.group);
+      return {
+        id: n.id,
+        label: n.label,
+        type: n.type,
+        color: {
+          background: ic,
+          border: ic,
+          highlight: { background: ic, border: '#fff' },
+        },
+        value: n.value,
+        title: n.preview,
+        font: {
+          color: fontColor,
+          size: 13,
+          face: 'system-ui, -apple-system, sans-serif',
+          strokeWidth: 3,
+          strokeColor: getComputedColor('--bg-primary'),
+        },
+      };
+    });
     const nodeIds = new Set(visNodes.map((n) => n.id));
     const visEdges = edges
       .filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to))
@@ -177,11 +169,38 @@ export function GraphPage() {
         dashes: e.type === 'AMBIGUOUS',
         arrows: 'to' as const,
       }));
+    return { visNodes, visEdges };
+  }, [nodes, edges]);
+
+  // Main network initialization / update effect
+  useEffect(() => {
+    if (!containerRef.current || !graphData || nodes.length === 0) return;
+
+    const { visNodes, visEdges } = buildVisData();
+
+    // If network already exists, just update datasets instead of destroy+recreate
+    if (networkRef.current && nodesDataSetRef.current && edgesDataSetRef.current) {
+      nodesDataSetRef.current.clear();
+      edgesDataSetRef.current.clear();
+      nodesDataSetRef.current.add(visNodes);
+      edgesDataSetRef.current.add(visEdges);
+      return;
+    }
+
+    // First-time initialization
+    setLoadPhase('Building knowledge graph...');
+    setLoadProgress(10);
 
     const nodesDataSet = new DataSet(visNodes);
     const edgesDataSet = new DataSet(visEdges);
     nodesDataSetRef.current = nodesDataSet;
     edgesDataSetRef.current = edgesDataSet;
+
+    setLoadProgress(30);
+    setLoadPhase('Computing layout...');
+
+    const gravConst = nodes.length > 150 ? -12000 : nodes.length > 80 ? -8000 : -3000;
+    const springLen = nodes.length > 150 ? 200 : nodes.length > 80 ? 160 : 120;
 
     const network = new VisNetwork(
       containerRef.current,
@@ -189,13 +208,16 @@ export function GraphPage() {
       { nodes: nodesDataSet as any, edges: edgesDataSet as any },
       {
         physics: {
+          stabilization: { iterations: 150, updateInterval: 25, fit: true },
           barnesHut: {
-            gravitationalConstant: -3000,
-            springLength: 120,
+            gravitationalConstant: gravConst,
+            springLength: springLen,
             springConstant: 0.04,
+            damping: 0.15,
           },
+          minVelocity: 0.75,
         },
-        interaction: { hover: true, tooltipDelay: 150 },
+        interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
         nodes: {
           shape: 'dot',
           scaling: { min: 8, max: 30 },
@@ -204,6 +226,19 @@ export function GraphPage() {
     );
 
     networkRef.current = network;
+    initRef.current = true;
+
+    network.on('stabilizationProgress', (params: any) => {
+      const pct = Math.min(100, Math.round((params.iterations / params.total) * 100));
+      setLoadProgress(30 + Math.round(pct * 0.65));
+    });
+
+    network.once('stabilizationIterationsDone', () => {
+      setLoadProgress(100);
+      setLoadPhase('Ready!');
+      setTimeout(() => setLoadPhase(''), 600);
+      network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+    });
 
     network.on('click', (params) => {
       if (params.nodes.length > 0) {
@@ -227,10 +262,11 @@ export function GraphPage() {
       if (networkRef.current) {
         networkRef.current.destroy();
         networkRef.current = null;
+        initRef.current = false;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphData, isEditing, filterTypes, filterCommunities]); // Re-run when filters change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphData, isEditing]);
 
   // Update node colors when theme changes
   useEffect(() => {
@@ -289,12 +325,36 @@ export function GraphPage() {
     { key: 'synthesis', labelKey: 'type.synthesis', color: 'bg-apple-orange' },
   ];
 
-  if (loading) {
+  // Show loading overlay during wikiStore fetch OR during first network init
+  const showLoader = loading || (!!loadPhase && !initRef.current);
+
+  if (showLoader) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 size={32} className="text-apple-blue animate-spin mx-auto mb-4" />
-          <p className="text-sm text-[var(--text-secondary)]">{t('graph.loading')}</p>
+      <div className="h-full flex items-center justify-center bg-[var(--bg-primary)]">
+        <div className="text-center w-64">
+          <div className="relative w-12 h-12 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-2 border-[var(--border-default)]" />
+            <div className="absolute inset-0 rounded-full border-2 border-apple-blue border-t-transparent animate-spin" />
+          </div>
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-2">
+            {loadPhase || t('graph.loading')}
+          </p>
+          {loadProgress > 0 && (
+            <>
+              <div className="h-1 bg-[var(--bg-secondary)] rounded-full overflow-hidden mb-2">
+                <div
+                  className="h-full bg-apple-blue transition-all duration-300"
+                  style={{ width: `${loadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">{loadProgress}%</p>
+            </>
+          )}
+          {!loadPhase && nodes.length > 0 && (
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              {nodes.length} nodes · {edges.length} edges
+            </p>
+          )}
         </div>
       </div>
     );

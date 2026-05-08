@@ -140,6 +140,29 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
     padding: 10px 14px; border-radius: 10px; font-size: 12px;
     backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
   }}
+  /* Loading overlay */
+  #loading-overlay {{
+    position: fixed; inset: 0; background: #1a1a2e; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease;
+  }}
+  #loading-overlay.hidden {{ opacity: 0; pointer-events: none; }}
+  .loader-ring {{
+    width: 56px; height: 56px; border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #FF5722; border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }}
+  @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  .loader-text {{ margin-top: 16px; font-size: 14px; color: #bbb; }}
+  .loader-progress {{ margin-top: 8px; font-size: 12px; color: #888; min-height: 18px; }}
+  .loader-bar {{
+    width: 220px; height: 3px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; margin-top: 12px; overflow: hidden;
+  }}
+  .loader-bar-inner {{
+    height: 100%; background: #FF5722; border-radius: 2px;
+    transition: width 0.3s ease;
+  }}
 </style>
 </head>
 <body>
@@ -161,6 +184,12 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
     </div>
   </div>
   <p>Click a node to highlight its connected neighbors and view the markdown on the right. Click the background to restore the full graph.</p>
+</div>
+<div id="loading-overlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Building knowledge graph...</div>
+  <div class="loader-progress" id="loader-progress">0 / 0 nodes</div>
+  <div class="loader-bar"><div class="loader-bar-inner" id="loader-bar-inner" style="width:0%"></div></div>
 </div>
 <div id="graph"></div>
 <aside id="drawer">
@@ -188,11 +217,14 @@ const originalEdges = {edges_json}.map(edge => ({{
   ...edge,
   id: edge.id || `${{edge.from}}->${{edge.to}}:${{edge.type || "INFERRED"}}`,
 }}));
-const nodes = new vis.DataSet(originalNodes);
-const edges = new vis.DataSet(originalEdges);
+const nodes = new vis.DataSet();
+const edges = new vis.DataSet();
 const adjacency = new Map();
 const searchInput = document.getElementById("search");
 const stats = document.getElementById("stats");
+const loaderProgress = document.getElementById("loader-progress");
+const loaderBarInner = document.getElementById("loader-bar-inner");
+const loadingOverlay = document.getElementById("loading-overlay");
 const controls = {{
   extracted: document.getElementById("cb-extracted"),
   inferred: document.getElementById("cb-inferred"),
@@ -202,6 +234,43 @@ const controls = {{
 }};
 const nodeMap = new Map(originalNodes.map(node => [node.id, node]));
 let activeNodeId = null;
+
+// Batch load data to avoid blocking the UI on large graphs
+const BATCH_SIZE = 80;
+function batchAddItems(dataSet, items, onProgress) {{
+  return new Promise((resolve) => {{
+    let idx = 0;
+    function addBatch() {{
+      const batch = items.slice(idx, idx + BATCH_SIZE);
+      dataSet.add(batch);
+      idx += batch.length;
+      if (onProgress) onProgress(idx, items.length);
+      if (idx < items.length) {{
+        requestAnimationFrame(addBatch);
+      }} else {{
+        resolve();
+      }}
+    }}
+    addBatch();
+  }});
+}}
+
+async function initGraph() {{
+  // Phase 1: load nodes
+  await batchAddItems(nodes, originalNodes, (done, total) => {{
+    loaderProgress.textContent = `Loading nodes... ${{done}} / ${{total}}`;
+    loaderBarInner.style.width = `${{(done / total) * 35}}%`;
+  }});
+  // Phase 2: load edges
+  await batchAddItems(edges, originalEdges, (done, total) => {{
+    loaderProgress.textContent = `Loading edges... ${{done}} / ${{total}}`;
+    loaderBarInner.style.width = `${{35 + (done / total) * 25}}%`;
+  }});
+  // Phase 3: build network (triggers physics)
+  loaderProgress.textContent = "Computing layout...";
+  loaderBarInner.style.width = "65%";
+  initNetwork();
+}}
 
 function hexToRgba(color, alpha) {{
   if (!color) return `rgba(255, 255, 255, ${{alpha}})`;
@@ -525,39 +594,70 @@ const container = document.getElementById("graph");
 
 // Adaptive physics based on graph size
 const nodeCount = originalNodes.length;
-const gravConst = nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
-const springLen = nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
+const gravConst = nodeCount > 150 ? -12000 : nodeCount > 80 ? -8000 : nodeCount > 30 ? -5000 : -2000;
+const springLen = nodeCount > 150 ? 300 : nodeCount > 80 ? 250 : nodeCount > 30 ? 200 : 150;
 
-const network = new vis.Network(container, {{ nodes, edges }}, {{
-  nodes: {{
-    shape: "dot",
-    font: {{ color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" }},
-    borderWidth: 1.5,
-    scaling: {{
-      min: 8,
-      max: 40,
-      label: {{ enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 }},
+let network = null;
+
+function initNetwork() {{
+  network = new vis.Network(container, {{ nodes, edges }}, {{
+    nodes: {{
+      shape: "dot",
+      font: {{ color: "#ddd", size: 12, strokeWidth: 3, strokeColor: "#111" }},
+      borderWidth: 1.5,
+      scaling: {{
+        min: 8,
+        max: 40,
+        label: {{ enabled: true, min: 10, max: 20, drawThreshold: 6, maxVisible: 24 }},
+      }},
     }},
-  }},
-  edges: {{
-    width: 0.8,
-    smooth: {{ type: "continuous" }},
-    arrows: {{ to: {{ enabled: true, scaleFactor: 0.4 }} }},
-    color: {{ inherit: false }},
-    hoverWidth: 2,
-  }},
-  physics: {{
-    stabilization: {{ iterations: 250, updateInterval: 25, fit: true }},
-    barnesHut: {{ gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 }},
-    minVelocity: 0.75,
-  }},
-  interaction: {{ hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true }},
-}});
+    edges: {{
+      width: 0.8,
+      smooth: {{ type: "continuous" }},
+      arrows: {{ to: {{ enabled: true, scaleFactor: 0.4 }} }},
+      color: {{ inherit: false }},
+      hoverWidth: 2,
+    }},
+    physics: {{
+      stabilization: {{ iterations: 200, updateInterval: 25, fit: true }},
+      barnesHut: {{ gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 }},
+      minVelocity: 0.75,
+    }},
+    interaction: {{ hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true }},
+  }});
 
-// Ensure the graph fits the viewport after physics stabilization
-network.once("stabilizationIterationsDone", function () {{
-  network.fit({{ animation: {{ duration: 400, easingFunction: "easeInOutQuad" }} }});
-}});
+  // Update progress during physics stabilization
+  network.on("stabilizationProgress", function(params) {{
+    const pct = Math.min(100, Math.round((params.iterations / params.total) * 100));
+    loaderBarInner.style.width = `${{65 + (pct * 0.32)}}%`;
+    loaderProgress.textContent = `Computing layout... ${{params.iterations}} / ${{params.total}}`;
+  }});
+
+  // Hide loader when stable and fit viewport
+  network.once("stabilizationIterationsDone", function () {{
+    loaderBarInner.style.width = "100%";
+    loaderProgress.textContent = "Ready!";
+    setTimeout(() => loadingOverlay.classList.add("hidden"), 500);
+    network.fit({{ animation: {{ duration: 400, easingFunction: "easeInOutQuad" }} }});
+  }});
+
+  network.on("click", params => {{
+    if (params.nodes.length > 0) {{
+      focusNode(params.nodes[0]);
+    }} else {{
+      clearSelection();
+    }}
+  }});
+
+  applyFilters();
+}}
+
+// Start initialization when DOM is ready
+if (document.readyState === "loading") {{
+  document.addEventListener("DOMContentLoaded", initGraph);
+}} else {{
+  initGraph();
+}}
 
 function focusNode(nodeId) {{
   activeNodeId = nodeId;
@@ -571,15 +671,7 @@ function focusNode(nodeId) {{
   }});
 }}
 
-network.on("click", params => {{
-  if (params.nodes.length > 0) {{
-    focusNode(params.nodes[0]);
-  }} else {{
-    clearSelection();
-  }}
-}});
-
-applyFilters();
+// Click handler moved into initNetwork
 </script>
 </body>
 </html>"""
