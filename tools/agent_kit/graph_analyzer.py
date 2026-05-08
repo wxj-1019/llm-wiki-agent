@@ -2,6 +2,7 @@
 """Analyze knowledge graph for entity/concept ranking."""
 from __future__ import annotations
 
+import itertools
 import logging
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING
@@ -82,14 +83,17 @@ def _approximate_betweenness(
 
     # Determine sample size
     total_pairs = len(nodes) * (len(nodes) - 1) // 2
-    import itertools
     import random
 
-    all_pairs = list(itertools.combinations(nodes, 2))
-    if len(all_pairs) > sample_limit:
-        pairs = random.sample(all_pairs, sample_limit)
+    if total_pairs <= sample_limit:
+        pairs = list(itertools.combinations(nodes, 2))
     else:
-        pairs = all_pairs
+        sampled_set: set[tuple[str, str]] = set()
+        while len(sampled_set) < sample_limit:
+            a, b = random.sample(nodes, 2)
+            pair = (a, b) if a < b else (b, a)
+            sampled_set.add(pair)
+        pairs = list(sampled_set)
 
     for src, tgt in pairs:
         path = _bfs_path(adj, src, tgt)

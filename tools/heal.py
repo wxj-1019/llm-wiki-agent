@@ -17,6 +17,7 @@ import os
 import re
 import sys
 import argparse
+import tempfile
 from pathlib import Path
 from datetime import date
 
@@ -45,6 +46,21 @@ try:
 except ImportError:
     def read_file(path: Path) -> str:
         return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp_path, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 try:
@@ -170,7 +186,7 @@ def update_index(entries: list[str]) -> None:
             content = content.replace(section_header + "\n", section_header + "\n" + entry + "\n")
         else:
             content += f"\n{section_header}\n{entry}\n"
-    INDEX_FILE.write_text(content, encoding="utf-8")
+    _atomic_write(INDEX_FILE, content)
 
 
 def heal_missing_entities(dry_run: bool = False):
@@ -218,6 +234,7 @@ def heal_missing_entities(dry_run: bool = False):
             context += f"\n\n### {s.name}\n{s.read_text(encoding='utf-8')[:800]}"
 
         safe_entity_name = entity.replace('\\', '\\\\').replace('"', '\\"')
+        source_names = ", ".join(s.name for s in sources)
         prompt = f"""You are filling a data gap in the Personal LLM Wiki.
 Create an Entity definition page for "{safe_entity_name}".
 
@@ -229,7 +246,7 @@ Format:
 title: "{safe_entity_name}"
 type: entity
 tags: []
-sources: {[s.name for s in sources]}
+sources: [{source_names}]
 ---
 
 # {safe_entity_name}
@@ -245,11 +262,16 @@ Write a comprehensive paragraph defining what `{safe_entity_name}` means in the 
                 continue
             normalized = re.sub(r'[\\/:*?"<>|]', '', safe_entity)
             normalized = normalized.replace(" ", "").replace("-", "")
+            # Guard against empty filename after normalization (e.g., entity was only spaces/hyphens)
+            if not normalized:
+                print(f" [!] Skipping entity — name becomes empty after sanitization: {entity!r}")
+                logger.warning("Skipping empty-normalized entity | entity=%r", entity)
+                continue
             legacy_path = ENTITIES_DIR / f"{safe_entity}.md"
             out_path = ENTITIES_DIR / f"{normalized}.md"
             if legacy_path.exists() and not out_path.exists():
                 out_path = legacy_path
-            out_path.write_text(result, encoding="utf-8")
+            _atomic_write(out_path, result)
             print(f" -> Saved to {out_path.relative_to(REPO_ROOT)}")
             logger.info("Entity page created | entity=%s path=%s chars=%d", entity, out_path.relative_to(REPO_ROOT), len(result))
             created.append((safe_entity, out_path.stem))
@@ -278,7 +300,7 @@ Write a comprehensive paragraph defining what `{safe_entity_name}` means in the 
                 c = p.read_text(encoding="utf-8")
                 nc = normalize_wikilinks(c, canonical_map)
                 if nc != c:
-                    p.write_text(nc, encoding="utf-8")
+                    _atomic_write(p, nc)
                     normalized_count += 1
             if normalized_count:
                 logger.info("Wikilinks normalized | pages_updated=%d", normalized_count)

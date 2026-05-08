@@ -36,13 +36,17 @@ REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 
 _mcp_search_engine = None
+_mcp_search_engine_lock = __import__('threading').Lock()
 
 
 def _get_mcp_search_engine():
     global _mcp_search_engine
-    if _mcp_search_engine is None:
-        from tools.search_engine import WikiSearchEngine
-        _mcp_search_engine = WikiSearchEngine()
+    if _mcp_search_engine is not None:
+        return _mcp_search_engine
+    with _mcp_search_engine_lock:
+        if _mcp_search_engine is None:
+            from tools.search_engine import WikiSearchEngine
+            _mcp_search_engine = WikiSearchEngine()
     return _mcp_search_engine
 RAW = REPO / "raw"
 META_FILES = {"index.md", "log.md", "lint-report.md", "health-report.md"}
@@ -53,7 +57,7 @@ try:
     from mcp.server.fastmcp import FastMCP
 except ImportError:
     logger.error("mcp package not installed. Run: pip install mcp>=1.2.0")
-    sys.exit(1)
+    FastMCP = None
 
 
 # ── FastMCP setup ──
@@ -64,11 +68,18 @@ mcp = FastMCP("llm-wiki")
 # ── Helpers ──
 
 def _safe_wiki_path(rel: str) -> Path | None:
-    """Resolve a repo-relative path, ensuring it stays within wiki/."""
     target = (REPO / rel).resolve()
     try:
         target.relative_to(WIKI.resolve())
     except ValueError:
+        return None
+    try:
+        cur = target
+        while cur != WIKI.resolve():
+            if cur.is_symlink() and not str(cur.resolve()).startswith(str(WIKI.resolve())):
+                return None
+            cur = cur.parent
+    except (OSError, ValueError):
         return None
     return target
 

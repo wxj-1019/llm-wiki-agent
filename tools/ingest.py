@@ -71,7 +71,17 @@ except ImportError:
 
     def write_file(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+            os.replace(tmp_path, str(path))
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         print(f"  wrote: {path.relative_to(REPO_ROOT)}")
 
 
@@ -89,19 +99,34 @@ def _load_checkpoint() -> dict:
 
 
 def _save_checkpoint(checkpoint: dict) -> None:
-    """Persist the ingest checkpoint to disk."""
+    """Persist the ingest checkpoint to disk atomically."""
     CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CHECKPOINT_FILE.write_text(json.dumps(checkpoint, indent=2, ensure_ascii=False), encoding="utf-8")
+    content = json.dumps(checkpoint, indent=2, ensure_ascii=False)
+    fd, tmp_path = tempfile.mkstemp(dir=str(CHECKPOINT_FILE.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp_path, str(CHECKPOINT_FILE))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     logger.debug("Checkpoint saved | path=%s entries=%d", CHECKPOINT_FILE, len(checkpoint))
 
 
 def _file_hash(path: Path) -> str:
-    """Return SHA256 hex digest of a file's bytes."""
+    """Return SHA256 hex digest of a file's bytes.
+
+    Returns a unique error marker (not empty string) on failure so two
+    different unreadable files don't hash-collide.
+    """
     h = hashlib.sha256()
     try:
         h.update(path.read_bytes())
     except OSError:
-        return ""
+        return f"error:{path.resolve().as_posix()}"
     return h.hexdigest()
 
 
@@ -176,10 +201,12 @@ except ImportError:
             raise IngestError("litellm not installed")
 
         cfg = _load_llm_config()
-        model = cfg.get("model") or os.getenv(model_env, default_model)
+        model = cfg.get("model") or os.getenv(model_env) or default_model
         provider = cfg.get("provider", "anthropic")
-        if "/" not in model:
+        if model and "/" not in model:
             model = f"{provider}/{model}"
+        elif not model:
+            model = default_model
         api_key = cfg.get("api_key", "")
 
         messages: list[dict] = []
@@ -201,9 +228,15 @@ except ImportError:
 
         logger.info("LLM request (fallback) | model=%s prompt_chars=%d max_tokens=%d", model, len(prompt), max_tokens)
         t0 = time.monotonic()
-        response = completion(**kwargs)
+        try:
+            response = completion(**kwargs)
+        except Exception as e:
+            logger.error("LLM call failed: %s", e)
+            raise
         elapsed = time.monotonic() - t0
-        content = response.choices[0].message.content
+        if not response.choices:
+            raise RuntimeError("LLM returned empty choices (possible content filter)")
+        content = response.choices[0].message.content or ""
         logger.info("LLM response (fallback) | model=%s elapsed=%.2fs response_chars=%d", model, elapsed, len(content))
         return content
 
@@ -234,14 +267,27 @@ def parse_json_from_response(text: str) -> dict:
         raise ValueError("No JSON object found in response")
     depth = 0
     end = start
+    in_string = False       # double-quoted string
+    escape_next = False
     for i in range(start, len(text)):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                end = i + 1
-                break
+        ch = text[i]
+        if in_string:
+            if escape_next:
+                escape_next = False
+            elif ch == "\\":
+                escape_next = True
+            elif ch == '"':
+                in_string = False
+        else:
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
     if depth != 0:
         raise ValueError("Unbalanced JSON braces in response")
     return json.loads(text[start:end])
@@ -319,7 +365,7 @@ def extract_wikilinks(content: str) -> list[str]:
     Handles both [[PageName]] and [[PageName|display alias]] formats.
     Returns the raw link text (including alias if present) for validation.
     """
-    return re.findall(r'\[\[([^\]]+)\]\]', content)
+    return re.findall(r'\[\[([^\[\]]+(?:\|[^\[\]]+)?)\]\]', content)
 
 
 def validate_ingest(changed_pages: list[str] | None = None) -> dict:
@@ -446,6 +492,8 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
         source = converted_path
 
     source_bytes = source.read_bytes()
+    if len(source_bytes) > 50 * 1024 * 1024:
+        raise IngestError(f"File too large ({len(source_bytes) / 1024 / 1024:.1f}MB > 50MB): {source}")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
     today = date.today().isoformat()
 
@@ -547,9 +595,9 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
         logger.error("Invalid slug from LLM | slug=%r", slug)
         print(f"Error: invalid slug from LLM: {slug!r}")
         raise IngestError(f"Invalid slug: {slug!r}")
-    source_path = WIKI_DIR / "sources" / f"{safe_slug}.md"
-    write_file(source_path, data["source_page"])
-    logger.info("Source page written | path=%s slug=%s", source_path.relative_to(REPO_ROOT), safe_slug)
+    wiki_source_path = WIKI_DIR / "sources" / f"{safe_slug}.md"
+    write_file(wiki_source_path, data["source_page"])
+    logger.info("Source page written | path=%s slug=%s", wiki_source_path.relative_to(REPO_ROOT), safe_slug)
 
     def _extract_title_from_content(content: str, fallback: str) -> str:
         if content.startswith("---"):

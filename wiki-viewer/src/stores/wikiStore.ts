@@ -241,6 +241,9 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   },
 
   refreshGraphData: async () => {
+    if (_initPromise) {
+      try { await _initPromise; } catch {}
+    }
     set({ loading: true, error: null });
     try {
       const data = await fetchGraphData();
@@ -336,3 +339,13 @@ useWikiStore.subscribe((state, prevState) => {
 });
 
 applyTheme((persisted.theme as WikiState['theme']) || 'system');
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    if (_persistTimer) {
+      clearTimeout(_persistTimer);
+      _persistTimer = null;
+      writePersist(useWikiStore.getState());
+    }
+  });
+}

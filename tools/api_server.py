@@ -51,6 +51,13 @@ try:
 except ImportError:
     LITELLM_AVAILABLE = False
 
+# web search availability check
+try:
+    from duckduckgo_search import DDGS
+    WEB_SEARCH_AVAILABLE = True
+except ImportError:
+    WEB_SEARCH_AVAILABLE = False
+
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
@@ -73,6 +80,11 @@ MAX_UPLOAD_SIZE = 20 * 1024 * 1024
 MAX_LLM_MESSAGES = 20
 MAX_LLM_CONTENT_SIZE = 50 * 1024  # 50KB
 AGENT_DIR = WIKI / ".agent"
+_GRAPH_REBUILD_LOCK = threading.Lock()
+_TOOL_SCRIPT_WHITELIST = {
+    "lint.py", "heal.py", "refresh.py", "build_graph.py",
+    "fetchers/web_fetcher.py", "batch_compiler.py", "batch_ingest.py",
+}
 
 # ── Webhook auth (optional) ──
 _WEBHOOK_TOKEN = os.environ.get("WIKI_WEBHOOK_TOKEN", "").strip()
@@ -153,12 +165,28 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"ok": False, "error": exc.detail, "code": exc.status_code},
+        )
+    logger.error("Unhandled exception | path=%s error_type=%s error=%s", request.url.path, type(exc).__name__, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"ok": False, "error": "Internal server error", "code": 500},
+    )
+
 # ── Simple in-memory rate limiter ──
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_rate_limit_lock = asyncio.Lock()
 RATE_LIMIT_MAX = 60
 RATE_LIMIT_WINDOW = 60
 _rate_limit_last_cleanup = time.time()
 RATE_LIMIT_CLEANUP_INTERVAL = 300
+
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
@@ -168,16 +196,17 @@ async def rate_limit(request: Request, call_next):
     if client in ("127.0.0.1", "localhost", "::1"):
         return await call_next(request)
     now = time.time()
-    if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
-        expired = [k for k, v in _rate_limit_store.items() if not v or all(now - t >= RATE_LIMIT_WINDOW for t in v)]
-        for k in expired:
-            del _rate_limit_store[k]
-        _rate_limit_last_cleanup = now
-    window = _rate_limit_store.get(client, [])
-    _rate_limit_store[client] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
-    if len(_rate_limit_store[client]) >= RATE_LIMIT_MAX:
-        return JSONResponse(status_code=429, content={"error": "Rate limit exceeded. Please slow down."})
-    _rate_limit_store[client].append(now)
+    async with _rate_limit_lock:
+        if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
+            expired = [k for k, v in _rate_limit_store.items() if not v or all(now - t >= RATE_LIMIT_WINDOW for t in v)]
+            for k in expired:
+                del _rate_limit_store[k]
+            _rate_limit_last_cleanup = now
+        window = _rate_limit_store.get(client, [])
+        _rate_limit_store[client] = [t for t in window if now - t < RATE_LIMIT_WINDOW]
+        if len(_rate_limit_store[client]) >= RATE_LIMIT_MAX:
+            return JSONResponse(status_code=429, content={"error": "Rate limit exceeded. Please slow down."})
+        _rate_limit_store[client].append(now)
     return await call_next(request)
 
 
@@ -355,6 +384,28 @@ def _fallback_search(query: str, limit: int) -> list[dict]:
         if len(results) >= limit:
             break
     return results
+
+
+@app.get("/api/search/web")
+async def search_web(q: str = Query("", min_length=1), limit: int = Query(10, ge=1, le=30)):
+    """Web search via DuckDuckGo. Returns search results with title, URL and snippet."""
+    if not WEB_SEARCH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="duckduckgo-search not installed. Run: pip install duckduckgo-search")
+    if not q or len(q.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
+    try:
+        with DDGS() as ddgs:
+            results = []
+            for r in ddgs.text(q.strip(), max_results=limit):
+                results.append({
+                    "title": r.get("title", ""),
+                    "href": r.get("href", ""),
+                    "body": r.get("body", ""),
+                })
+            return {"results": results, "count": len(results)}
+    except Exception as e:
+        logging.warning("Web search failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Web search failed: {e}")
 
 
 @app.get("/api/search")
@@ -700,10 +751,12 @@ async def multimodal_describe(file: UploadFile = File(...)):
                 status_code=503,
                 detail="No vision backend available. Set GEMINI_API_KEY or OLLAMA_URL.",
             )
-        return {"description": description, "saved_path": tmp_path}
+        return {"description": description}
     finally:
-        # Keep temp file for potential debugging; cleanup is OS responsibility
-        pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
 @app.post("/api/multimodal/ingest")
@@ -839,29 +892,35 @@ async def api_ingest(payload: IngestPayload):
 
 def _rebuild_graph_sync() -> None:
     """Trigger a lightweight graph rebuild after ingestion completes (runs in a background thread)."""
-    import time
-    time.sleep(2)
-    log_path = REPO / ".cache" / "graph_rebuild.log"
+    if not _GRAPH_REBUILD_LOCK.acquire(blocking=False):
+        return
     try:
-        log_path.write_text("Background graph rebuild started\n", encoding="utf-8")
-        env = os.environ.copy()
-        env["PYTHONIOENCODING"] = "utf-8"
-        result = subprocess.run(
-            [PYTHON_EXE, str(REPO / "tools" / "build_graph.py"), "--no-infer"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            cwd=str(REPO),
-            timeout=120,
-            env=env,
-        )
-        log_path.write_text(
-            f"Finished: rc={result.returncode}\nstdout={result.stdout[:500]}\nstderr={result.stderr[:200]}\n",
-            encoding="utf-8",
-        )
-    except Exception as e:
-        log_path.write_text(f"Failed: {e}\n", encoding="utf-8")
+        import time
+        time.sleep(2)
+        log_path = REPO / ".cache" / "graph_rebuild.log"
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_text("Background graph rebuild started\n", encoding="utf-8")
+            env = os.environ.copy()
+            env["PYTHONIOENCODING"] = "utf-8"
+            result = subprocess.run(
+                [PYTHON_EXE, str(REPO / "tools" / "build_graph.py"), "--no-infer"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                cwd=str(REPO),
+                timeout=120,
+                env=env,
+            )
+            log_path.write_text(
+                f"Finished: rc={result.returncode}\nstdout={result.stdout[:500]}\nstderr={result.stderr[:200]}\n",
+                encoding="utf-8",
+            )
+        except Exception as e:
+            log_path.write_text(f"Failed: {e}\n", encoding="utf-8")
+    finally:
+        _GRAPH_REBUILD_LOCK.release()
 
 
 def _calc_ingest_progress(line: str, current: int) -> int:
@@ -1032,8 +1091,10 @@ async def api_ingest_stream(path: str = Query(..., min_length=1)):
 def list_ingest_jobs():
     """Return active and recently-completed ingestion jobs."""
     cutoff = time.time() - 3600  # keep 1 hour
-    active = {k: v for k, v in ingestion_jobs.items() if v.get("updated_at", 0) > cutoff}
-    return {"jobs": list(active.values())}
+    expired = [k for k, v in ingestion_jobs.items() if v.get("updated_at", 0) <= cutoff]
+    for k in expired:
+        del ingestion_jobs[k]
+    return {"jobs": list(ingestion_jobs.values())}
 
 
 @app.get("/api/ingest/jobs/{job_id}")
@@ -1069,6 +1130,14 @@ async def webhook_clip(payload: WebhookClipPayload, _=Depends(_require_webhook_t
         lower_host = hostname.lower()
         if lower_host in ("localhost",) or lower_host.endswith(".local"):
             raise HTTPException(status_code=400, detail="Private/internal URLs are not allowed")
+        try:
+            infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+            for _, _, _, _, sockaddr in infos:
+                resolved_ip = ipaddress.ip_address(sockaddr[0])
+                if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local or resolved_ip.is_reserved:
+                    raise HTTPException(status_code=400, detail="Resolved address is private/internal")
+        except socket.gaierror:
+            raise HTTPException(status_code=400, detail="Could not resolve hostname")
     jina_api = f"https://r.jina.ai/{target_url}"
 
     def _fetch_jina():
@@ -1266,6 +1335,9 @@ async def save_config(name: str, request: Request):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid path")
     path.parent.mkdir(parents=True, exist_ok=True)
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail=f"Config too large (max {MAX_UPLOAD_SIZE // (1024 * 1024)}MB)")
     body = await request.body()
     if yaml:
         try:
@@ -1490,7 +1562,7 @@ def _load_llm_config() -> dict:
     api_key = cfg.get("api_key", "")
     if api_key:
         key_env = f"{provider.upper().replace('-', '_')}_API_KEY"
-        os.environ[key_env] = api_key
+        os.environ.setdefault(key_env, api_key)
     _llm_config_cache = cfg
     _llm_config_cache_ts = now
     return cfg
@@ -1498,10 +1570,10 @@ def _load_llm_config() -> dict:
 
 def _resolve_model(cfg: dict, env_var: str, default: str, model_key: str = "model") -> str:
     """Resolve model name, ensuring provider prefix for litellm."""
-    model = cfg.get(model_key) or os.getenv(env_var, default)
-    provider = cfg.get("provider", "anthropic")
-    if "/" not in model:
-        model = f"{provider}/{model}"
+    model = cfg.get(model_key) or os.getenv(env_var) or default
+    if not model or "/" not in model:
+        provider = cfg.get("provider", "anthropic")
+        model = f"{provider}/{model}" if model else f"{provider}/{default}"
     return model
 
 
@@ -2359,7 +2431,7 @@ async def skills_save(name: str, request: Request):
 
 class WikiWritePayload(BaseModel):
     path: str = Field(..., min_length=1, description="Repo-relative path to wiki page")
-    content: str = Field(..., min_length=1, description="Full markdown content")
+    content: str = Field(..., min_length=1, max_length=10 * 1024 * 1024, description="Full markdown content")
 
 
 @app.post("/api/wiki/write")
@@ -2392,21 +2464,30 @@ async def graph_save_layout(payload: GraphLayoutPayload):
     graph_path = GRAPH / "graph.json"
     if not graph_path.exists():
         raise HTTPException(status_code=404, detail="graph.json not found")
+    tmp_path = None
     try:
-        data = json.loads(graph_path.read_text(encoding="utf-8"))
-        nodes = data.get("nodes", [])
-        for node in nodes:
-            nid = node.get("id")
-            pos = payload.positions.get(nid)
-            if pos and isinstance(pos, dict):
-                node["x"] = pos.get("x")
-                node["y"] = pos.get("y")
-        data["nodes"] = nodes
-        data["layout_saved"] = datetime.now().isoformat()
-        graph_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        with _GRAPH_REBUILD_LOCK:
+            data = json.loads(graph_path.read_text(encoding="utf-8"))
+            nodes = data.get("nodes", [])
+            for node in nodes:
+                nid = node.get("id")
+                pos = payload.positions.get(nid)
+                if pos and isinstance(pos, dict):
+                    node["x"] = pos.get("x")
+                    node["y"] = pos.get("y")
+            data["nodes"] = nodes
+            data["layout_saved"] = datetime.now().isoformat()
+            fd, tmp_path = tempfile.mkstemp(dir=str(GRAPH), suffix=".tmp")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, str(graph_path))
+            tmp_path = None
         return {"success": True, "nodes_updated": len([n for n in nodes if "x" in n])}
     except (json.JSONDecodeError, OSError) as e:
         raise HTTPException(status_code=500, detail=f"Failed to save layout: {e}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 
 # ── Wiki Tools API (lint / heal / refresh / build-graph) ──
@@ -2417,9 +2498,12 @@ class ToolRunPayload(BaseModel):
 
 def _run_tool_script(script_name: str, extra_args: list[str] | None = None) -> dict:
     """Run a tool script via subprocess and return structured result."""
+    if script_name not in _TOOL_SCRIPT_WHITELIST:
+        return {"success": False, "stdout": "", "stderr": f"Script not allowed: {script_name}", "returncode": -1}
     cmd = [PYTHON_EXE, str(REPO / "tools" / script_name)]
     if extra_args:
-        cmd.extend(extra_args)
+        safe_args = [a for a in extra_args if not a.startswith("-") or a in {"--save", "--json", "--dry-run", "--no-infer", "--open", "--force", "--window", "daily", "--config", "--url", "--max-results", "--max-per-feed", "--max-per-repo", "--token"}]
+        cmd.extend(safe_args)
     try:
         result = subprocess.run(
             cmd,
@@ -2668,7 +2752,12 @@ if FRONTEND_DIST.exists():
     @app.get("/{full_path:path}")
     async def spa_index(full_path: str):
         """Serve SPA index.html for all non-API, non-asset routes."""
-        file_path = FRONTEND_DIST / full_path
+        # Prevent path traversal: resolve and verify the path stays within dist/
+        file_path = (FRONTEND_DIST / full_path).resolve()
+        try:
+            file_path.relative_to(FRONTEND_DIST.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Path traversal blocked")
         if file_path.is_file():
             return FileResponse(str(file_path), headers={"Cache-Control": "no-cache"})
         return FileResponse(str(FRONTEND_DIST / "index.html"), headers={"Cache-Control": "no-cache"})

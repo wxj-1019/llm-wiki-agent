@@ -33,7 +33,7 @@ def safe_filename(name: str) -> str:
     """Sanitize a string for use as a filename (not a full path)."""
     safe = name.replace("/", "_").replace("\\", "_")
     safe = safe.replace("..", "_")
-    safe = "".join(ch for ch in safe if ord(ch) > 31)
+    safe = "".join(ch for ch in safe if ord(ch) > 31 and ch not in '<>:"|?*')
     safe = safe.strip()
     if not safe:
         raise ValueError("Filename is empty after sanitization")

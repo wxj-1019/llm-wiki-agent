@@ -154,27 +154,26 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   saveToServer: async () => {
     try {
       const cfg = get().config;
-      // Save github sources
       const githubYaml = buildGithubYaml(cfg);
-      const g1 = await fetch('/api/config/github_sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: githubYaml,
-      });
-      // Save rss sources
       const rssYaml = buildRssYaml(cfg);
-      const g2 = await fetch('/api/config/rss_sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: rssYaml,
-      });
-      // Save arxiv sources
       const arxivYaml = buildArxivYaml(cfg);
-      const g3 = await fetch('/api/config/arxiv_sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: arxivYaml,
-      });
+      const [g1, g2, g3] = await Promise.all([
+        fetch('/api/config/github_sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: githubYaml,
+        }),
+        fetch('/api/config/rss_sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: rssYaml,
+        }),
+        fetch('/api/config/arxiv_sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: arxivYaml,
+        }),
+      ]);
       return g1.ok && g2.ok && g3.ok;
     } catch {
       return false;

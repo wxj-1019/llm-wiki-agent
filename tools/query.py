@@ -15,11 +15,11 @@ Flags:
 import sys
 import re
 import json
+import os
+import tempfile
 import argparse
 from pathlib import Path
 from datetime import date
-
-import os
 
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
@@ -45,7 +45,17 @@ except ImportError:
 
     def write_file(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+            os.replace(tmp_path, str(path))
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         print(f"  saved: {path.relative_to(REPO_ROOT)}")
 
 # ── Shared path safety (with inline fallback) ──
@@ -88,8 +98,7 @@ except ImportError:
         try:
             from litellm import completion
         except ImportError:
-            print("Error: litellm not installed. Run: pip install litellm")
-            sys.exit(1)
+            raise RuntimeError("litellm not installed. Run: pip install litellm")
 
         cfg = _load_llm_config()
         model = cfg.get("model") or os.getenv(model_env, default_model)
@@ -203,6 +212,9 @@ except ImportError:
             LOG_FILE.write_text(LOG_HEADER + "\n" + entry_text + "\n", encoding="utf-8")
             return
         existing = read_file(LOG_FILE).strip()
+        # Dedup: skip if this exact entry already exists in the log
+        if entry_text in existing:
+            return
         if existing.startswith("# Wiki Log"):
             parts = existing.split("\n---\n", 1)
             if len(parts) == 2:
@@ -221,9 +233,7 @@ def query(question: str, save_path: str | None = None):
     # Step 1: Read index
     index_content = read_file(INDEX_FILE)
     if not index_content:
-        print("Wiki is empty. Ingest some sources first with: python tools/ingest.py <source>")
-        logger.error("Wiki index is empty")
-        sys.exit(1)
+        raise RuntimeError("Wiki is empty. Ingest some sources first.")
 
     # Step 2: Find relevant pages
     relevant_pages = find_relevant_pages(question, index_content)
@@ -256,7 +266,10 @@ def query(question: str, save_path: str | None = None):
     pages_context = ""
     for p in relevant_pages:
         rel = p.relative_to(REPO_ROOT)
-        pages_context += f"\n\n### {rel}\n{p.read_text(encoding='utf-8')[:4000]}"
+        try:
+            pages_context += f"\n\n### {rel}\n{p.read_text(encoding='utf-8')[:4000]}"
+        except (OSError, UnicodeDecodeError):
+            continue
 
     if not pages_context:
         pages_context = f"\n\n### wiki/index.md\n{index_content}"

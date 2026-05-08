@@ -8,7 +8,10 @@ All functions are pure or operate only on the filesystem; no LLM calls here.
 """
 from __future__ import annotations
 
+import os
 import re
+import time
+import tempfile
 from pathlib import Path
 from typing import Iterator
 
@@ -24,13 +27,32 @@ META_FILES = {"index.md", "log.md", "lint-report.md", "health-report.md"}
 
 def read_file(path: Path) -> str:
     """Read text from *path* if it exists, otherwise return empty string."""
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+    if not path.exists():
+        return ""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return ""
+    if size > 50 * 1024 * 1024:
+        raise ValueError(f"File too large ({size / 1024 / 1024:.1f}MB > 50MB): {path}")
+    return path.read_text(encoding="utf-8")
 
 
 def write_file(path: Path, content: str) -> None:
-    """Write *content* to *path*, creating parent directories as needed."""
+    """Write *content* to *path* atomically, creating parent directories as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    dir_path = str(path.parent)
+    fd, tmp_path = tempfile.mkstemp(dir=dir_path, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp_path, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def extract_wikilinks(content: str) -> list[str]:
@@ -39,7 +61,8 @@ def extract_wikilinks(content: str) -> list[str]:
     Handles both ``[[PageName]]`` and ``[[PageName|display alias]]`` formats.
     Returns the raw link text (including alias if present).
     """
-    return re.findall(r'\[\[([^\]]+)\]\]', content)
+    # [^\[\]]+ excludes nested [[ inside wikilinks to avoid false matches
+    return re.findall(r'\[\[([^\[\]]+(?:\|[^\[\]]+)?)\]\]', content)
 
 
 def resolve_wikilink_target(link: str) -> str:
@@ -47,11 +70,23 @@ def resolve_wikilink_target(link: str) -> str:
     return link.split("|")[0].strip()
 
 
+_pages_cache: list[Path] | None = None
+_pages_cache_time: float = 0
+_PAGES_CACHE_TTL = 5.0
+
+
 def all_wiki_pages() -> Iterator[Path]:
     """Yield all .md files in wiki/, excluding meta files and agent internals."""
-    for p in WIKI_DIR.rglob("*.md"):
-        if p.name not in META_FILES and ".agent" not in p.parts:
-            yield p
+    global _pages_cache, _pages_cache_time
+    now = time.monotonic()
+    if _pages_cache is not None and now - _pages_cache_time < _PAGES_CACHE_TTL:
+        yield from _pages_cache
+        return
+    pages = [p for p in WIKI_DIR.rglob("*.md")
+             if p.name not in META_FILES and ".agent" not in p.parts]
+    _pages_cache = pages
+    _pages_cache_time = now
+    yield from pages
 
 
 def all_wiki_page_stems() -> set[str]:

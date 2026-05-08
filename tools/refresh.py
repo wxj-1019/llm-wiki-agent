@@ -16,7 +16,7 @@ import sys
 import json
 import hashlib
 import re
-import importlib.util
+import subprocess
 from typing import Optional
 from pathlib import Path
 from datetime import date
@@ -111,23 +111,32 @@ def find_stale_sources(force: bool = False) -> list[tuple[Path, Path]]:
 
 
 def refresh_page(wiki_page: Path, raw_path: Path) -> bool:
-    """Re-ingest a single source document."""
+    """Re-ingest a single source document via subprocess."""
     try:
-        spec = importlib.util.spec_from_file_location("ingest", TOOLS_DIR / "ingest.py")
-        if spec is None or spec.loader is None:
-            print(f"  [ERROR] Could not load ingest module")
-            logger.error("Could not load ingest module | wiki_page=%s raw_path=%s", wiki_page.name, raw_path)
-            return False
-        ingest_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(ingest_mod)
         print(f"\n{'='*60}")
         print(f"  Refreshing: {wiki_page.name}")
         print(f"  From:       {raw_path}")
         print(f"{'='*60}")
         logger.info("Refreshing page | wiki_page=%s raw_path=%s", wiki_page.name, raw_path)
-        ingest_mod.ingest(str(raw_path))
+        result = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "tools" / "ingest.py"), str(raw_path)],
+            capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=300
+        )
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr)
+        if result.returncode != 0:
+            print(f"  [ERROR] Ingest subprocess failed with code {result.returncode}")
+            logger.error("Ingest subprocess failed | wiki_page=%s returncode=%d stderr=%s",
+                         wiki_page.name, result.returncode, result.stderr[:200])
+            return False
         logger.info("Page refreshed successfully | wiki_page=%s", wiki_page.name)
         return True
+    except subprocess.TimeoutExpired:
+        print(f"  [ERROR] Ingest subprocess timed out for {wiki_page.name}")
+        logger.error("Ingest subprocess timeout | wiki_page=%s", wiki_page.name)
+        return False
     except Exception as e:
         print(f"  [ERROR] Failed to refresh {wiki_page.name}: {e}")
         logger.error("Page refresh failed | wiki_page=%s error_type=%s error=%s", wiki_page.name, type(e).__name__, e)
@@ -148,24 +157,20 @@ def main():
         if not wiki_page.suffix:
             wiki_page = wiki_page.with_suffix(".md")
         if not wiki_page.exists():
-            print(f"Page not found: {wiki_page}")
-            sys.exit(1)
+            raise RuntimeError(f"Page not found: {wiki_page}")
         content = read_file(wiki_page)
         source_file = extract_source_file(content)
         if not source_file:
-            print(f"No source_file found in frontmatter of {wiki_page.name}")
-            sys.exit(1)
+            raise RuntimeError(f"Page has no source_file in frontmatter: {wiki_page}")
         raw_path = (REPO_ROOT / source_file).resolve()
         try:
             raw_path.relative_to(REPO_ROOT.resolve())
         except ValueError:
-            print(f"Error: source_file resolves outside repo: {source_file}")
-            sys.exit(1)
+            raise RuntimeError(f"Could not resolve raw path for: {wiki_page}")
         if not raw_path.exists():
             raw_path = (RAW_DIR / source_file).resolve()
         if not raw_path.exists():
-            print(f"Raw document not found: {source_file}")
-            sys.exit(1)
+            raise RuntimeError(f"Could not resolve raw path for: {wiki_page}")
         stale = [(wiki_page, raw_path)]
     else:
         stale = find_stale_sources(force=args.force)

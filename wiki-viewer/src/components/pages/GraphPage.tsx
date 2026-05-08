@@ -43,7 +43,7 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 
-import { Network as NetworkIcon, Loader2, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers } from 'lucide-react';
+import { Network as NetworkIcon, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -51,6 +51,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { typeLabelKey } from '@/i18n';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { safeGet, safeSet } from '@/lib/safeStorage';
+import { ChipLoader } from '@/components/ChipLoader';
 import { getPagePath } from '@/lib/wikilink';
 
 export function GraphPage() {
@@ -75,10 +76,13 @@ export function GraphPage() {
   const [showCommunityFilter, setShowCommunityFilter] = useState(false);
   const [showOnboard, setShowOnboard] = useState(() => !safeGet(GRAPH_ONBOARDED_KEY, (v): v is string => typeof v === 'string', ''));
   const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(isEditing);
+  useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
   const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
   const [rebuilding, setRebuilding] = useState(false);
-  const [loadPhase, setLoadPhase] = useState('');
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [stabilizing, setStabilizing] = useState(false);
+  const stabilizingRef = useRef(false);
+  const [loadWaitSec, setLoadWaitSec] = useState(0);
   const initRef = useRef(false);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -147,7 +151,7 @@ export function GraphPage() {
           highlight: { background: ic, border: '#fff' },
         },
         value: n.value,
-        title: n.preview,
+        title: n.preview?.replace(/</g, '&lt;').replace(/>/g, '&gt;') ?? '',
         font: {
           color: fontColor,
           size: 13,
@@ -187,89 +191,78 @@ export function GraphPage() {
       return;
     }
 
-    // First-time initialization
-    setLoadPhase('Building knowledge graph...');
-    setLoadProgress(10);
-
     const nodesDataSet = new DataSet(visNodes);
     const edgesDataSet = new DataSet(visEdges);
     nodesDataSetRef.current = nodesDataSet;
     edgesDataSetRef.current = edgesDataSet;
 
-    setLoadProgress(30);
-    setLoadPhase('Computing layout...');
-
     const gravConst = nodes.length > 150 ? -12000 : nodes.length > 80 ? -8000 : -3000;
     const springLen = nodes.length > 150 ? 200 : nodes.length > 80 ? 160 : 120;
 
-    const network = new VisNetwork(
-      containerRef.current,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { nodes: nodesDataSet as any, edges: edgesDataSet as any },
-      {
-        physics: {
-          stabilization: { iterations: 150, updateInterval: 25, fit: true },
-          barnesHut: {
-            gravitationalConstant: gravConst,
-            springLength: springLen,
-            springConstant: 0.04,
-            damping: 0.15,
+    // Defer heavy VisNetwork creation to next frame so the loader animation
+    // gets one unblocked frame to start smoothly.
+    const rafId = requestAnimationFrame(() => {
+      const network = new VisNetwork(
+        containerRef.current,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { nodes: nodesDataSet as any, edges: edgesDataSet as any },
+        {
+          physics: {
+            stabilization: { iterations: 50, updateInterval: 50, fit: true },
+            barnesHut: {
+              gravitationalConstant: gravConst,
+              springLength: springLen,
+              springConstant: 0.04,
+              damping: 0.15,
+            },
+            minVelocity: 0.75,
           },
-          minVelocity: 0.75,
-        },
-        interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
-        nodes: {
-          shape: 'dot',
-          scaling: { min: 8, max: 30 },
-        },
-      }
-    );
+          interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
+          nodes: {
+            shape: 'dot',
+            scaling: { min: 8, max: 30 },
+          },
+        }
+      );
 
-    networkRef.current = network;
-    initRef.current = true;
+      networkRef.current = network;
+      initRef.current = true;
 
-    // Throttle progress updates to avoid React re-rendering 40×/sec
-    let lastProgress = -1;
-    let rafId: number | null = null;
-    network.on('stabilizationProgress', (params: any) => {
-      const pct = Math.min(100, Math.round((params.iterations / params.total) * 100));
-      const nextProgress = 30 + Math.round(pct * 0.65);
-      if (nextProgress !== lastProgress) {
-        lastProgress = nextProgress;
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => setLoadProgress(nextProgress));
-      }
-    });
+      setStabilizing(true);
+      stabilizingRef.current = true;
 
-    network.once('stabilizationIterationsDone', () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      setLoadProgress(100);
-      // Let overlay fade out before fitting viewport so the transition feels seamless
-      setTimeout(() => {
-        setLoadPhase('');
+      // Smoothly fit viewport once stabilization completes
+      network.once('stabilizationIterationsDone', () => {
+        if (stabilizingRef.current) {
+          stabilizingRef.current = false;
+          setStabilizing(false);
+        }
         network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
-      }, 200);
-    });
+      });
 
-    network.on('click', (params) => {
-      if (params.nodes.length > 0) {
-        setSelectedNode(params.nodes[0]);
-      } else {
-        setSelectedNode(null);
-      }
-    });
+      network.on('click', (params) => {
+        if (params.nodes.length > 0) {
+          setSelectedNode(params.nodes[0]);
+        } else {
+          setSelectedNode(null);
+        }
+      });
 
-    network.on('doubleClick', (params) => {
-      if (isEditing) return; // Disable navigation in edit mode
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.find((n) => n.id === nodeId);
-        if (!node) return;
-        navigate(getPagePath(node));
-      }
+      network.on('doubleClick', (params) => {
+        if (isEditingRef.current) return;
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          const node = nodes.find((n) => n.id === nodeId);
+          if (!node) return;
+          navigate(getPagePath(node));
+        }
+      });
     });
 
     return () => {
+      cancelAnimationFrame(rafId);
+      stabilizingRef.current = false;
+      setStabilizing(false);
       if (networkRef.current) {
         networkRef.current.destroy();
         networkRef.current = null;
@@ -277,7 +270,7 @@ export function GraphPage() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphData, isEditing]);
+  }, [graphData]);
 
   // Update node colors when theme changes
   useEffect(() => {
@@ -336,7 +329,7 @@ export function GraphPage() {
     { key: 'synthesis', labelKey: 'type.synthesis', color: 'bg-apple-orange' },
   ];
 
-  const showLoader = loading || loadPhase !== '';
+  const showLoader = loading || stabilizing || rebuilding;
 
   if (error || !graphData) {
     return (
@@ -379,8 +372,11 @@ export function GraphPage() {
 
   return (
     <div className="h-full relative">
-      {/* Graph Canvas */}
-      <div ref={containerRef} className="w-full h-full bg-[var(--bg-primary)]" />
+      {/* Graph Canvas — hidden while loading so React doesn't waste time on it */}
+      <div
+        ref={containerRef}
+        className={`w-full h-full bg-[var(--bg-primary)] ${showLoader ? 'invisible' : 'visible'}`}
+      />
 
       {/* Loading Overlay — rendered on top so canvas initializes behind it */}
       <AnimatePresence>
@@ -389,125 +385,20 @@ export function GraphPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]"
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)] loader-bg-grid"
           >
             <div className="text-center">
-              {/* Neural Constellation Loader — pure transform + opacity only */}
-              <div className="relative w-[140px] h-[140px] mx-auto mb-5">
-                {/* Ambient glow behind everything — single element, opacity only */}
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: 'radial-gradient(circle, rgba(255,87,34,0.12) 0%, transparent 65%)',
-                    animation: 'kb-ambient 4s ease-in-out infinite',
-                  }}
-                />
-
-                {/* Core */}
-                <div
-                  className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full z-10"
-                  style={{
-                    background: 'radial-gradient(circle, #ffab91 0%, #ff5722 70%)',
-                    animation: 'kb-core-pulse 2.4s ease-in-out infinite',
-                  }}
-                />
-                {/* Core expanding ring — simulates glow without box-shadow animation */}
-                <div
-                  className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full border border-[#ff5722]/40"
-                  style={{
-                    animation: 'kb-core-ring 2.4s ease-in-out infinite',
-                  }}
-                />
-
-                {/* Orbit 1 */}
-                <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
-                  style={{ width: 40, height: 40, animation: 'kb-spin 6.7s linear infinite' }}
-                >
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#4fc3f7]"
-                    style={{
-                      transform: 'rotate(0deg) translateY(-20px)',
-                      animation: 'kb-node-breathe 2.3s ease-in-out infinite',
-                      animationDelay: '0s',
-                    }}
-                  />
-                </div>
-                {/* Orbit 2 */}
-                <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
-                  style={{ width: 72, height: 72, animation: 'kb-spin 10.3s linear infinite reverse' }}
-                >
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#81c784]"
-                    style={{
-                      transform: 'rotate(70deg) translateY(-36px)',
-                      animation: 'kb-node-breathe 2.9s ease-in-out infinite',
-                      animationDelay: '0.5s',
-                    }}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#ffb74d]"
-                    style={{
-                      transform: 'rotate(250deg) translateY(-36px)',
-                      animation: 'kb-node-breathe 2.9s ease-in-out infinite',
-                      animationDelay: '1.1s',
-                    }}
-                  />
-                </div>
-                {/* Orbit 3 */}
-                <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
-                  style={{ width: 104, height: 104, animation: 'kb-spin 14.9s linear infinite' }}
-                >
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#ba68c8]"
-                    style={{
-                      transform: 'rotate(140deg) translateY(-52px)',
-                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
-                      animationDelay: '0.2s',
-                    }}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#e57373]"
-                    style={{
-                      transform: 'rotate(260deg) translateY(-52px)',
-                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
-                      animationDelay: '1.3s',
-                    }}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#4dd0e1]"
-                    style={{
-                      transform: 'rotate(20deg) translateY(-52px)',
-                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
-                      animationDelay: '1.9s',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <p className="text-[15px] font-medium text-[var(--text-primary)] tracking-wide">
-                {loadPhase || t('graph.loading')}
-              </p>
-              {loadProgress > 0 && (
-                <>
-                  <div className="w-60 h-[3px] bg-white/[0.06] rounded-full overflow-hidden mt-3.5 mx-auto">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${loadProgress}%`,
-                        background: 'linear-gradient(90deg, #ff5722, #ff8a65)',
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)] mt-2">{loadProgress}%</p>
-                </>
-              )}
-              {!loadPhase && nodes.length > 0 && (
-                <p className="text-xs text-[var(--text-secondary)] mt-1">
+              <ChipLoader text={t('graph.loading')} />
+              {nodes.length > 0 && (
+                <p className="text-[11px] text-[var(--text-tertiary)] mt-2 tracking-wider uppercase">
                   {nodes.length} nodes · {edges.length} edges
+                </p>
+              )}
+              <LoadWaitTimer active={showLoader} onTick={setLoadWaitSec} />
+              {loadWaitSec > 5 && (
+                <p className="text-xs text-[var(--text-tertiary)] mt-4 animate-pulse">
+                  {t('graph.loadingSlow', 'Building a large knowledge graph, please wait...')}
                 </p>
               )}
             </div>
@@ -515,10 +406,11 @@ export function GraphPage() {
         )}
       </AnimatePresence>
 
-      {/* Stats Overlay */}
-      <GraphStats nodes={nodes} edges={edges} />
+      {!showLoader && (<>
+        {/* Stats Overlay */}
+        <GraphStats nodes={nodes} edges={edges} />
 
-      {/* Controls */}
+        {/* Controls */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass rounded-2xl px-2 sm:px-4 py-2 flex items-center gap-1 sm:gap-3 max-w-[calc(100vw-2rem)] overflow-x-auto">
         {typeFilters.map((tf) => (
           <button
@@ -609,7 +501,7 @@ export function GraphPage() {
                       style={{ background: getAppleNodeColor(c.id) }}
                     />
                     <span className="flex-1 text-left">
-                      {t('graph.communityLabel', 'Group')} {String.fromCharCode(65 + (c.id % 26))}
+                      {t('graph.communityLabel', 'Group')} {(() => { const n = c.id; return n < 26 ? String.fromCharCode(65 + n) : String.fromCharCode(65 + Math.floor(n / 26) - 1) + String.fromCharCode(65 + (n % 26)); })()}
                     </span>
                     <span className="text-[10px] text-[var(--text-tertiary)]">{c.count}</span>
                   </button>
@@ -719,7 +611,12 @@ export function GraphPage() {
         <button
           onClick={() => {
             if (!graphData) return;
-            const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+            // Strip heavy content fields to avoid OOM on large wikis
+            const exportData = {
+              ...graphData,
+              nodes: graphData.nodes.map(({ content, markdown, body, description, ...rest }) => rest),
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -798,8 +695,26 @@ export function GraphPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </>)}
     </div>
   );
+}
+
+function LoadWaitTimer({ active, onTick }: { active: boolean; onTick: (sec: number) => void }) {
+  useEffect(() => {
+    if (!active) {
+      onTick(0);
+      return;
+    }
+    let sec = 0;
+    onTick(0);
+    const id = setInterval(() => {
+      sec += 1;
+      onTick(sec);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [active, onTick]);
+  return null;
 }
 
 function NodePanel({

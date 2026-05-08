@@ -87,7 +87,7 @@ export const useIngestStore = create<IngestState>((set, get) => ({
 
   dismissAllCompleted: () => {
     set((state) => {
-      const jobs = state.jobs.filter((j) => j.status === 'running');
+      const jobs = state.jobs.filter((j) => j.status !== 'completed');
       persist(jobs);
       return { jobs };
     });

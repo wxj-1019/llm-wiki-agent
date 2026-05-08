@@ -103,7 +103,7 @@ class WikiSearchEngine:
     def __init__(self, db_path: Path | str = DB_PATH) -> None:
         self.db_path = Path(db_path)
         self._conn = _ensure_db()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._ensure_indexed()
 
     def _ensure_indexed(self) -> None:
@@ -423,6 +423,7 @@ class WikiSearchEngine:
 
     def close(self) -> None:
         self._conn.close()
+        self._conn = None
 
 
 # ── CLI ──────────────────────────────────────────────────────────

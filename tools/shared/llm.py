@@ -97,7 +97,9 @@ def call_llm(
         try:
             response = completion(**kwargs)
             elapsed = time.monotonic() - t0
-            content = response.choices[0].message.content
+            if not response.choices:
+                raise RuntimeError("LLM returned empty choices (possible content filter)")
+            content = response.choices[0].message.content or ""
             usage = getattr(response, "usage", None)
             prompt_tokens = getattr(usage, "prompt_tokens", None)
             completion_tokens = getattr(usage, "completion_tokens", None)

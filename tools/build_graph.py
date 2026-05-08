@@ -21,6 +21,7 @@ Edge types:
 
 import re
 import json
+import time
 import hashlib
 import argparse
 import statistics
@@ -81,9 +82,7 @@ except ImportError:
         try:
             from litellm import completion
         except ImportError:
-            print("Error: litellm not installed. Run: pip install litellm")
-            import sys
-            sys.exit(1)
+            raise RuntimeError("litellm not installed. Run: pip install litellm")
 
         cfg = _load_llm_config()
         model = cfg.get("model") or os.getenv(model_env, default_model)
@@ -137,7 +136,7 @@ except ImportError:
             yield p
 
     def extract_wikilinks(content: str) -> list[str]:
-        return list(set(re.findall(r'\[\[([^\]]+)\]\]', content)))
+        return list(set(re.findall(r'\[\[([^\[\]]+(?:\|[^\[\]]+)?)\]\]', content)))
 
     def strip_frontmatter(content: str) -> str:
         if content.startswith("---"):
@@ -436,19 +435,33 @@ Rules:
             raw = raw.strip()
             logger.debug("Inference LLM response | page=%s elapsed=%.2fs response_chars=%d", src, elapsed, len(raw))
 
+            # Parse the LLM response as JSON with robust fallback
             match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", raw)
             if match:
-                raw = match.group(0)
+                raw_cleaned = match.group(0)
             else:
-                raw = re.sub(r"^```(?:json)?\s*", "", raw)
-                raw = re.sub(r"\s*```$", "", raw)
+                raw_cleaned = re.sub(r"^```(?:json)?\s*", "", raw)
+                raw_cleaned = re.sub(r"\s*```$", "", raw_cleaned if 'raw_cleaned' in dir() else raw)
+                raw_cleaned = re.sub(r"```", "", raw_cleaned).strip()
 
-            inferred = json.loads(raw)
-            if isinstance(inferred, dict):
+            try:
+                inferred = json.loads(raw_cleaned)
+            except (json.JSONDecodeError, TypeError, ValueError) as jde:
+                print(f"-> [WARN] Non-JSON LLM response: {str(jde)[:60]}")
+                logger.warning("Inference LLM non-JSON response | page=%s error_type=%s error=%s raw_first_100=%s",
+                               src, type(jde).__name__, jde, raw[:100].replace("\n", "\\n"))
+                inferred = None
+
+            if inferred is None:
+                edges_list = []
+            elif isinstance(inferred, dict):
                 edges_list = inferred.get("edges", [])
             elif isinstance(inferred, list):
                 edges_list = inferred
             else:
+                edges_list = []
+
+            if not isinstance(edges_list, list):
                 edges_list = []
 
             for rel in edges_list:
@@ -485,11 +498,15 @@ Rules:
             print(f"-> [WARN] Invalid JSON: {str(jde)[:60]}")
             logger.warning("Inference JSON parse error | page=%s error_type=%s error=%s raw_first_100=%s",
                            src, type(jde).__name__, jde, (raw or "")[:100].replace("\n", "\\n"))
+            cache[str(p)] = {"hash": sha256(full_content), "edges": []}
+            append_checkpoint(src, [])
         except Exception as e:
             err_msg = str(e).replace('\n', ' ')[:80]
             print(f"-> [ERROR] {err_msg}")
             logger.error("Inference unexpected error | page=%s error_type=%s error=%s",
                          src, type(e).__name__, e)
+            cache[str(p)] = {"hash": sha256(full_content), "edges": []}
+            append_checkpoint(src, [])
 
     return new_edges
 
@@ -848,7 +865,7 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
             append_log(f"## [{today}] report | Graph health report generated\n\n{len(nodes)} nodes analyzed.")
 
     if open_browser:
-        webbrowser.open(f"file://{GRAPH_HTML.resolve()}")
+        webbrowser.open(GRAPH_HTML.as_uri())
 
 
 if __name__ == "__main__":
