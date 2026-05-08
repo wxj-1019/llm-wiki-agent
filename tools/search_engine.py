@@ -14,11 +14,15 @@ from pathlib import Path
 from typing import Iterator
 
 try:
-    from tools.shared.logging_config import get_logger
+    from shared.logging_config import get_logger
     logger = get_logger("search_engine")
 except ImportError:
-    import logging
-    logger = logging.getLogger("wiki.search_engine")
+    try:
+        from tools.shared.logging_config import get_logger
+        logger = get_logger("search_engine")
+    except ImportError:
+        import logging
+        logger = logging.getLogger("wiki.search_engine")
 
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"

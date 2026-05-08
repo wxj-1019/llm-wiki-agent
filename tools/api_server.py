@@ -300,7 +300,7 @@ def _get_search_engine():
     if _search_engine is None:
         with _search_engine_lock:
             if _search_engine is None:
-                from tools.search_engine import WikiSearchEngine
+                from search_engine import WikiSearchEngine
                 _search_engine = WikiSearchEngine()
     return _search_engine
 
@@ -693,7 +693,7 @@ async def multimodal_describe(file: UploadFile = File(...)):
         tmp_path = tmp.name
 
     try:
-        from tools.multimodal_ingest import describe_image
+        from multimodal_ingest import describe_image
         description = describe_image(tmp_path)
         if not description:
             raise HTTPException(
@@ -739,7 +739,7 @@ async def multimodal_ingest_image(file: UploadFile = File(...)):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid path")
 
-    from tools.multimodal_ingest import describe_image, save_description
+    from multimodal_ingest import describe_image, save_description
 
     description = describe_image(str(image_path))
     if not description:
