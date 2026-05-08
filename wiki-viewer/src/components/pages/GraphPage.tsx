@@ -325,175 +325,7 @@ export function GraphPage() {
     { key: 'synthesis', labelKey: 'type.synthesis', color: 'bg-apple-orange' },
   ];
 
-  // Show loading overlay during wikiStore fetch OR during first network init
-  const showLoader = loading || (!!loadPhase && !initRef.current);
-
-  if (showLoader) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[var(--bg-primary)]">
-        <div className="text-center">
-          {/* Neural Constellation Loader */}
-          <div className="relative w-[140px] h-[140px] mx-auto mb-5">
-            {/* Core */}
-            <div
-              className="absolute top-1/2 left-1/2 w-4 h-4 -ml-2 -mt-2 rounded-full z-10"
-              style={{
-                background: 'radial-gradient(circle, #ffab91 0%, #ff5722 70%)',
-                boxShadow: '0 0 20px rgba(255,87,34,0.5), 0 0 40px rgba(255,87,34,0.25), 0 0 80px rgba(255,87,34,0.1)',
-                animation: 'kb-core-pulse 2.4s ease-in-out infinite',
-              }}
-            />
-            {/* Orbit 1 */}
-            <div
-              className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-              style={{ width: 44, height: 44, animation: 'kb-spin 6s linear infinite', transformOrigin: 'center' }}
-            >
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#4fc3f7',
-                  '--kb-color': '#4fc3f7',
-                  '--kb-angle': '0deg',
-                  '--kb-orbit-r': '22px',
-                  transform: 'rotate(0deg) translateY(-22px)',
-                  animation: 'kb-node-glow 2.2s ease-in-out infinite',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                style={{
-                  '--kb-p-angle': '180deg',
-                  '--kb-orbit-r': '22px',
-                  transform: 'rotate(180deg) translateY(-22px)',
-                  animation: 'kb-particle-travel 3s ease-out infinite',
-                  animationDelay: '0.5s',
-                  opacity: 0,
-                } as React.CSSProperties}
-              />
-            </div>
-            {/* Orbit 2 */}
-            <div
-              className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-              style={{ width: 76, height: 76, animation: 'kb-spin 10s linear infinite reverse', transformOrigin: 'center' }}
-            >
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#81c784',
-                  '--kb-color': '#81c784',
-                  '--kb-angle': '60deg',
-                  '--kb-orbit-r': '38px',
-                  transform: 'rotate(60deg) translateY(-38px)',
-                  animation: 'kb-node-glow 2.8s ease-in-out infinite',
-                  animationDelay: '0.4s',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#ffb74d',
-                  '--kb-color': '#ffb74d',
-                  '--kb-angle': '240deg',
-                  '--kb-orbit-r': '38px',
-                  transform: 'rotate(240deg) translateY(-38px)',
-                  animation: 'kb-node-glow 2.8s ease-in-out infinite',
-                  animationDelay: '0.8s',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                style={{
-                  '--kb-p-angle': '300deg',
-                  '--kb-orbit-r': '38px',
-                  transform: 'rotate(300deg) translateY(-38px)',
-                  animation: 'kb-particle-travel 3s ease-out infinite',
-                  animationDelay: '1.2s',
-                  opacity: 0,
-                } as React.CSSProperties}
-              />
-            </div>
-            {/* Orbit 3 */}
-            <div
-              className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-              style={{ width: 108, height: 108, animation: 'kb-spin 14s linear infinite', transformOrigin: 'center' }}
-            >
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#ba68c8',
-                  '--kb-color': '#ba68c8',
-                  '--kb-angle': '120deg',
-                  '--kb-orbit-r': '54px',
-                  transform: 'rotate(120deg) translateY(-54px)',
-                  animation: 'kb-node-glow 3.4s ease-in-out infinite',
-                  animationDelay: '0.2s',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#e57373',
-                  '--kb-color': '#e57373',
-                  '--kb-angle': '240deg',
-                  '--kb-orbit-r': '54px',
-                  transform: 'rotate(240deg) translateY(-54px)',
-                  animation: 'kb-node-glow 3.4s ease-in-out infinite',
-                  animationDelay: '1.0s',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
-                style={{
-                  background: '#4dd0e1',
-                  '--kb-color': '#4dd0e1',
-                  '--kb-angle': '0deg',
-                  '--kb-orbit-r': '54px',
-                  transform: 'rotate(0deg) translateY(-54px)',
-                  animation: 'kb-node-glow 3.4s ease-in-out infinite',
-                  animationDelay: '1.4s',
-                } as React.CSSProperties}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                style={{
-                  '--kb-p-angle': '90deg',
-                  '--kb-orbit-r': '54px',
-                  transform: 'rotate(90deg) translateY(-54px)',
-                  animation: 'kb-particle-travel 3s ease-out infinite',
-                  animationDelay: '2.0s',
-                  opacity: 0,
-                } as React.CSSProperties}
-              />
-            </div>
-          </div>
-
-          <p className="text-[15px] font-medium text-[var(--text-primary)] tracking-wide">
-            {loadPhase || t('graph.loading')}
-          </p>
-          {loadProgress > 0 && (
-            <>
-              <div className="w-60 h-[3px] bg-white/[0.06] rounded-full overflow-hidden mt-3.5 mx-auto">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${loadProgress}%`,
-                    background: 'linear-gradient(90deg, #ff5722, #ff8a65)',
-                    boxShadow: '0 0 8px rgba(255,87,34,0.3)',
-                  }}
-                />
-              </div>
-              <p className="text-xs text-[var(--text-secondary)] mt-2">{loadProgress}%</p>
-            </>
-          )}
-          {!loadPhase && nodes.length > 0 && (
-            <p className="text-xs text-[var(--text-secondary)] mt-1">
-              {nodes.length} nodes · {edges.length} edges
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const showLoader = loading || loadPhase !== '';
 
   if (error || !graphData) {
     return (
@@ -538,6 +370,180 @@ export function GraphPage() {
     <div className="h-full relative">
       {/* Graph Canvas */}
       <div ref={containerRef} className="w-full h-full bg-[var(--bg-primary)]" />
+
+      {/* Loading Overlay — rendered on top so canvas initializes behind it */}
+      <AnimatePresence>
+        {showLoader && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]/90 backdrop-blur-sm"
+          >
+            <div className="text-center">
+              {/* Neural Constellation Loader */}
+              <div className="relative w-[140px] h-[140px] mx-auto mb-5">
+                {/* Core */}
+                <div
+                  className="absolute top-1/2 left-1/2 w-4 h-4 -ml-2 -mt-2 rounded-full z-10"
+                  style={{
+                    background: 'radial-gradient(circle, #ffab91 0%, #ff5722 70%)',
+                    boxShadow: '0 0 20px rgba(255,87,34,0.5), 0 0 40px rgba(255,87,34,0.25), 0 0 80px rgba(255,87,34,0.1)',
+                    animation: 'kb-core-pulse 2.4s ease-in-out infinite',
+                  }}
+                />
+                {/* Orbit 1 */}
+                <div
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
+                  style={{ width: 44, height: 44, animation: 'kb-spin 6s linear infinite', transformOrigin: 'center' }}
+                >
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#4fc3f7',
+                      '--kb-color': '#4fc3f7',
+                      '--kb-angle': '0deg',
+                      '--kb-orbit-r': '22px',
+                      transform: 'rotate(0deg) translateY(-22px)',
+                      animation: 'kb-node-glow 2.2s ease-in-out infinite',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
+                    style={{
+                      '--kb-p-angle': '180deg',
+                      '--kb-orbit-r': '22px',
+                      transform: 'rotate(180deg) translateY(-22px)',
+                      animation: 'kb-particle-travel 3s ease-out infinite',
+                      animationDelay: '0.5s',
+                      opacity: 0,
+                    } as React.CSSProperties}
+                  />
+                </div>
+                {/* Orbit 2 */}
+                <div
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
+                  style={{ width: 76, height: 76, animation: 'kb-spin 10s linear infinite reverse', transformOrigin: 'center' }}
+                >
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#81c784',
+                      '--kb-color': '#81c784',
+                      '--kb-angle': '60deg',
+                      '--kb-orbit-r': '38px',
+                      transform: 'rotate(60deg) translateY(-38px)',
+                      animation: 'kb-node-glow 2.8s ease-in-out infinite',
+                      animationDelay: '0.4s',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#ffb74d',
+                      '--kb-color': '#ffb74d',
+                      '--kb-angle': '240deg',
+                      '--kb-orbit-r': '38px',
+                      transform: 'rotate(240deg) translateY(-38px)',
+                      animation: 'kb-node-glow 2.8s ease-in-out infinite',
+                      animationDelay: '0.8s',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
+                    style={{
+                      '--kb-p-angle': '300deg',
+                      '--kb-orbit-r': '38px',
+                      transform: 'rotate(300deg) translateY(-38px)',
+                      animation: 'kb-particle-travel 3s ease-out infinite',
+                      animationDelay: '1.2s',
+                      opacity: 0,
+                    } as React.CSSProperties}
+                  />
+                </div>
+                {/* Orbit 3 */}
+                <div
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
+                  style={{ width: 108, height: 108, animation: 'kb-spin 14s linear infinite', transformOrigin: 'center' }}
+                >
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#ba68c8',
+                      '--kb-color': '#ba68c8',
+                      '--kb-angle': '120deg',
+                      '--kb-orbit-r': '54px',
+                      transform: 'rotate(120deg) translateY(-54px)',
+                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
+                      animationDelay: '0.2s',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#e57373',
+                      '--kb-color': '#e57373',
+                      '--kb-angle': '240deg',
+                      '--kb-orbit-r': '54px',
+                      transform: 'rotate(240deg) translateY(-54px)',
+                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
+                      animationDelay: '1.0s',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    style={{
+                      background: '#4dd0e1',
+                      '--kb-color': '#4dd0e1',
+                      '--kb-angle': '0deg',
+                      '--kb-orbit-r': '54px',
+                      transform: 'rotate(0deg) translateY(-54px)',
+                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
+                      animationDelay: '1.4s',
+                    } as React.CSSProperties}
+                  />
+                  <div
+                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
+                    style={{
+                      '--kb-p-angle': '90deg',
+                      '--kb-orbit-r': '54px',
+                      transform: 'rotate(90deg) translateY(-54px)',
+                      animation: 'kb-particle-travel 3s ease-out infinite',
+                      animationDelay: '2.0s',
+                      opacity: 0,
+                    } as React.CSSProperties}
+                  />
+                </div>
+              </div>
+
+              <p className="text-[15px] font-medium text-[var(--text-primary)] tracking-wide">
+                {loadPhase || t('graph.loading')}
+              </p>
+              {loadProgress > 0 && (
+                <>
+                  <div className="w-60 h-[3px] bg-white/[0.06] rounded-full overflow-hidden mt-3.5 mx-auto">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${loadProgress}%`,
+                        background: 'linear-gradient(90deg, #ff5722, #ff8a65)',
+                        boxShadow: '0 0 8px rgba(255,87,34,0.3)',
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] mt-2">{loadProgress}%</p>
+                </>
+              )}
+              {!loadPhase && nodes.length > 0 && (
+                <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  {nodes.length} nodes · {edges.length} edges
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats Overlay */}
       <GraphStats nodes={nodes} edges={edges} />

@@ -31,7 +31,8 @@ export function getPagePath(node: { id: string; type: string }): string {
   return `/${prefix}/${slug}`;
 }
 
-export function extractWikiLinks(markdown: string): string[] {
+export function extractWikiLinks(markdown: string | undefined): string[] {
+  if (!markdown) return [];
   const matches = markdown.matchAll(/\[\[([^\]]+)\]\]/g);
   return Array.from(new Set(Array.from(matches).map((m) => {
     // Handle piped links: [[Target|Display]] → extract Target
