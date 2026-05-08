@@ -28,6 +28,13 @@ LOG_FILE = WIKI_DIR / "log.md"
 SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
 AGENT_DIR = WIKI_DIR / ".agent"
 
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("query")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.query")
+
 
 # ── Shared utilities (with inline fallback) ─────────────────────────
 try:
@@ -209,15 +216,19 @@ except ImportError:
 
 def query(question: str, save_path: str | None = None):
     today = date.today().isoformat()
+    logger.info("Query start | question=%s save=%s", question[:100], save_path)
 
     # Step 1: Read index
     index_content = read_file(INDEX_FILE)
     if not index_content:
         print("Wiki is empty. Ingest some sources first with: python tools/ingest.py <source>")
+        logger.error("Wiki index is empty")
         sys.exit(1)
 
     # Step 2: Find relevant pages
     relevant_pages = find_relevant_pages(question, index_content)
+    logger.info("Relevant pages | count=%d pages=%s", len(relevant_pages),
+                [p.relative_to(WIKI_DIR).as_posix() for p in relevant_pages[:10]])
 
     # If no keyword match, ask Claude to identify relevant pages from the index
     if not relevant_pages or len(relevant_pages) <= 1:

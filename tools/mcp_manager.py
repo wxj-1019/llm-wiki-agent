@@ -162,8 +162,10 @@ class MCPManager:
         url = kwargs.get("url", "")
         if not url:
             return {"error": "url is required for url source"}
-        if not url.startswith(("https://", "git://", "git@")):
-            return {"error": "Only https://, git://, and git@ URLs are allowed"}
+        # Validate URL scheme: only allow https:// (encrypted) for security.
+        # git:// is unencrypted and susceptible to MITM attacks.
+        if not url.startswith("https://"):
+            return {"error": "Only https:// URLs are allowed for security"}
         result = subprocess.run(
             ["git", "clone", url, str(server_dir)],
             capture_output=True, text=True, timeout=120,
@@ -228,8 +230,17 @@ class MCPManager:
         if proc and proc.poll() is None:
             return {"status": "already_running", "pid": proc.pid}
 
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(REPO) + os.pathsep + env.get("PYTHONPATH", "")
+        # Only pass safe environment variables to MCP server subprocess
+        env = {
+            "PATH": os.environ.get("PATH", ""),
+            "PYTHONPATH": str(REPO) + os.pathsep + os.environ.get("PYTHONPATH", ""),
+            "HOME": os.environ.get("HOME", ""),
+            "USER": os.environ.get("USER", ""),
+            "SYSTEMROOT": os.environ.get("SYSTEMROOT", ""),  # Windows
+            "TEMP": os.environ.get("TEMP", ""),
+            "TMP": os.environ.get("TMP", ""),
+            "LANG": os.environ.get("LANG", "en_US.UTF-8"),
+        }
 
         proc = subprocess.Popen(
             [sys.executable, str(server_file)],

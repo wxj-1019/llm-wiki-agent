@@ -28,6 +28,13 @@ RAW_DIR = REPO_ROOT / "raw"
 SOURCES_DIR = WIKI_DIR / "sources"
 REFRESH_CACHE = REPO_ROOT / "graph" / ".refresh_cache.json"
 
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("refresh")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.refresh")
+
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
@@ -43,8 +50,12 @@ def read_file(path: Path) -> str:
 def load_refresh_cache() -> dict:
     if REFRESH_CACHE.exists():
         try:
-            return json.loads(REFRESH_CACHE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, IOError):
+            data = json.loads(REFRESH_CACHE.read_text(encoding="utf-8"))
+            logger.info("Refresh cache loaded | path=%s entries=%d", REFRESH_CACHE, len(data))
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning("Refresh cache load failed | path=%s error_type=%s error=%s",
+                           REFRESH_CACHE, type(e).__name__, e)
             return {}
     return {}
 
@@ -101,11 +112,11 @@ def find_stale_sources(force: bool = False) -> list[tuple[Path, Path]]:
 
 def refresh_page(wiki_page: Path, raw_path: Path) -> bool:
     """Re-ingest a single source document."""
-    # Import ingest module safely via importlib
     try:
         spec = importlib.util.spec_from_file_location("ingest", TOOLS_DIR / "ingest.py")
         if spec is None or spec.loader is None:
             print(f"  [ERROR] Could not load ingest module")
+            logger.error("Could not load ingest module | wiki_page=%s raw_path=%s", wiki_page.name, raw_path)
             return False
         ingest_mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ingest_mod)
@@ -113,10 +124,13 @@ def refresh_page(wiki_page: Path, raw_path: Path) -> bool:
         print(f"  Refreshing: {wiki_page.name}")
         print(f"  From:       {raw_path}")
         print(f"{'='*60}")
+        logger.info("Refreshing page | wiki_page=%s raw_path=%s", wiki_page.name, raw_path)
         ingest_mod.ingest(str(raw_path))
+        logger.info("Page refreshed successfully | wiki_page=%s", wiki_page.name)
         return True
     except Exception as e:
         print(f"  [ERROR] Failed to refresh {wiki_page.name}: {e}")
+        logger.error("Page refresh failed | wiki_page=%s error_type=%s error=%s", wiki_page.name, type(e).__name__, e)
         return False
 
 
@@ -158,17 +172,20 @@ def main():
 
     if not stale:
         print("All source pages are up to date. Nothing to refresh.")
+        logger.info("No stale pages found | force=%s", args.force)
         return
 
     print(f"Found {len(stale)} stale source page(s):")
+    logger.info("Stale pages detected | count=%d force=%s", len(stale), args.force)
     for wiki_page, raw_path in stale:
         print(f"  • {wiki_page.name} ← {raw_path.relative_to(REPO_ROOT)}")
+        logger.debug("Stale page | wiki_page=%s raw_path=%s", wiki_page.name, raw_path)
 
     if args.dry_run:
         print("\n[DRY RUN] No changes made.")
+        logger.info("Dry run mode — no changes made")
         return
 
-    # Refresh each stale page
     cache = load_refresh_cache()
     refreshed = 0
     failed = 0
@@ -186,6 +203,7 @@ def main():
     print(f"\n{'='*60}")
     print(f"  Refresh complete: {refreshed} updated, {failed} failed")
     print(f"{'='*60}")
+    logger.info("Refresh complete | refreshed=%d failed=%d total=%d", refreshed, failed, len(stale))
 
 
 if __name__ == "__main__":

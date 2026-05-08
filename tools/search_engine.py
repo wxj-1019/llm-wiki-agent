@@ -13,6 +13,13 @@ import hashlib
 from pathlib import Path
 from typing import Iterator
 
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("search_engine")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.search_engine")
+
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 STATE_DIR = REPO / "state"
@@ -128,18 +135,20 @@ class WikiSearchEngine:
                 self._index_one(p)
             self._conn.commit()
         count = self._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()[0]
+        logger.info("FTS5 index rebuilt | pages=%d", count)
         print(f"Indexed {count} wiki pages into FTS5.")
 
     def _index_one(self, path: Path) -> None:
         try:
             content = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError) as e:
+            logger.debug("Skipped indexing file | path=%s error_type=%s", path.name, type(e).__name__)
             return
         clean = _strip_frontmatter(content)
         title = _extract_frontmatter_field(content, "title") or path.stem
         page_type = _extract_frontmatter_field(content, "type") or "unknown"
         tags = _extract_frontmatter_field(content, "tags") or ""
-        rel_path = str(path.relative_to(REPO))
+        rel_path = path.relative_to(REPO).as_posix()
         self._conn.execute(
             "INSERT INTO wiki_pages (title, content, path, type, tags) VALUES (?, ?, ?, ?, ?)",
             (title, clean, rel_path, page_type, tags),
@@ -179,7 +188,9 @@ class WikiSearchEngine:
                     """,
                     (fts_query, limit),
                 )
-            except Exception:
+            except Exception as e:
+                logger.warning("FTS5 MATCH failed, retrying with escaped query | query=%s error_type=%s error=%s",
+                               q[:100], type(e).__name__, e)
                 cursor = self._conn.execute(
                     """
                     SELECT path, title, type, rank, content
@@ -201,6 +212,7 @@ class WikiSearchEngine:
                     "rank": rank,
                     "excerpt": excerpt,
                 })
+        logger.info("FTS5 search | query=%s results=%d limit=%d", q[:100], len(results), limit)
         return results
 
     def search(self, query: str, limit: int = 20, semantic: bool = False) -> list[dict]:

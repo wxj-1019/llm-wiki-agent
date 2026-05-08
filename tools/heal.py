@@ -31,6 +31,13 @@ ENTITIES_DIR = WIKI_DIR / "entities"
 INDEX_FILE = WIKI_DIR / "index.md"
 LOG_FILE = WIKI_DIR / "log.md"
 
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("heal")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.heal")
+
 
 # ── Shared utilities (with inline fallback) ─────────────────────────
 try:
@@ -169,9 +176,11 @@ def update_index(entries: list[str]) -> None:
 def heal_missing_entities(dry_run: bool = False):
     pages = list(all_wiki_pages())
     missing_entities = find_missing_entities(pages)
+    logger.info("Heal start | dry_run=%s total_pages=%d missing_entities=%d", dry_run, len(pages), len(missing_entities))
 
     if not missing_entities:
         print("Graph is fully connected. No missing entities found!")
+        logger.info("No missing entities found")
         return
 
     if dry_run:
@@ -198,9 +207,11 @@ def heal_missing_entities(dry_run: bool = False):
     print(f"Found {len(missing_entities)} missing entity nodes. Commencing auto-heal...")
 
     created = []
+    failed = []
     for entity in missing_entities:
         print(f"Healing entity page for: {entity}")
         sources = search_sources(entity, pages)
+        logger.info("Healing entity | entity=%s sources=%d", entity, len(sources))
 
         context = ""
         for s in sources:
@@ -230,20 +241,22 @@ Write a comprehensive paragraph defining what `{safe_entity_name}` means in the 
             safe_entity = Path(entity).name
             if not safe_entity or safe_entity in (".", ".."):
                 print(f" [!] Skipping invalid entity name: {entity!r}")
+                logger.warning("Skipping invalid entity name | entity=%r", entity)
                 continue
-            # Normalize filename: remove spaces/dashes for continuous TitleCase
             normalized = re.sub(r'[\\/:*?"<>|]', '', safe_entity)
             normalized = normalized.replace(" ", "").replace("-", "")
-            # If legacy spaced file already exists, keep using it to avoid duplicates
             legacy_path = ENTITIES_DIR / f"{safe_entity}.md"
             out_path = ENTITIES_DIR / f"{normalized}.md"
             if legacy_path.exists() and not out_path.exists():
                 out_path = legacy_path
             out_path.write_text(result, encoding="utf-8")
             print(f" -> Saved to {out_path.relative_to(REPO_ROOT)}")
+            logger.info("Entity page created | entity=%s path=%s chars=%d", entity, out_path.relative_to(REPO_ROOT), len(result))
             created.append((safe_entity, out_path.stem))
         except Exception as e:
             print(f" [!] Failed to generate {entity}: {e}")
+            logger.error("Entity page generation failed | entity=%s error_type=%s error=%s", entity, type(e).__name__, e)
+            failed.append(entity)
 
     # Update index with newly created entities
     if created:
@@ -251,22 +264,32 @@ Write a comprehensive paragraph defining what `{safe_entity_name}` means in the 
         entries = [f"- [{display}](entities/{stem}.md) — auto-healed entity" for display, stem in created]
         update_index(entries)
         print(f"  indexed: {len(entries)} entity page(s)")
+        logger.info("Index updated | new_entities=%d", len(entries))
 
-        # Normalize wikilinks across all pages to point to canonical filenames
-        from tools.shared.wiki import normalize_wikilinks
-        canonical_map = {}
-        for p in all_wiki_pages():
-            stem = p.stem
-            canonical_map[stem.lower()] = stem
-            canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
-        for p in all_wiki_pages():
-            c = p.read_text(encoding="utf-8")
-            nc = normalize_wikilinks(c, canonical_map)
-            if nc != c:
-                p.write_text(nc, encoding="utf-8")
+        try:
+            from tools.shared.wiki import normalize_wikilinks
+            canonical_map = {}
+            for p in all_wiki_pages():
+                stem = p.stem
+                canonical_map[stem.lower()] = stem
+                canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
+            normalized_count = 0
+            for p in all_wiki_pages():
+                c = p.read_text(encoding="utf-8")
+                nc = normalize_wikilinks(c, canonical_map)
+                if nc != c:
+                    p.write_text(nc, encoding="utf-8")
+                    normalized_count += 1
+            if normalized_count:
+                logger.info("Wikilinks normalized | pages_updated=%d", normalized_count)
+        except ImportError:
+            logger.warning("Wikilink normalization skipped — shared.wiki module not available")
 
         names = ", ".join(display for display, _ in created)
         append_log(f"## [{today}] heal | Auto-healed missing entities\n\nCreated entity pages for: {names}.")
+
+    logger.info("Heal complete | created=%d failed=%d total_missing=%d",
+                len(created), len(failed), len(missing_entities))
 
 
 if __name__ == "__main__":

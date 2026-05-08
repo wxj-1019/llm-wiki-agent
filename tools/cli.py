@@ -99,7 +99,7 @@ def main() -> int:
     if args.cmd == "ingest":
         return _run_py("ingest.py", args.path)
     elif args.cmd == "search":
-        return _run_py("search_engine.py", "--query", args.query, "--limit", str(args.limit))
+        return _run_py("search_engine.py", "--search", args.query, "--limit", str(args.limit))
     elif args.cmd == "health":
         extra = []
         if args.save:

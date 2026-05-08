@@ -29,6 +29,7 @@ import sys
 import io
 import json
 import hashlib
+import time
 
 # Fix Windows GBK console encoding for emoji output
 if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
@@ -44,6 +45,13 @@ from datetime import date
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
 AGENT_DIR = WIKI_DIR / ".agent"
+
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("ingest")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.ingest")
 
 
 class IngestError(Exception):
@@ -71,9 +79,12 @@ def _load_checkpoint() -> dict:
     """Load ingest checkpoint mapping file paths to their last-known hash and status."""
     if CHECKPOINT_FILE.exists():
         try:
-            return json.loads(CHECKPOINT_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            pass
+            data = json.loads(CHECKPOINT_FILE.read_text(encoding="utf-8"))
+            logger.info("Checkpoint loaded | path=%s entries=%d", CHECKPOINT_FILE, len(data))
+            return data
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Checkpoint load failed (discarding) | path=%s error_type=%s error=%s",
+                           CHECKPOINT_FILE, type(e).__name__, e)
     return {}
 
 
@@ -81,6 +92,7 @@ def _save_checkpoint(checkpoint: dict) -> None:
     """Persist the ingest checkpoint to disk."""
     CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
     CHECKPOINT_FILE.write_text(json.dumps(checkpoint, indent=2, ensure_ascii=False), encoding="utf-8")
+    logger.debug("Checkpoint saved | path=%s entries=%d", CHECKPOINT_FILE, len(checkpoint))
 
 
 def _file_hash(path: Path) -> str:
@@ -155,10 +167,11 @@ except ImportError:
                 pass
         return defaults
 
-    def call_llm(prompt: str, model_env: str = "LLM_MODEL", default_model: str = "anthropic/claude-3-5-sonnet-latest", max_tokens: int = 4096) -> str:
+    def call_llm(prompt: str, model_env: str = "LLM_MODEL", default_model: str = "anthropic/claude-3-5-sonnet-latest", max_tokens: int = 4096, system: str = "", temperature: float | None = None) -> str:
         try:
             from litellm import completion
         except ImportError:
+            logger.error("litellm not installed")
             print("Error: litellm not installed. Run: pip install litellm")
             raise IngestError("litellm not installed")
 
@@ -169,18 +182,30 @@ except ImportError:
             model = f"{provider}/{model}"
         api_key = cfg.get("api_key", "")
 
-        kwargs = {
+        messages: list[dict] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        kwargs: dict = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}]
+            "messages": messages,
         }
 
         if max_tokens:
             kwargs["max_tokens"] = max_tokens
         if api_key:
             kwargs["api_key"] = api_key
+        if temperature is not None:
+            kwargs["temperature"] = temperature
 
+        logger.info("LLM request (fallback) | model=%s prompt_chars=%d max_tokens=%d", model, len(prompt), max_tokens)
+        t0 = time.monotonic()
         response = completion(**kwargs)
-        return response.choices[0].message.content
+        elapsed = time.monotonic() - t0
+        content = response.choices[0].message.content
+        logger.info("LLM response (fallback) | model=%s elapsed=%.2fs response_chars=%d", model, elapsed, len(content))
+        return content
 
 
 def build_wiki_context(max_page_chars: int = 2000) -> str:
@@ -437,6 +462,7 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
     source_content = source.read_text(encoding="utf-8")
 
     print(f"\nIngesting: {source.name}  (hash: {source_hash})")
+    logger.info("Ingest start | file=%s hash=%s source_chars=%d", source.name, source_hash, len(source_content))
 
     wiki_context = build_wiki_context()
     schema = read_file(SCHEMA_FILE)
@@ -487,12 +513,19 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
 """
 
     print(f"  calling API (model: {os.getenv('LLM_MODEL', 'anthropic/claude-3-5-sonnet-latest')})")
+    t0 = time.monotonic()
     raw = call_llm(prompt, max_tokens=8192)
+    elapsed = time.monotonic() - t0
     if not raw:
+        logger.error("LLM returned empty response | elapsed=%.2fs", elapsed)
         raise IngestError("LLM returned empty response")
+    logger.info("LLM call complete | elapsed=%.2fs response_chars=%d", elapsed, len(raw))
     try:
         data = parse_json_from_response(raw)
+        logger.info("JSON parsed | keys=%s", list(data.keys()))
     except (ValueError, json.JSONDecodeError) as e:
+        logger.error("JSON parse failed | error_type=%s error=%s response_first_200=%s",
+                     type(e).__name__, e, raw[:200].replace("\n", "\\n"))
         print(f"Error parsing API response: {e}")
         debug_path = Path(tempfile.gettempdir()) / "ingest_debug.txt"
         debug_path.write_text(raw, encoding="utf-8")
@@ -503,17 +536,20 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
     required_keys = ["slug", "source_page", "index_entry", "log_entry"]
     missing_keys = [k for k in required_keys if k not in data]
     if missing_keys:
+        logger.error("Missing required keys | missing=%s present=%s", missing_keys, list(data.keys()))
         print(f"Error: LLM response missing required keys: {missing_keys}")
         raise IngestError(f"Missing required keys: {missing_keys}")
 
     # Write source page
     slug = data["slug"]
-    # Sanitize slug to prevent path traversal
     safe_slug = Path(slug).name
     if not safe_slug or safe_slug == "." or safe_slug == "..":
+        logger.error("Invalid slug from LLM | slug=%r", slug)
         print(f"Error: invalid slug from LLM: {slug!r}")
         raise IngestError(f"Invalid slug: {slug!r}")
-    write_file(WIKI_DIR / "sources" / f"{safe_slug}.md", data["source_page"])
+    source_path = WIKI_DIR / "sources" / f"{safe_slug}.md"
+    write_file(source_path, data["source_page"])
+    logger.info("Source page written | path=%s slug=%s", source_path.relative_to(REPO_ROOT), safe_slug)
 
     def _extract_title_from_content(content: str, fallback: str) -> str:
         if content.startswith("---"):
@@ -525,35 +561,37 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
                     return m.group(1).strip()
         return fallback
 
-    # Write entity pages and auto-index
-    for page in data.get("entity_pages", []):
+    entity_pages = data.get("entity_pages", [])
+    concept_pages = data.get("concept_pages", [])
+    logger.info("LLM returned | entity_pages=%d concept_pages=%d contradictions=%d",
+                len(entity_pages), len(concept_pages), len(data.get("contradictions", [])))
+
+    for page in entity_pages:
         page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
         write_file(page_path, page["content"])
         title = _extract_title_from_content(page["content"], page_path.stem)
         entry = f"- [{title}]({page_path.relative_to(WIKI_DIR).as_posix()}) — auto-created entity"
         update_index(entry, section="Entities")
+        logger.debug("Entity page written | path=%s title=%s", page_path.relative_to(WIKI_DIR), title)
 
-    # Write concept pages and auto-index
-    for page in data.get("concept_pages", []):
+    for page in concept_pages:
         page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
         write_file(page_path, page["content"])
         title = _extract_title_from_content(page["content"], page_path.stem)
         entry = f"- [{title}]({page_path.relative_to(WIKI_DIR).as_posix()}) — auto-created concept"
         update_index(entry, section="Concepts")
+        logger.debug("Concept page written | path=%s title=%s", page_path.relative_to(WIKI_DIR), title)
 
-    # Update overview
     if data.get("overview_update"):
         write_file(OVERVIEW_FILE, data["overview_update"])
+        logger.info("Overview updated")
 
-    # Update index
     update_index(data["index_entry"], section="Sources")
-
-    # Append log
     append_log(data["log_entry"])
 
-    # Report contradictions
     contradictions = data.get("contradictions", [])
     if contradictions:
+        logger.warning("Contradictions detected | count=%d", len(contradictions))
         print("\n  ⚠️  Contradictions detected:")
         for c in contradictions:
             print(f"     - {c}")
@@ -569,40 +607,47 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
         updated_pages.append("overview.md")
 
     # Normalize wikilinks to match actual filenames
-    from tools.shared.wiki import normalize_wikilinks
+    try:
+        from tools.shared.wiki import normalize_wikilinks
+    except ImportError:
+        normalize_wikilinks = None
 
-    canonical_map = {}
-    for p in WIKI_DIR.rglob("*.md"):
-        if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
-            continue
-        stem = p.stem
-        canonical_map[stem.lower()] = stem
-        canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
+    if normalize_wikilinks:
+        canonical_map = {}
+        for p in WIKI_DIR.rglob("*.md"):
+            if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
+                continue
+            stem = p.stem
+            canonical_map[stem.lower()] = stem
+            canonical_map[stem.lower().replace(" ", "").replace("-", "")] = stem
 
-    for page_path in created_pages + updated_pages:
-        full_path = WIKI_DIR / page_path
-        if full_path.exists():
-            c = read_file(full_path)
-            nc = normalize_wikilinks(c, canonical_map)
-            if nc != c:
-                write_file(full_path, nc)
+        for page_path in created_pages + updated_pages:
+            full_path = WIKI_DIR / page_path
+            if full_path.exists():
+                c = read_file(full_path)
+                nc = normalize_wikilinks(c, canonical_map)
+                if nc != c:
+                    write_file(full_path, nc)
 
     validation = validate_ingest(created_pages)
     if validation.get("broken_links"):
+        logger.warning("Broken wikilinks found | count=%d", len(validation['broken_links']))
         print(f"  ⚠  Found {len(validation['broken_links'])} broken wikilinks:")
         for page, link in validation["broken_links"][:10]:
             print(f"      wiki/{page} → [[{link}]]")
         if len(validation["broken_links"]) > 10:
             print(f"      ... and {len(validation['broken_links']) - 10} more")
     if validation.get("unindexed"):
+        logger.warning("Unindexed pages found | count=%d pages=%s", len(validation['unindexed']), validation['unindexed'])
         print(f"  ⚠  Found {len(validation['unindexed'])} unindexed pages: {validation['unindexed']}")
 
-    # --- Post-ingest reflection ---
     try:
         from tools.reflect import run_reflection
+        logger.info("Running post-ingest reflection")
         print("\n  🔄 Running post-ingest reflection...")
         run_reflection(last_n=1, suggest_skills=False, dry_run=False)
     except Exception as exc:
+        logger.warning("Reflection skipped | error_type=%s error=%s", type(exc).__name__, exc)
         print(f"  ⚠  Reflection skipped: {exc}")
 
     # Update checkpoint on success
@@ -726,17 +771,23 @@ if __name__ == "__main__":
         if resume or incremental:
             print(f"  (resume={resume}, incremental={incremental})")
 
+    logger.info("Batch ingest start | total_files=%d resume=%s incremental=%s", len(unique_paths), resume, incremental)
+
     success_count = 0
     fail_count = 0
-    for p in unique_paths:
+    for idx, p in enumerate(unique_paths, 1):
         try:
+            logger.info("Processing file %d/%d | file=%s", idx, len(unique_paths), p.name)
             result = ingest(str(p), auto_convert=not no_convert, checkpoint=checkpoint)
             if result["success"]:
                 success_count += 1
+                logger.info("File ingested | file=%s title=%s slug=%s", p.name, result.get("title"), result.get("slug"))
             else:
                 fail_count += 1
+                logger.error("File ingest failed (result) | file=%s", p.name)
         except IngestError as e:
             fail_count += 1
+            logger.error("File ingest failed (IngestError) | file=%s error=%s", p.name, e)
             print(f"  ❌ Failed: {p.name} ({e})")
             checkpoint[str(p.resolve())] = {
                 "hash": _file_hash(p),
@@ -746,6 +797,7 @@ if __name__ == "__main__":
             _save_checkpoint(checkpoint)
         except Exception as e:
             fail_count += 1
+            logger.exception("Unexpected error on file | file=%s error_type=%s error=%s", p.name, type(e).__name__, e)
             print(f"  ❌ Unexpected error on {p.name}: {e}")
             checkpoint[str(p.resolve())] = {
                 "hash": _file_hash(p),
@@ -755,6 +807,7 @@ if __name__ == "__main__":
             _save_checkpoint(checkpoint)
 
     _save_checkpoint(checkpoint)
+    logger.info("Batch ingest complete | success=%d failed=%d total=%d", success_count, fail_count, len(unique_paths))
 
     print(f"\n{'='*50}")
     print(f"Batch complete: {success_count} succeeded, {fail_count} failed")

@@ -37,17 +37,26 @@ def embed(text: str, model: str = "nomic-embed-text") -> Optional[list[float]]:
 
 
 def batch_embed(texts: list[str], model: str = "nomic-embed-text") -> list[list[float] | None]:
-    """Generate embedding vectors for a batch of texts."""
+    """Generate embedding vectors for a batch of texts.
+    Falls back to individual embedding if batch fails.
+    """
     if not texts:
         return []
     try:
         result = _post("/api/embed", {"model": model, "input": texts})
         embeddings = result.get("embeddings", [])
         if len(embeddings) != len(texts):
-            return [None] * len(texts)
+            raise ValueError(f"Embedding count mismatch: got {len(embeddings)}, expected {len(texts)}")
         return embeddings
     except Exception:
-        return [None] * len(texts)
+        results: list[list[float] | None] = []
+        for text in texts:
+            try:
+                emb = embed(text, model)
+                results.append(emb)
+            except Exception:
+                results.append(None)
+        return results
 
 
 def chat(prompt: str, model: str = "llama3", system: str = "") -> Optional[str]:

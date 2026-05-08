@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -295,7 +296,6 @@ def run_reflection(
         print(f"   Raw response: {response[:200]}")
         return {}
 
-    import json
     try:
         reflection = json.loads(json_match.group())
     except json.JSONDecodeError:

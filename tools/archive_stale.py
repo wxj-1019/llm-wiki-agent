@@ -85,11 +85,10 @@ def _is_expired(meta: dict[str, Any]) -> bool:
 
 
 def _remove_from_index(index_text: str, rel_path: str) -> str:
-    # Remove the markdown list item that points to rel_path
     lines = index_text.split("\n")
     new_lines = []
     for line in lines:
-        if rel_path in line and line.strip().startswith("-"):
+        if line.strip().startswith("-") and re.search(rf'\({re.escape(rel_path)}\)', line):
             continue
         new_lines.append(line)
     return "\n".join(new_lines)

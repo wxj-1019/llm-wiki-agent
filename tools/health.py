@@ -35,6 +35,13 @@ WIKI_DIR = REPO_ROOT / "wiki"
 INDEX_FILE = WIKI_DIR / "index.md"
 LOG_FILE = WIKI_DIR / "log.md"
 
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("health")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.health")
+
 # Minimum content length (excluding frontmatter) to not be considered a stub
 STUB_THRESHOLD_CHARS = 100
 
@@ -323,14 +330,28 @@ def fix_log_coverage(pages: list[Path]) -> list[str]:
 def run_health() -> dict:
     """Run all health checks, return structured results."""
     pages = list(all_wiki_pages())
+    logger.info("Health check start | total_pages=%d", len(pages))
+
+    empty_files = check_empty_files(pages)
+    index_sync = check_index_sync(pages)
+    log_coverage = check_log_coverage(pages)
+    broken_links = check_broken_links(pages)
+
+    logger.info("Health check complete | empty=%d missing_index=%d extra_index=%d "
+                "missing_log=%d broken_links=%d",
+                len(empty_files),
+                len(index_sync.get("missing_from_index", [])),
+                len(index_sync.get("extra_in_index", [])),
+                len(log_coverage),
+                len(broken_links))
 
     return {
         "date": date.today().isoformat(),
         "total_pages": len(pages),
-        "empty_files": check_empty_files(pages),
-        "index_sync": check_index_sync(pages),
-        "log_coverage": check_log_coverage(pages),
-        "broken_links": check_broken_links(pages),
+        "empty_files": empty_files,
+        "index_sync": index_sync,
+        "log_coverage": log_coverage,
+        "broken_links": broken_links,
     }
 
 

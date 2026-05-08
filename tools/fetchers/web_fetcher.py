@@ -519,77 +519,69 @@ def run(
         "start_time": datetime.now(timezone.utc).isoformat(),
     }
 
-    def _process_one(url: str, name: str, tags: list[str], depth: int, base_domain: str) -> tuple[int, int, int]:
-        """Process a single URL. Returns (success, skipped, failed)."""
+    def _process_one(url: str, name: str, tags: list[str], depth: int, base_domain: str) -> tuple[int, int, int, str | None]:
+        """Process a single URL. Returns (success, skipped, failed, html_or_none)."""
         nonlocal total_success, total_skipped, total_failed
 
         if not url or url in visited_this_run:
-            return 0, 1, 0
+            return 0, 1, 0, None
         visited_this_run.add(url)
 
         print(f"  [depth={depth}] {url}")
 
-        # Deduplication (persistent)
         url_meta = state.get("url_meta", {}).get(url, {})
         etag = url_meta.get("etag", "")
         last_modified = url_meta.get("last_modified", "")
 
         if url in state.get("processed_urls", {}) and not dry_run and not etag and not last_modified:
             print(f"    [SKIP] Already processed")
-            return 0, 1, 0
+            return 0, 1, 0, None
 
-        # Fetch
         html, headers = _fetch_html(url, timeout, user_agent, etag=etag, last_modified=last_modified)
         if headers.get("not_modified"):
             print(f"    [SKIP] Not modified since last fetch")
-            return 0, 1, 0
+            return 0, 1, 0, None
         if html is None:
             _log_failed(url, "fetch")
-            return 0, 0, 1
+            return 0, 0, 1, None
 
-        # Extract
         extracted = _extract_content(html, url, fallback)
         if extracted is None:
             print(f"    [FAIL] Extraction failed")
             _log_failed(url, "extraction")
-            return 0, 0, 1
+            return 0, 0, 1, None
 
-        # Quality gate
         if len(extracted.get("body", "")) < min_length:
             print(f"    [SKIP] Content too short ({len(extracted.get('body', ''))} chars)")
-            return 0, 1, 0
+            return 0, 1, 0, None
 
-        # Content fingerprint deduplication (catch same content at different URLs)
         fp = _content_fingerprint(extracted["body"])
         seen_hashes = state.get("content_hashes", {})
         if not dry_run and fp in seen_hashes and seen_hashes[fp] != url:
             print(f"    [SKIP] Duplicate content (same as {seen_hashes[fp]})")
-            return 0, 1, 0
+            return 0, 1, 0, None
 
-        # Quality score
         q = _score_quality(extracted["body"])
         grade = "A" if q["total"] >= 80 else "B" if q["total"] >= 60 else "C" if q["total"] >= 40 else "D"
         extracted["_quality"] = q
         extracted["_quality_grade"] = grade
 
-        # Stats
         engine = extracted.get("engine", "unknown")
         stats["engines"][engine] = stats["engines"].get(engine, 0) + 1
         stats["quality_scores"].append(q["total"])
         stats["urls"].append({"url": url, "grade": grade, "score": q["total"], "engine": engine})
 
-        # Write
         out_path = _write_entry(url, name, tags, extracted, dry_run, headers, fp)
         if out_path:
             print(f"    [OK] Saved to {out_path.name} ({engine}) [Q={grade}:{q['total']}]")
-            return 1, 0, 0
+            return 1, 0, 0, html
         else:
             if dry_run:
                 print(f"    [DRY] Would save [Q={grade}:{q['total']}]")
-                return 1, 0, 0
+                return 1, 0, 0, html
             else:
                 print(f"    [FAIL] Write failed")
-                return 0, 0, 1
+                return 0, 0, 1, None
 
     for entry_idx, entry in enumerate(entries, 1):
         seed_url = entry.get("url", "")
@@ -609,24 +601,22 @@ def run(
 
         while queue and source_pages < max_pages_per_source:
             url, name, tags, depth = queue.pop(0)
-            s, sk, f = _process_one(url, name, tags, depth, base_domain)
+            s, sk, f, html = _process_one(url, name, tags, depth, base_domain)
             source_success += s
             total_success += s
             total_skipped += sk
             total_failed += f
             source_pages += 1
 
-            if s > 0 and depth < max_depth:
-                html, _ = _fetch_html(url, timeout, user_agent)
-                if html:
-                    links = _extract_links(html, url)
-                    for link in links:
-                        if link in visited_this_run:
-                            continue
-                        if not _should_follow(link, base_domain, crawl_rules):
-                            continue
-                        if len(queue) + source_pages < max_pages_per_source:
-                            queue.append((link, "", seed_tags, depth + 1))
+            if s > 0 and depth < max_depth and html:
+                links = _extract_links(html, url)
+                for link in links:
+                    if link in visited_this_run:
+                        continue
+                    if not _should_follow(link, base_domain, crawl_rules):
+                        continue
+                    if len(queue) + source_pages < max_pages_per_source:
+                        queue.append((link, "", seed_tags, depth + 1))
 
             if delay > 0 and queue:
                 time.sleep(delay)

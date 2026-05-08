@@ -45,6 +45,13 @@ try:
 except ImportError:
     HAS_NETWORKX = False
     print("Warning: networkx not installed. Community detection disabled. Run: pip install networkx")
+
+try:
+    from tools.shared.logging_config import get_logger
+    logger = get_logger("build_graph")
+except ImportError:
+    import logging
+    logger = logging.getLogger("wiki.build_graph")
 WIKI_DIR = REPO_ROOT / "wiki"
 GRAPH_DIR = REPO_ROOT / "graph"
 GRAPH_JSON = GRAPH_DIR / "graph.json"
@@ -185,8 +192,12 @@ def edge_id(src: str, target: str, edge_type: str) -> str:
 def load_cache() -> dict:
     if CACHE_FILE.exists():
         try:
-            return json.loads(CACHE_FILE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, IOError):
+            data = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+            logger.info("Cache loaded | path=%s entries=%d", CACHE_FILE, len(data))
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning("Cache load failed (discarding) | path=%s error_type=%s error=%s",
+                           CACHE_FILE, type(e).__name__, e)
             return {}
     return {}
 
@@ -194,6 +205,7 @@ def load_cache() -> dict:
 def save_cache(cache: dict):
     GRAPH_DIR.mkdir(parents=True, exist_ok=True)
     CACHE_FILE.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
+    logger.debug("Cache saved | path=%s entries=%d", CACHE_FILE, len(cache))
 
 
 def extract_frontmatter_tags(content: str) -> list[str]:
@@ -318,6 +330,7 @@ def build_inferred_edges(pages: list[Path], existing_edges: list[dict], cache: d
         checkpoint_edges, completed_ids = load_checkpoint()
         if completed_ids:
             print(f"  checkpoint: {len(completed_ids)} pages already done, {len(checkpoint_edges)} edges loaded")
+            logger.info("Checkpoint loaded | completed_pages=%d loaded_edges=%d", len(completed_ids), len(checkpoint_edges))
 
     new_edges = list(checkpoint_edges)
 
@@ -350,12 +363,14 @@ def build_inferred_edges(pages: list[Path], existing_edges: list[dict], cache: d
 
     if not changed_pages:
         print("  no changed pages — skipping semantic inference")
+        logger.info("Inference skipped — no changed pages")
         return new_edges
 
     total_pages = len(changed_pages)
     already_done = len(completed_ids)
     grand_total = total_pages + already_done
     print(f"  inferring relationships for {total_pages} remaining pages (of {grand_total} total)...")
+    logger.info("Inference start | changed_pages=%d total_pages=%d checkpoint_done=%d", total_pages, grand_total, already_done)
 
     node_list = "\n".join(f"- {page_id(p)} ({extract_frontmatter_type(read_file(p))})" for p in pages)
 
@@ -405,11 +420,15 @@ Rules:
         page_edges = []
         valid_rels = []
         try:
+            t0 = time.monotonic()
             raw = call_llm(prompt, "LLM_MODEL_FAST", "claude-3-5-haiku-latest", max_tokens=1024)
+            elapsed = time.monotonic() - t0
             if not raw:
                 print("⚠  Empty LLM response")
+                logger.warning("Inference LLM empty response | page=%s elapsed=%.2fs", src, elapsed)
                 continue
             raw = raw.strip()
+            logger.debug("Inference LLM response | page=%s elapsed=%.2fs response_chars=%d", src, elapsed, len(raw))
 
             match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", raw)
             if match:
@@ -455,11 +474,16 @@ Rules:
             }
             append_checkpoint(src, page_edges)
             print(f"-> Found {len(page_edges)} edges.")
+            logger.info("Inference page done | page=%s edges=%d", src, len(page_edges))
         except (json.JSONDecodeError, TypeError, ValueError) as jde:
             print(f"-> [WARN] Invalid JSON: {str(jde)[:60]}")
+            logger.warning("Inference JSON parse error | page=%s error_type=%s error=%s raw_first_100=%s",
+                           src, type(jde).__name__, jde, (raw or "")[:100].replace("\n", "\\n"))
         except Exception as e:
             err_msg = str(e).replace('\n', ' ')[:80]
             print(f"-> [ERROR] {err_msg}")
+            logger.error("Inference unexpected error | page=%s error_type=%s error=%s",
+                         src, type(e).__name__, e)
 
     return new_edges
 

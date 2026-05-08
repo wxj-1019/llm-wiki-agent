@@ -113,8 +113,11 @@ def check_module(name: str, attr: str | None = None) -> tuple[bool, str]:
     try:
         mod = __import__(name)
         if attr:
-            val = getattr(mod, attr)
-            return True, str(val)
+            try:
+                val = getattr(mod, attr)
+                return True, str(val)
+            except AttributeError:
+                return True, "installed (version unknown)"
         return True, "installed"
     except ImportError:
         return False, "not installed"

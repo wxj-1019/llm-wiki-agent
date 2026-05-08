@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
 import socket
 import subprocess
@@ -26,7 +27,7 @@ try:
     import yaml
 except ImportError:
     yaml = None
-from fastapi import FastAPI, Query, Request, UploadFile, File, Depends, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, UploadFile, File, Depends, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -163,6 +164,9 @@ RATE_LIMIT_CLEANUP_INTERVAL = 300
 async def rate_limit(request: Request, call_next):
     global _rate_limit_last_cleanup
     client = request.client.host if request.client else "unknown"
+    # Skip rate limiting for localhost in development
+    if client in ("127.0.0.1", "localhost", "::1"):
+        return await call_next(request)
     now = time.time()
     if now - _rate_limit_last_cleanup > RATE_LIMIT_CLEANUP_INTERVAL:
         expired = [k for k, v in _rate_limit_store.items() if not v or all(now - t >= RATE_LIMIT_WINDOW for t in v)]
@@ -473,20 +477,54 @@ def get_system_status():
     }
 
 
+def _extract_source_file_from_frontmatter(path: Path) -> str | None:
+    """Quickly read the first 2KB of a markdown file and extract source_file from frontmatter."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")[:2048]
+        if not text.startswith("---"):
+            return None
+        end = text.find("---", 3)
+        if end == -1:
+            return None
+        fm = text[3:end].strip()
+        if yaml:
+            data = yaml.safe_load(fm)
+            if isinstance(data, dict):
+                return data.get("source_file")
+        # Fallback: simple line parsing when yaml is unavailable
+        for line in fm.splitlines():
+            if line.strip().startswith("source_file:"):
+                val = line.split(":", 1)[1].strip()
+                # Remove quotes if present
+                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    val = val[1:-1]
+                return val
+    except Exception:
+        pass
+    return None
+
+
 @app.get("/api/raw-files")
 def list_raw_files():
     raw_dir = REPO / "raw"
+    # Build a set of raw file paths that have been ingested by scanning wiki/sources/
+    ingested_paths: set[str] = set()
+    sources_dir = REPO / "wiki" / "sources"
+    if sources_dir.exists():
+        for src in sources_dir.glob("*.md"):
+            sf = _extract_source_file_from_frontmatter(src)
+            if sf:
+                ingested_paths.add(sf)
     files = []
     for p in raw_dir.rglob("*"):
         if p.is_file() and p.name != ".gitkeep":
-            # Check if a corresponding source page exists in wiki/sources/
-            source_path = REPO / "wiki" / "sources" / f"{p.stem}.md"
+            rel = p.relative_to(REPO).as_posix()
             files.append({
-                "path": p.relative_to(REPO).as_posix(),
+                "path": rel,
                 "name": p.name,
                 "size": p.stat().st_size,
                 "modified": p.stat().st_mtime,
-                "ingested": source_path.exists(),
+                "ingested": rel in ingested_paths,
             })
     files.sort(key=lambda x: x["modified"], reverse=True)
     return {"files": files}
@@ -547,9 +585,10 @@ async def upload_file(file: UploadFile = File(...)):
         ".yml": ["application/yaml", "text/yaml"],
     }
     allowed = expected_types.get(suffix, [])
-    # application/octet-stream is a generic fallback — skip validation
+    # application/octet-stream is a generic browser fallback for unknown types
+    # — log a warning and continue with extension-only validation
     if content_type == "application/octet-stream":
-        pass
+        logger.info("Upload %s: Content-Type is octet-stream, validating by extension only", safe_name)
     elif allowed and content_type and not any(content_type.startswith(a) for a in allowed):
         raise HTTPException(
             status_code=400,
@@ -595,8 +634,7 @@ async def upload_file(file: UploadFile = File(...)):
             converted_path = await asyncio.to_thread(_do_convert)
             converted = converted_path.relative_to(REPO).as_posix()
         except Exception as e:
-            logger.warning("Config back-compat cleanup failed: %s", e)
-            pass
+            logger.warning("File conversion failed for %s: %s", safe_name, e)
 
     return {
         "success": True,
@@ -719,6 +757,8 @@ async def multimodal_ingest_image(file: UploadFile = File(...)):
             [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(md_path)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
@@ -757,7 +797,7 @@ def delete_raw_file(path: str):
 
 @app.post("/api/ingest")
 async def api_ingest(payload: IngestPayload):
-    path_str = path
+    path_str = payload.path
     if not path_str:
         raise HTTPException(status_code=400, detail="path is required")
 
@@ -777,11 +817,16 @@ async def api_ingest(payload: IngestPayload):
             [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(target)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
+        success = result.returncode == 0
+        if success:
+            threading.Thread(target=_rebuild_graph_sync, daemon=True).start()
         return {
-            "success": result.returncode == 0,
+            "success": success,
             "stdout": result.stdout,
             "stderr": result.stderr,
             "returncode": result.returncode,
@@ -790,6 +835,33 @@ async def api_ingest(payload: IngestPayload):
         raise HTTPException(status_code=504, detail="Ingest timed out after 5 minutes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
+
+
+def _rebuild_graph_sync() -> None:
+    """Trigger a lightweight graph rebuild after ingestion completes (runs in a background thread)."""
+    import time
+    time.sleep(2)
+    log_path = REPO / ".cache" / "graph_rebuild.log"
+    try:
+        log_path.write_text("Background graph rebuild started\n", encoding="utf-8")
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        result = subprocess.run(
+            [PYTHON_EXE, str(REPO / "tools" / "build_graph.py"), "--no-infer"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(REPO),
+            timeout=120,
+            env=env,
+        )
+        log_path.write_text(
+            f"Finished: rc={result.returncode}\nstdout={result.stdout[:500]}\nstderr={result.stderr[:200]}\n",
+            encoding="utf-8",
+        )
+    except Exception as e:
+        log_path.write_text(f"Failed: {e}\n", encoding="utf-8")
 
 
 def _calc_ingest_progress(line: str, current: int) -> int:
@@ -838,15 +910,50 @@ async def api_ingest_stream(path: str = Query(..., min_length=1)):
     job_id = str(uuid.uuid4())[:8]
 
     async def event_generator():
-        proc = await asyncio.create_subprocess_exec(
-            PYTHON_EXE,
-            "-u",
-            str(REPO / "tools" / "ingest.py"),
-            str(target),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=str(REPO),
-        )
+        # Windows: asyncio.create_subprocess_exec can raise NotImplementedError
+        # when the active event loop does not support subprocess transport.
+        # Fall back to subprocess.Popen + threads for cross-platform reliability.
+        if sys.platform == "win32":
+            popen = subprocess.Popen(
+                [PYTHON_EXE, "-u", str(REPO / "tools" / "ingest.py"), str(target)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=str(REPO),
+            )
+
+            async def _readline(pipe):
+                return await asyncio.to_thread(pipe.readline)
+
+            async def _wait():
+                return await asyncio.to_thread(popen.wait)
+
+            def _returncode():
+                return popen.poll()
+
+            def _kill():
+                popen.kill()
+        else:
+            popen = await asyncio.create_subprocess_exec(
+                PYTHON_EXE,
+                "-u",
+                str(REPO / "tools" / "ingest.py"),
+                str(target),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(REPO),
+            )
+
+            async def _readline(pipe):
+                return await pipe.readline()
+
+            async def _wait():
+                return await popen.wait()
+
+            def _returncode():
+                return popen.returncode
+
+            def _kill():
+                popen.kill()
 
         ingestion_jobs[job_id] = {
             "id": job_id,
@@ -865,9 +972,9 @@ async def api_ingest_stream(path: str = Query(..., min_length=1)):
         async def read_stderr():
             while True:
                 try:
-                    line = await asyncio.wait_for(proc.stderr.readline(), timeout=1.0)
+                    line = await asyncio.wait_for(_readline(popen.stderr), timeout=1.0)
                 except asyncio.TimeoutError:
-                    if proc.returncode is not None:
+                    if _returncode() is not None:
                         break
                     continue
                 if not line:
@@ -882,7 +989,7 @@ async def api_ingest_stream(path: str = Query(..., min_length=1)):
 
         try:
             while True:
-                line = await proc.stdout.readline()
+                line = await _readline(popen.stdout)
                 if not line:
                     break
                 text = line.decode("utf-8", errors="replace").rstrip()
@@ -904,16 +1011,19 @@ async def api_ingest_stream(path: str = Query(..., min_length=1)):
                 await stderr_task
             except asyncio.CancelledError:
                 pass
-            if proc.returncode is None:
-                proc.kill()
-                await proc.wait()
+            if _returncode() is None:
+                _kill()
+                await _wait()
 
-        final_status = "completed" if proc.returncode == 0 else "failed"
+        final_status = "completed" if _returncode() == 0 else "failed"
         ingestion_jobs[job_id]["status"] = final_status
         ingestion_jobs[job_id]["progress"] = 100
         ingestion_jobs[job_id]["updated_at"] = time.time()
 
-        yield f"event: complete\ndata: {json.dumps({'job_id': job_id, 'status': final_status, 'returncode': proc.returncode})}\n\n"
+        if final_status == "completed":
+            threading.Thread(target=_rebuild_graph_sync, daemon=True).start()
+
+        yield f"event: complete\ndata: {json.dumps({'job_id': job_id, 'status': final_status, 'returncode': _returncode()})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -1012,6 +1122,8 @@ source_url: "{safe_url}"
             [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(raw_path)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
@@ -1059,6 +1171,8 @@ async def webhook_ingest(payload: WebhookIngestPayload, _=Depends(_require_webho
             [PYTHON_EXE, str(REPO / "tools" / "ingest.py"), str(target)],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
@@ -1103,6 +1217,8 @@ async def webhook_github(request: Request, _=Depends(_require_webhook_token)):
             [PYTHON_EXE, str(REPO / "tools" / "refresh.py")],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
@@ -1206,6 +1322,8 @@ async def agent_kit_generate(payload: AgentKitGeneratePayload):
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
@@ -1416,8 +1534,16 @@ async def agent_kit_llm_chat(request: Request):
         kwargs["api_key"] = api_key
     try:
         from litellm import completion
+        t0 = time.monotonic()
+        logger.info("LLM chat request | model=%s messages=%d total_chars=%d", model, len(full_messages), total_size)
         response = await asyncio.to_thread(completion, **kwargs)
+        elapsed = time.monotonic() - t0
         content = response.choices[0].message.content
+        usage = getattr(response, "usage", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+        logger.info("LLM chat response | model=%s elapsed=%.2fs prompt_tokens=%s completion_tokens=%s response_chars=%d",
+                    model, elapsed, prompt_tokens, completion_tokens, len(content))
         return {"content": content}
     except (ImportError, ConnectionError, TimeoutError, OSError, ValueError) as e:
         raise HTTPException(status_code=500, detail=f"LLM error: {e}")
@@ -1522,6 +1648,7 @@ async def wiki_chat(payload: WikiChatRequest):
     knowledge_context = "\n".join(knowledge_chunks)
     if not knowledge_context:
         knowledge_context = "No relevant wiki pages found."
+    logger.info("Wiki chat context | query=%s sources=%d knowledge_chars=%d", query[:100], len(sources), len(knowledge_context))
 
     agent_ctx = _load_agent_context()
     system_prompt = (
@@ -1547,21 +1674,27 @@ async def wiki_chat(payload: WikiChatRequest):
 
     async def event_generator():
         from litellm import acompletion
-        # First event: searching status
+        logger.info("Wiki chat stream start | model=%s messages=%d", model, len(full_messages))
+        t0 = time.monotonic()
         yield f"data: {json.dumps({'status': 'searching'}, ensure_ascii=False)}\n\n"
-        # Second event: sources metadata
         yield f"data: {json.dumps({'sources': sources}, ensure_ascii=False)}\n\n"
         try:
             response = await acompletion(**kwargs)
+            chunk_count = 0
             async for chunk in response:
                 try:
                     delta = chunk.choices[0].delta.content or ""
                 except (IndexError, AttributeError):
                     continue
                 if delta:
+                    chunk_count += 1
                     yield f"data: {json.dumps({'chunk': delta}, ensure_ascii=False)}\n\n"
+            elapsed = time.monotonic() - t0
+            logger.info("Wiki chat stream end | model=%s elapsed=%.2fs chunks=%d", model, elapsed, chunk_count)
             yield "data: [DONE]\n\n"
         except Exception as e:
+            elapsed = time.monotonic() - t0
+            logger.error("Wiki chat stream error | model=%s elapsed=%.2fs error_type=%s error=%s", model, elapsed, type(e).__name__, e)
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
 
@@ -2292,6 +2425,8 @@ def _run_tool_script(script_name: str, extra_args: list[str] | None = None) -> d
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=str(REPO),
             timeout=300,
         )
