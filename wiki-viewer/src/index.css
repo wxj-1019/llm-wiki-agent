@@ -462,6 +462,26 @@
   }
 }
 
+/* ── Knowledge Graph Loader Animations ── */
+@keyframes kb-core-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.85; }
+}
+@keyframes kb-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes kb-node-glow {
+  0%, 100% { box-shadow: 0 0 5px var(--kb-color); opacity: 0.75; transform: rotate(var(--kb-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1); }
+  50% { box-shadow: 0 0 14px var(--kb-color), 0 0 28px var(--kb-color); opacity: 1; transform: rotate(var(--kb-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1.25); }
+}
+@keyframes kb-particle-travel {
+  0% { opacity: 0; transform: rotate(var(--kb-p-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(0.5); }
+  15% { opacity: 1; transform: rotate(calc(var(--kb-p-angle) + 30deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1); }
+  85% { opacity: 1; transform: rotate(calc(var(--kb-p-angle) + 150deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1); }
+  100% { opacity: 0; transform: rotate(calc(var(--kb-p-angle) + 180deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(0.5); }
+}
+
 @media print {
   header, aside, .fixed, nav, .glass, [role="alert"] {
     display: none !important;

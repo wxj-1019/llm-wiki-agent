@@ -144,24 +144,102 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
   #loading-overlay {{
     position: fixed; inset: 0; background: #1a1a2e; z-index: 100;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.8s ease;
   }}
   #loading-overlay.hidden {{ opacity: 0; pointer-events: none; }}
-  .loader-ring {{
-    width: 56px; height: 56px; border: 3px solid rgba(255,255,255,0.1);
-    border-top-color: #FF5722; border-radius: 50%;
-    animation: spin 1s linear infinite;
+
+  /* ── Neural Constellation Loader ── */
+  .kb-loader {{
+    position: relative;
+    width: 140px; height: 140px;
+    margin-bottom: 24px;
   }}
-  @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
-  .loader-text {{ margin-top: 16px; font-size: 14px; color: #bbb; }}
-  .loader-progress {{ margin-top: 8px; font-size: 12px; color: #888; min-height: 18px; }}
+  /* Core */
+  .kb-core {{
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 16px; height: 16px;
+    margin: -8px 0 0 -8px;
+    background: radial-gradient(circle, #ffab91 0%, #ff5722 70%);
+    border-radius: 50%;
+    box-shadow:
+      0 0 20px rgba(255,87,34,0.5),
+      0 0 40px rgba(255,87,34,0.25),
+      0 0 80px rgba(255,87,34,0.1);
+    animation: kbCorePulse 2.4s ease-in-out infinite;
+    z-index: 5;
+  }}
+  /* Orbit rings */
+  .kb-orbit {{
+    position: absolute;
+    top: 50%; left: 50%;
+    border-radius: 50%;
+    border: 1px dashed rgba(255,255,255,0.07);
+    transform: translate(-50%, -50%);
+  }}
+  .kb-orbit.o1 {{ width: 44px; height: 44px; --orbit-r: 22px; animation: kbSpin 6s linear infinite; }}
+  .kb-orbit.o2 {{ width: 76px; height: 76px; --orbit-r: 38px; animation: kbSpin 10s linear infinite reverse; }}
+  .kb-orbit.o3 {{ width: 108px; height: 108px; --orbit-r: 54px; animation: kbSpin 14s linear infinite; }}
+  /* Orbital nodes */
+  .kb-node {{
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 6px; height: 6px;
+    margin: -3px 0 0 -3px;
+    background: var(--color);
+    border-radius: 50%;
+    transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1));
+    animation: kbNodeGlow 2.5s ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }}
+  .kb-orbit.o1 .kb-node {{ animation-duration: 2.2s; }}
+  .kb-orbit.o2 .kb-node {{ animation-duration: 2.8s; }}
+  .kb-orbit.o3 .kb-node {{ animation-duration: 3.4s; }}
+  /* Data particles that travel along orbital paths */
+  .kb-particle {{
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 3px; height: 3px;
+    margin: -1.5px 0 0 -1.5px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #fff;
+    opacity: 0;
+    transform: rotate(var(--p-angle)) translateY(calc(var(--orbit-r) * -1));
+    animation: kbParticleTravel 3s ease-out infinite;
+    animation-delay: var(--p-delay, 0s);
+  }}
+  /* Text & progress */
+  .loader-text {{ margin-top: 4px; font-size: 15px; color: #ddd; letter-spacing: 0.3px; font-weight: 500; }}
+  .loader-sub {{ margin-top: 6px; font-size: 12px; color: #777; min-height: 18px; }}
   .loader-bar {{
-    width: 220px; height: 3px; background: rgba(255,255,255,0.08);
-    border-radius: 2px; margin-top: 12px; overflow: hidden;
+    width: 240px; height: 3px; background: rgba(255,255,255,0.06);
+    border-radius: 3px; margin-top: 14px; overflow: hidden;
   }}
   .loader-bar-inner {{
-    height: 100%; background: #FF5722; border-radius: 2px;
-    transition: width 0.3s ease;
+    height: 100%; background: linear-gradient(90deg, #ff5722, #ff8a65);
+    border-radius: 3px;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 0 8px rgba(255,87,34,0.3);
+  }}
+  /* Keyframes */
+  @keyframes kbCorePulse {{
+    0%, 100% {{ transform: scale(1); opacity: 1; }}
+    50% {{ transform: scale(1.4); opacity: 0.85; }}
+  }}
+  @keyframes kbSpin {{
+    from {{ transform: translate(-50%, -50%) rotate(0deg); }}
+    to {{ transform: translate(-50%, -50%) rotate(360deg); }}
+  }}
+  @keyframes kbNodeGlow {{
+    0%, 100% {{ box-shadow: 0 0 5px var(--color); opacity: 0.75; transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
+    50% {{ box-shadow: 0 0 14px var(--color), 0 0 28px var(--color); opacity: 1; transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1.25); }}
+  }}
+  @keyframes kbParticleTravel {{
+    0% {{ opacity: 0; transform: rotate(var(--p-angle)) translateY(calc(var(--orbit-r) * -1)) scale(0.5); }}
+    15% {{ opacity: 1; transform: rotate(calc(var(--p-angle) + 30deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
+    85% {{ opacity: 1; transform: rotate(calc(var(--p-angle) + 150deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
+    100% {{ opacity: 0; transform: rotate(calc(var(--p-angle) + 180deg)) translateY(calc(var(--orbit-r) * -1)) scale(0.5); }}
   }}
 </style>
 </head>
@@ -186,9 +264,26 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
   <p>Click a node to highlight its connected neighbors and view the markdown on the right. Click the background to restore the full graph.</p>
 </div>
 <div id="loading-overlay">
-  <div class="loader-ring"></div>
-  <div class="loader-text">Building knowledge graph...</div>
-  <div class="loader-progress" id="loader-progress">0 / 0 nodes</div>
+  <div class="kb-loader">
+    <div class="kb-core"></div>
+    <div class="kb-orbit o1">
+      <div class="kb-node" style="--angle:0deg;--color:#4fc3f7;--delay:0s;"></div>
+      <div class="kb-particle" style="--p-angle:180deg;--p-delay:0.5s;"></div>
+    </div>
+    <div class="kb-orbit o2">
+      <div class="kb-node" style="--angle:60deg;--color:#81c784;--delay:0.4s;"></div>
+      <div class="kb-node" style="--angle:240deg;--color:#ffb74d;--delay:0.8s;"></div>
+      <div class="kb-particle" style="--p-angle:300deg;--p-delay:1.2s;"></div>
+    </div>
+    <div class="kb-orbit o3">
+      <div class="kb-node" style="--angle:120deg;--color:#ba68c8;--delay:0.2s;"></div>
+      <div class="kb-node" style="--angle:240deg;--color:#e57373;--delay:1.0s;"></div>
+      <div class="kb-node" style="--angle:0deg;--color:#4dd0e1;--delay:1.4s;"></div>
+      <div class="kb-particle" style="--p-angle:90deg;--p-delay:2.0s;"></div>
+    </div>
+  </div>
+  <div class="loader-text" id="loader-text">Synthesizing knowledge graph...</div>
+  <div class="loader-sub" id="loader-progress">0 / 0 nodes</div>
   <div class="loader-bar"><div class="loader-bar-inner" id="loader-bar-inner" style="width:0%"></div></div>
 </div>
 <div id="graph"></div>

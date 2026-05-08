@@ -14,6 +14,10 @@
 
 163 nodes, 629 edges (629 extracted, 0 inferred).
 
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+163 nodes, 629 edges (629 extracted, 0 inferred).
+
 ## [2026-05-08] ingest | Log File Test
 
 Added source. Key claims: This document tests whether the graph rebuild pipeline's file-based logging mechanism correctly records operations after ingestion.
