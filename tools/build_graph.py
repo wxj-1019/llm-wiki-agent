@@ -235,6 +235,11 @@ def build_nodes(pages: list[Path]) -> list[dict]:
         body = strip_frontmatter(content)
         preview_lines = [line.strip() for line in body.splitlines() if line.strip()]
         preview = " ".join(preview_lines[:3])[:220]
+        # Extract [[wikilinks]] from body for mindmap / content tracking
+        raw_links = re.findall(r'\[\[([^\]]+)\]\]', body)
+        links = list(dict.fromkeys(  # deduplicate preserving order
+            l.split("|")[0] for l in raw_links
+        ))
         tags = extract_frontmatter_tags(content)
         last_updated = extract_frontmatter_field(content, "last_updated") or extract_frontmatter_field(content, "date")
         node = {
@@ -244,6 +249,7 @@ def build_nodes(pages: list[Path]) -> list[dict]:
             "color": TYPE_COLORS.get(node_type, TYPE_COLORS["unknown"]),
             "path": p.relative_to(REPO_ROOT).as_posix(),
             "preview": preview,
+            "links": links,
         }
         if tags:
             node["tags"] = tags

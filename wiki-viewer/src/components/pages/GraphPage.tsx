@@ -228,16 +228,27 @@ export function GraphPage() {
     networkRef.current = network;
     initRef.current = true;
 
+    // Throttle progress updates to avoid React re-rendering 40×/sec
+    let lastProgress = -1;
+    let rafId: number | null = null;
     network.on('stabilizationProgress', (params: any) => {
       const pct = Math.min(100, Math.round((params.iterations / params.total) * 100));
-      setLoadProgress(30 + Math.round(pct * 0.65));
+      const nextProgress = 30 + Math.round(pct * 0.65);
+      if (nextProgress !== lastProgress) {
+        lastProgress = nextProgress;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => setLoadProgress(nextProgress));
+      }
     });
 
     network.once('stabilizationIterationsDone', () => {
+      if (rafId) cancelAnimationFrame(rafId);
       setLoadProgress(100);
-      setLoadPhase('Ready!');
-      setTimeout(() => setLoadPhase(''), 600);
-      network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+      // Let overlay fade out before fitting viewport so the transition feels seamless
+      setTimeout(() => {
+        setLoadPhase('');
+        network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+      }, 200);
     });
 
     network.on('click', (params) => {
@@ -378,8 +389,8 @@ export function GraphPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]/90 backdrop-blur-sm"
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]"
           >
             <div className="text-center">
               {/* Neural Constellation Loader */}

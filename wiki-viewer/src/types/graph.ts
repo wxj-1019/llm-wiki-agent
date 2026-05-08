@@ -6,6 +6,7 @@ export interface GraphNode {
   path: string;
   markdown: string;
   preview: string;
+  links?: string[];
   group: number;
   value: number;
   tags?: string[];

@@ -225,21 +225,30 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
   /* Keyframes */
   @keyframes kbCorePulse {{
     0%, 100% {{ transform: scale(1); opacity: 1; }}
-    50% {{ transform: scale(1.4); opacity: 0.85; }}
+    45% {{ transform: scale(1.35); opacity: 0.92; }}
+    55% {{ transform: scale(1.35); opacity: 0.92; }}
   }}
   @keyframes kbSpin {{
     from {{ transform: translate(-50%, -50%) rotate(0deg); }}
     to {{ transform: translate(-50%, -50%) rotate(360deg); }}
   }}
   @keyframes kbNodeGlow {{
-    0%, 100% {{ box-shadow: 0 0 5px var(--color); opacity: 0.75; transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
-    50% {{ box-shadow: 0 0 14px var(--color), 0 0 28px var(--color); opacity: 1; transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1.25); }}
+    0%, 100% {{
+      opacity: 0.5;
+      box-shadow: 0 0 4px var(--color), 0 0 10px var(--color);
+      transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1);
+    }}
+    50% {{
+      opacity: 1;
+      box-shadow: 0 0 8px var(--color), 0 0 18px var(--color), 0 0 28px var(--color);
+      transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1.18);
+    }}
   }}
   @keyframes kbParticleTravel {{
-    0% {{ opacity: 0; transform: rotate(var(--p-angle)) translateY(calc(var(--orbit-r) * -1)) scale(0.5); }}
-    15% {{ opacity: 1; transform: rotate(calc(var(--p-angle) + 30deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
-    85% {{ opacity: 1; transform: rotate(calc(var(--p-angle) + 150deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
-    100% {{ opacity: 0; transform: rotate(calc(var(--p-angle) + 180deg)) translateY(calc(var(--orbit-r) * -1)) scale(0.5); }}
+    0% {{ opacity: 0; transform: rotate(var(--p-angle)) translateY(calc(var(--orbit-r) * -1)) scale(0.4); }}
+    12% {{ opacity: 0.85; transform: rotate(calc(var(--p-angle) + 24deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
+    88% {{ opacity: 0.85; transform: rotate(calc(var(--p-angle) + 156deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
+    100% {{ opacity: 0; transform: rotate(calc(var(--p-angle) + 180deg)) translateY(calc(var(--orbit-r) * -1)) scale(0.4); }}
   }}
 </style>
 </head>
@@ -728,12 +737,14 @@ function initNetwork() {{
     loaderProgress.textContent = `Computing layout... ${{params.iterations}} / ${{params.total}}`;
   }});
 
-  // Hide loader when stable and fit viewport
+  // Hide loader when stable, then fit viewport for a seamless transition
   network.once("stabilizationIterationsDone", function () {{
     loaderBarInner.style.width = "100%";
     loaderProgress.textContent = "Ready!";
-    setTimeout(() => loadingOverlay.classList.add("hidden"), 500);
-    network.fit({{ animation: {{ duration: 400, easingFunction: "easeInOutQuad" }} }});
+    setTimeout(() => {{
+      loadingOverlay.classList.add("hidden");
+      network.fit({{ animation: {{ duration: 400, easingFunction: "easeInOutQuad" }} }});
+    }}, 300);
   }});
 
   network.on("click", params => {{

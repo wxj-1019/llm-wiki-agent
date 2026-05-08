@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { extractWikiLinks } from '@/lib/wikilink';
 import { getPagePath } from '@/lib/wikilink';
 import { motion } from 'framer-motion';
 import { Network, ChevronRight, Download } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { MindmapSkeleton } from '@/components/ui/Skeleton';
+import { useTranslation } from 'react-i18next';
 
 const MAX_DEPTH = 3;
 function getNodeColors(): Record<string, string> {
@@ -25,12 +25,13 @@ interface MindNode {
   label: string;
   type: string;
   depth: number;
+  preview: string;
   children: MindNode[];
 }
 
 function buildMindTree(
   nodeId: string,
-  nodeMap: Map<string, { id: string; label: string; type: string; markdown: string }>,
+  nodeMap: Map<string, { id: string; label: string; type: string; links?: string[]; preview: string }>,
   labelMap: Map<string, string>,
   depth: number,
   visited: Set<string> = new Set()
@@ -41,7 +42,7 @@ function buildMindTree(
   const node = nodeMap.get(nodeId);
   if (!node) return null;
 
-  const links = extractWikiLinks(node.markdown);
+  const links = node.links || [];
   const children: MindNode[] = [];
 
   for (const link of links.slice(0, 8)) {
@@ -58,23 +59,25 @@ function buildMindTree(
     label: node.label,
     type: node.type,
     depth,
+    preview: node.preview,
     children,
   };
 }
 
-function MindNodeComponent({ node, nodeMap }: { node: MindNode; nodeMap: Map<string, { id: string; label: string; type: string }> }) {
+function MindNodeComponent({ node, nodeMap }: { node: MindNode; nodeMap: Map<string, { id: string; label: string; type: string; preview: string }> }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(node.depth < 2);
   const targetNode = nodeMap.get(node.id);
   const hasChildren = node.children.length > 0;
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-2 py-1">
-        {hasChildren && (
+      <div className="flex items-start gap-2 py-1.5 group">
+        {hasChildren ? (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-0.5 rounded hover:bg-[var(--bg-secondary)] transition-colors"
-            aria-label={expanded ? 'Collapse' : 'Expand'}
+            className="p-0.5 rounded hover:bg-[var(--bg-secondary)] transition-colors mt-0.5"
+            aria-label={expanded ? t('mindmap.collapse') : t('mindmap.expand')}
             aria-expanded={expanded}
           >
             <ChevronRight
@@ -82,22 +85,30 @@ function MindNodeComponent({ node, nodeMap }: { node: MindNode; nodeMap: Map<str
               className={`text-[var(--text-tertiary)] transition-transform ${expanded ? 'rotate-90' : ''}`}
             />
           </button>
+        ) : (
+          <span className="w-5 shrink-0" aria-hidden="true" />
         )}
-        {!hasChildren && <span className="w-5 shrink-0" aria-hidden="true" />}
         <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
           style={{ backgroundColor: getNodeColors()[node.type] || '#999' }}
         />
-        {targetNode ? (
-          <Link
-            to={getPagePath(targetNode)}
-            className="text-sm hover:text-apple-blue transition-colors truncate"
-          >
-            {node.label}
-          </Link>
-        ) : (
-          <span className="text-sm truncate">{node.label}</span>
-        )}
+        <div className="min-w-0 flex-1">
+          {targetNode ? (
+            <Link
+              to={getPagePath(targetNode)}
+              className="text-sm font-medium hover:text-apple-blue transition-colors"
+            >
+              {node.label}
+            </Link>
+          ) : (
+            <span className="text-sm font-medium">{node.label}</span>
+          )}
+          {node.preview && (
+            <p className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-2 leading-relaxed">
+              {node.preview}
+            </p>
+          )}
+        </div>
       </div>
       {expanded && hasChildren && (
         <div className="ml-5 pl-3 border-l border-[var(--border-default)]">
@@ -112,11 +123,12 @@ function MindNodeComponent({ node, nodeMap }: { node: MindNode; nodeMap: Map<str
 
 export function MindmapPage() {
   const { slug } = useParams();
+  const { t } = useTranslation();
   const graphData = useWikiStore((s) => s.graphData);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const nodes = useMemo(() => graphData?.nodes || [], [graphData?.nodes]);
   const loading = useWikiStore((s) => s.loading);
-  useDocumentTitle('Mindmap');
+  useDocumentTitle(t('mindmap.title'));
 
   const { rootNode, nodeMap } = useMemo(() => {
     if (!slug || !graphData) return { rootNode: null, nodeMap: new Map() };
@@ -140,7 +152,7 @@ export function MindmapPage() {
     return (
       <div className="empty-state-warm mt-20">
         <Network size={48} className="text-[var(--text-tertiary)] mb-3" />
-        <h3 className="text-lg font-semibold">Page not found</h3>
+        <h3 className="text-lg font-semibold">{t('mindmap.notFound')}</h3>
       </div>
     );
   }
@@ -159,20 +171,20 @@ export function MindmapPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      addNotification(`Export failed: ${(e as Error).message}`, 'error');
+      addNotification(t('mindmap.exportFailed', { error: (e as Error).message }), 'error');
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Mindmap: {rootNode.label}</h1>
+        <h1 className="text-3xl font-semibold">{t('mindmap.heading', { label: rootNode.label })}</h1>
         <button
           onClick={handleExport}
           className="apple-button-ghost flex items-center gap-2"
         >
           <Download size={16} />
-          Export SVG
+          {t('mindmap.exportSVG')}
         </button>
       </div>
 
