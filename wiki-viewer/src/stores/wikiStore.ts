@@ -101,7 +101,7 @@ const MAX_READING_PROGRESS = 100;
 const _readingTimestamps: Record<string, number> = {};
 
 let _initPromise: Promise<void> | null = null;
-let _pollInterval: ReturnType<typeof setInterval> | null = null;
+let _pollTimer: ReturnType<typeof setTimeout> | null = null;
 let _persistTimer: ReturnType<typeof setTimeout> | null = null;
 let _lastEtag = '0';
 let _pollFetching = false;
@@ -112,23 +112,24 @@ const MAX_POLL_INTERVAL = 300000; // 5 min cap
 const MAX_FAILURES_BEFORE_STOP = 10;
 
 export function stopPolling() {
-  if (_pollInterval) {
-    clearInterval(_pollInterval);
-    _pollInterval = null;
+  if (_pollTimer) {
+    clearTimeout(_pollTimer);
+    _pollTimer = null;
   }
 }
 
 function _schedulePoll() {
-  if (_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(async () => {
-    if (document.hidden || _pollFetching) return;
+  if (_pollTimer) clearTimeout(_pollTimer);
+  _pollTimer = setTimeout(async () => {
+    if (document.hidden || _pollFetching) {
+      _schedulePoll();
+      return;
+    }
     _pollFetching = true;
     try {
       const newEtag = await fetchIndexEtag();
       _consecutiveFailures = 0;
       _currentPollInterval = BASE_POLL_INTERVAL;
-      // Reschedule with normal interval if it was backed off
-      _schedulePoll();
       useWikiStore.setState({ apiConnected: true, error: null });
       if (newEtag !== _lastEtag && _lastEtag !== '0') {
         const data = await fetchGraphData();
@@ -137,9 +138,9 @@ function _schedulePoll() {
         saveGraphCache(data);
       }
       _lastEtag = newEtag;
+      _schedulePoll();
     } catch {
       _consecutiveFailures++;
-      // Exponential backoff: 30s -> 60s -> 120s -> 240s -> 300s cap
       _currentPollInterval = Math.min(BASE_POLL_INTERVAL * Math.pow(2, _consecutiveFailures), MAX_POLL_INTERVAL);
       if (_consecutiveFailures >= MAX_FAILURES_BEFORE_STOP) {
         stopPolling();
@@ -155,7 +156,7 @@ function _schedulePoll() {
 }
 
 function _startPolling() {
-  if (_pollInterval) return;
+  if (_pollTimer) return;
   _consecutiveFailures = 0;
   _currentPollInterval = BASE_POLL_INTERVAL;
   _schedulePoll();
@@ -227,7 +228,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       const etag = await fetchIndexEtag();
       const connected = etag !== '0' && etag !== '';
       set({ apiConnected: connected, error: connected ? null : get().error });
-      if (connected && !_pollInterval) {
+      if (connected && !_pollTimer) {
         _consecutiveFailures = 0;
         _currentPollInterval = BASE_POLL_INTERVAL;
         _startPolling();

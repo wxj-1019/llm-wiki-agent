@@ -80,7 +80,16 @@ export function BrowsePage() {
   const graphData = useWikiStore((s) => s.graphData);
   const loading = useWikiStore((s) => s.loading);
   const nodes = useMemo(() => graphData?.nodes || [], [graphData]);
-  const getBacklinks = useWikiStore((s) => s.getBacklinks);
+  const edges = useMemo(() => graphData?.edges || [], [graphData]);
+
+  // Pre-compute backlink counts in O(E) once to avoid O(N*E) per sort
+  const backlinkCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of edges) {
+      map.set(e.to, (map.get(e.to) || 0) + 1);
+    }
+    return map;
+  }, [edges]);
 
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 24;
@@ -102,9 +111,7 @@ export function BrowsePage() {
     if (sortBy === 'name') {
       result = [...result].sort((a, b) => a.label.localeCompare(b.label));
     } else if (sortBy === 'connected') {
-      const countMap = new Map<string, number>();
-      result.forEach((n) => countMap.set(n.id, getBacklinks(n.id).length));
-      result = [...result].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
+      result = [...result].sort((a, b) => (backlinkCounts.get(b.id) || 0) - (backlinkCounts.get(a.id) || 0));
     } else if (sortBy === 'updated') {
       result = [...result].sort((a, b) => {
         const da = a.last_updated || '';
@@ -113,7 +120,7 @@ export function BrowsePage() {
       });
     }
     return result;
-  }, [nodes, filterType, debouncedQuery, sortBy, getBacklinks]);
+  }, [nodes, filterType, debouncedQuery, sortBy, backlinkCounts]);
 
   useEffect(() => {
     setPage(1);
@@ -217,7 +224,7 @@ export function BrowsePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {paginated.map((node, i) => {
           const useMotion = filtered.length <= 20;
-          const backlinkCount = getBacklinks(node.id).length;
+          const backlinkCount = backlinkCounts.get(node.id) || 0;
           const card = <PageCard node={node} backlinkCount={backlinkCount} />;
           if (!useMotion) {
             return (

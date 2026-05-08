@@ -36,7 +36,7 @@ export function searchNodes(query: string): FuseResult<GraphNode>[] {
 }
 
 function stripFrontmatter(markdown: string): string {
-  // Robust frontmatter stripping: match only at start of file
+  if (!markdown) return '';
   const match = markdown.match(/^---\s*\n[\s\S]*?\n---\s*\n/);
   if (match) return markdown.slice(match[0].length).trim();
   return markdown;
@@ -88,14 +88,16 @@ export async function hybridSearch(
   const ftsMatches: FuseResult<GraphNode>[] = [];
   try {
     const apiResults = await searchFts(query, 20, semantic);
-    const nodeMap = new Map(nodes.map((n, i) => [n.path, { node: n, index: i }]));
+    // Normalize node paths to forward slashes for matching
+    const nodeMap = new Map(nodes.map((n, i) => [n.path.replace(/\\/g, '/'), { node: n, index: i }]));
     for (const r of apiResults) {
-      const mapped = nodeMap.get(r.path);
+      const normalizedPath = r.path.replace(/\\/g, '/');
+      const mapped = nodeMap.get(normalizedPath);
       if (mapped) {
         ftsMatches.push({
           item: mapped.node,
           refIndex: mapped.index,
-          score: Math.max(0, r.rank / 100), // BM25 rank → Fuse-like score (small = good)
+          score: Math.max(0, -r.rank / 100),
           matches: [],
         } as FuseResult<GraphNode>);
       }

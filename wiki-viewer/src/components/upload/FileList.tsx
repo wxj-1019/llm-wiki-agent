@@ -172,12 +172,24 @@ const FileListItem = memo(function FileListItem({
         </button>
         <button
           onClick={() => onIngest(file)}
-          disabled={isIngesting}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-apple-blue text-white text-xs font-semibold hover:bg-apple-blue-hover transition-all disabled:opacity-50 shadow-sm shadow-apple-blue/20 hover:shadow-md hover:shadow-apple-blue/30"
-          title={t('upload.ingest')}
+          disabled={isIngesting || isIngested}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-all disabled:opacity-50 shadow-sm ${
+            isIngested
+              ? 'bg-apple-green/10 text-apple-green hover:bg-apple-green/20 shadow-apple-green/20'
+              : 'bg-apple-blue text-white hover:bg-apple-blue-hover shadow-apple-blue/20 hover:shadow-md hover:shadow-apple-blue/30'
+          }`}
+          title={isIngested ? t('upload.ingested') : t('upload.ingest')}
         >
-          {isIngesting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-          <span className="hidden sm:inline">{isIngesting ? t('upload.ingesting') : t('upload.ingest')}</span>
+          {isIngesting ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : isIngested ? (
+            <FileCheck size={12} />
+          ) : (
+            <Play size={12} />
+          )}
+          <span className="hidden sm:inline">
+            {isIngesting ? t('upload.ingesting') : isIngested ? t('upload.ingested') : t('upload.ingest')}
+          </span>
         </button>
         <button
           onClick={() => onDelete(file)}

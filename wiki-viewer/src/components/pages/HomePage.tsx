@@ -52,7 +52,7 @@ function useWikiStats(): { stats: WikiStats; loading: boolean; error: string | n
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -65,11 +65,11 @@ function useWikiStats(): { stats: WikiStats; loading: boolean; error: string | n
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refetch();
-  }, []);
+  }, [refetch]);
 
   const stats = useMemo(() => ({
     pages: nodes.length,
@@ -123,8 +123,8 @@ function useHealthScores(stats: WikiStats, edgeList: GraphEdge[]): number[] {
       connectedIds.add(e.from);
       connectedIds.add(e.to);
     }
-    const orphanEstimate = Math.max(0, pages - connectedIds.size);
-    const consistency = Math.round(Math.max(30, 100 - (orphanEstimate / pages) * 100));
+    const isolatedEstimate = Math.max(0, pages - connectedIds.size);
+    const consistency = Math.round(Math.max(30, 100 - (isolatedEstimate / pages) * 100));
 
     return [
       Math.round(completeness),
@@ -259,91 +259,22 @@ function TypeBarChart({ stats }: { stats: WikiStats }) {
 }
 
 function GrowthTrendChart({ currentPages }: { currentPages: number }) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const { t } = useTranslation();
 
-  const days = useMemo(() => {
-    const result: Date[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      result.push(d);
-    }
-    return result;
-  }, []);
-
-  const data = useMemo(() => {
-    const maxPages = Math.max(currentPages, 1);
-    return days.map((date, i) => {
-      const base = (i / 6) * maxPages;
-      const noise = i === 6 ? 0 : Math.sin(i * 2.5) * 0.08 * maxPages;
-      return {
-        date,
-        label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        value: Math.max(0, Math.round(base + noise)),
-      };
-    });
-  }, [currentPages, days]);
-
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
-
-  const width = 600;
-  const height = 300;
-  const paddingLeft = 50;
-  const paddingRight = 20;
-  const paddingTop = 20;
-  const paddingBottom = 40;
-  const chartWidth = width - paddingLeft - paddingRight;
-  const chartHeight = height - paddingTop - paddingBottom;
-
-  const xScale = (i: number) => paddingLeft + (i / (data.length - 1)) * chartWidth;
-  const yScale = (v: number) => paddingTop + chartHeight - (v / maxValue) * chartHeight;
-
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(' ');
-  const areaPoints = `${paddingLeft},${paddingTop + chartHeight} ${points} ${paddingLeft + chartWidth},${paddingTop + chartHeight}`;
-
-  const gridLines = Array.from({ length: 5 }, (_, i) => {
-    const y = paddingTop + (i / 4) * chartHeight;
-    return { y, value: Math.round(maxValue - (i / 4) * maxValue) };
-  });
-
+  // Growth trend requires historical data (page counts over time).
+  // Until data collection is active, we show an honest placeholder.
   return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[300px] overflow-visible">
-        {gridLines.map((line, i) => (
-          <g key={i}>
-            <line x1={paddingLeft} y1={line.y} x2={width - paddingRight} y2={line.y} stroke="var(--border-subtle)" strokeWidth={1} strokeDasharray="6 4" />
-            <text x={paddingLeft - 10} y={line.y} textAnchor="end" dominantBaseline="middle" className="text-[10px] fill-[var(--text-secondary)]">{line.value}</text>
-          </g>
-        ))}
-        {data.map((d, i) => (
-          <text key={i} x={xScale(i)} y={height - 10} textAnchor="middle" dominantBaseline="middle" className="text-[10px] fill-[var(--text-secondary)]">{d.label}</text>
-        ))}
-        <polygon points={areaPoints} fill="var(--chart-fill-area)" />
-        <polyline points={points} fill="none" stroke="var(--apple-blue)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="growth-line" />
-        {data.map((d, i) => (
-          <circle
-            key={i} cx={xScale(i)} cy={yScale(d.value)}
-            r={hoveredIndex === i ? 5 : 3.5}
-            fill="var(--bg-primary)" stroke="var(--apple-blue)" strokeWidth={2}
-            className="transition-all duration-200 cursor-pointer"
-            onMouseEnter={() => setHoveredIndex(i)}
-            onMouseLeave={() => setHoveredIndex(null)}
-          />
-        ))}
-      </svg>
-      {hoveredIndex !== null && (
-        <div
-          className="absolute pointer-events-none bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-lg px-2.5 py-1.5 text-xs shadow-lg z-10 whitespace-nowrap"
-          style={{
-            left: `${(xScale(hoveredIndex) / width) * 100}%`,
-            top: `${(yScale(data[hoveredIndex].value) / height) * 100}%`,
-            transform: 'translate(-50%, -130%)',
-          }}
-        >
-          <div className="font-medium text-[var(--text-primary)]">{data[hoveredIndex].label}</div>
-          <div className="text-[var(--text-secondary)]">{data[hoveredIndex].value} pages</div>
-        </div>
-      )}
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="w-16 h-16 mb-4 rounded-2xl bg-apple-blue/10 flex items-center justify-center">
+        <TrendingUp size={28} className="text-apple-blue" />
+      </div>
+      <p className="text-sm font-medium text-[var(--text-secondary)] mb-1">
+        {t('home.growthTrend.empty', 'Growth data is being collected')}
+      </p>
+      <p className="text-xs text-[var(--text-tertiary)] max-w-xs">
+        {t('home.growthTrend.hint', 'Historical page counts will appear here as the wiki grows. Current total:')}{' '}
+        <span className="font-semibold text-[var(--text-primary)]">{currentPages}</span>
+      </p>
     </div>
   );
 }
@@ -842,12 +773,12 @@ export function HomePage() {
               <div className="flex-1 h-3 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, stats.pages > 0 ? (stats.edges / stats.pages) * 25 : 0)}%` }}
+                  animate={{ width: `${Math.min(100, stats.pages > 0 ? Math.min((stats.edges / Math.max(stats.pages, 1)) / 5 * 100, 100) : 0)}%` }}
                   transition={{ duration: 0.8 }}
                   className="h-full bg-apple-blue rounded-full"
                 />
               </div>
-              <span className="text-sm font-medium">{stats.edges} / {stats.pages} {t('home.pages')}</span>
+              <span className="text-sm font-medium">{(stats.pages > 0 ? (stats.edges / stats.pages).toFixed(1) : '0.0')} {t('home.edgesPerPage')}</span>
             </div>
             <p className="text-xs text-[var(--text-tertiary)] mt-2">
               {t('home.linkDensityHint')}

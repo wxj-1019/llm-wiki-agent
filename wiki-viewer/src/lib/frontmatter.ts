@@ -34,7 +34,8 @@ function parseArray(raw: string): string[] {
   return items.map((s) => s.replace(TRIM_QUOTES_RE, '$1').trim()).filter(Boolean);
 }
 
-export function parseFrontmatter(raw: string): { meta: PageMeta | null; body: string } {
+export function parseFrontmatter(raw: string | undefined | null): { meta: PageMeta | null; body: string } {
+  if (!raw) return { meta: null, body: raw || '' };
   // Support both \n and \r\n line endings in frontmatter
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return { meta: null, body: raw };

@@ -30,7 +30,7 @@ function loadJobs(): IngestJob[] {
       // Mark running jobs as failed since we lost the SSE connection
       return parsed.map((j) =>
         j.status === 'running'
-          ? { ...j, status: 'failed', logs: [...j.logs, '页面切换导致连接中断'] }
+          ? { ...j, status: 'failed', logs: [...j.logs, 'Connection lost due to page navigation'] }
           : j
       );
     }
@@ -54,7 +54,7 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       path,
       name,
       status: 'running',
-      logs: ['开始摄取...'],
+      logs: ['Starting ingest...'],
       progress: 0,
       createdAt: Date.now(),
       updatedAt: Date.now(),

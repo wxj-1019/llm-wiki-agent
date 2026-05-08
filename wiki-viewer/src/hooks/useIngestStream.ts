@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useIngestStore } from '@/stores/ingestStore';
 
 const activeConnections = new Map<string, EventSource>();
@@ -12,7 +12,7 @@ export function connectIngestStream(jobId: string, path: string) {
   const updateJob = useIngestStore.getState().updateJob;
 
   es.addEventListener('start', () => {
-    updateJob(jobId, { status: 'running', logs: ['连接成功，开始摄取...'] });
+    updateJob(jobId, { status: 'running', logs: ['Connected, starting ingest...'] });
   });
 
   es.addEventListener('log', (e) => {
@@ -72,17 +72,23 @@ export function disconnectIngestStream(jobId: string) {
 export function useIngestStreamManager() {
   const jobs = useIngestStore((s) => s.jobs);
 
-  // Reconnect to running jobs on mount
   useEffect(() => {
+    const ownedIds = new Set<string>();
     const running = jobs.filter((j) => j.status === 'running');
     for (const job of running) {
-      connectIngestStream(job.id, job.path);
+      if (!activeConnections.has(job.id)) {
+        connectIngestStream(job.id, job.path);
+      }
+      ownedIds.add(job.id);
     }
     return () => {
-      for (const es of activeConnections.values()) {
-        es.close();
+      for (const jobId of ownedIds) {
+        const es = activeConnections.get(jobId);
+        if (es) {
+          es.close();
+          activeConnections.delete(jobId);
+        }
       }
-      activeConnections.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

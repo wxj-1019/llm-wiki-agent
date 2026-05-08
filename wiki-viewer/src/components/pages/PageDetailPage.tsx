@@ -67,7 +67,7 @@ export function PageDetailPage({ type }: Props) {
   const node = useMemo(() => {
     if (!graphData) return null;
     return graphData.nodes.find(
-      (n) => n.type === type && n.id.endsWith(`/${param}`)
+      (n) => n.type === type && n.id.split('/').pop() === param
     );
   }, [graphData, type, param]);
 
@@ -261,14 +261,14 @@ export function PageDetailPage({ type }: Props) {
                 className="absolute right-0 top-full mt-1 glass rounded-xl p-1 min-w-[160px] z-50 shadow-xl border border-[var(--border-subtle)]"
               >
                 <button
-                  onClick={() => { if (!node) return; const blob = new Blob([node.markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${node.label || 'page'}.md`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
+                  onClick={() => { if (!node) return; const safeLabel = (node.label || 'page').replace(/[<>:"/\\|?*]/g, '_'); const blob = new Blob([node.markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${safeLabel}.md`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
                 >
                   <FileText size={14} />
                   {t('detail.exportMarkdown', 'Markdown (.md)')}
                 </button>
                 <button
-                  onClick={() => { if (!node) return; const el = document.querySelector('.wiki-content'); if (!el) return; const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${node.label}</title>\n<style>\nbody{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.7;color:#1d1d1f}\nh1,h2,h3{font-weight:600;margin-top:1.5em}\ncode{background:#f5f5f7;padding:0.15em 0.4em;border-radius:4px;font-size:0.9em}\npre{background:#f5f5f7;padding:1em;border-radius:8px;overflow-x:auto}\nblockquote{border-left:3px solid #0071e3;margin-left:0;padding-left:1em;color:#6e6e73}\na{color:#0071e3}\ntable{border-collapse:collapse;width:100%}\nth,td{border:1px solid #d2d2d7;padding:0.5em}\n</style>\n</head>\n<body>\n<h1>${node.label}</h1>\n${el.innerHTML}\n</body>\n</html>`; const blob = new Blob([html], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${node.label || 'page'}.html`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
+                  onClick={() => { if (!node) return; const el = document.querySelector('.wiki-content'); if (!el) return; const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); const safeLabel = escapeHtml(node.label || 'page'); const safeFilename = safeLabel.replace(/[<>:"/\\|?*]/g, '_').slice(0, 80); const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${safeLabel}</title>\n<style>\nbody{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.7;color:#1d1d1f}\nh1,h2,h3{font-weight:600;margin-top:1.5em}\ncode{background:#f5f5f7;padding:0.15em 0.4em;border-radius:4px;font-size:0.9em}\npre{background:#f5f5f7;padding:1em;border-radius:8px;overflow-x:auto}\nblockquote{border-left:3px solid #0071e3;margin-left:0;padding-left:1em;color:#6e6e73}\na{color:#0071e3}\ntable{border-collapse:collapse;width:100%}\nth,td{border:1px solid #d2d2d7;padding:0.5em}\n</style>\n</head>\n<body>\n<h1>${safeLabel}</h1>\n${el.innerHTML}\n</body>\n</html>`; const blob = new Blob([html], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${safeFilename}.html`; a.click(); URL.revokeObjectURL(url); setShowExportMenu(false); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
                 >
                   <Globe size={14} />

@@ -129,6 +129,7 @@ export function UploadPage() {
     setUploadProgress({ current: 0, total: fileList.length });
     let successCount = 0;
     let failCount = 0;
+    let needGraphRefresh = false;
     for (let i = 0; i < fileList.length; i++) {
       setUploadProgress({ current: i, total: fileList.length });
       const file = fileList[i];
@@ -138,7 +139,7 @@ export function UploadPage() {
           if (result.success) {
             successCount++;
             showToast(t('upload.success.imageIngest', { path: result.md_path }), 'success');
-            refreshGraphData();
+            needGraphRefresh = true;
           } else {
             failCount++;
             showToast(t('upload.error.imageIngest', { error: result.stderr || 'Unknown' }), 'error');
@@ -152,6 +153,9 @@ export function UploadPage() {
         failCount++;
         showToast(String(err), 'error');
       }
+    }
+    if (needGraphRefresh) {
+      refreshGraphData();
     }
     setUploadProgress({ current: fileList.length, total: fileList.length });
     setTimeout(() => {
@@ -272,12 +276,20 @@ export function UploadPage() {
       showToast(t('upload.nothingSelected'), 'error');
       return;
     }
+    let skippedCount = 0;
     for (const path of selectedPaths) {
       const file = files.find((f) => f.path === path);
       if (file) {
+        if (file.ingested) {
+          skippedCount++;
+          continue;
+        }
         const jobId = useIngestStore.getState().startJob(file.path, file.name);
         connectIngestStream(jobId, file.path);
       }
+    }
+    if (skippedCount > 0) {
+      showToast(`${skippedCount} 个文件已摄取，已自动跳过`, 'info');
     }
   }, [selectedPaths, files, showToast, t]);
 
@@ -287,7 +299,8 @@ export function UploadPage() {
   useBodyScrollLock(showBatchDeleteConfirm);
 
   // Listen for completed/failed ingest jobs and refresh data
-  const completedIdsRef = useRef<Set<string>>(new Set());
+  // Initialize with already-completed jobs so page reload / Strict Mode doesn't re-process them
+  const completedIdsRef = useRef<Set<string>>(new Set(jobs.filter((j) => j.status !== 'running').map((j) => j.id)));
   const showToastRef = useRef(showToast);
   showToastRef.current = showToast;
   const tRef = useRef(t);
@@ -296,10 +309,13 @@ export function UploadPage() {
   refreshGraphDataRef.current = refreshGraphData;
   const loadFilesRef = useRef(loadFiles);
   loadFilesRef.current = loadFiles;
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    let hasNewCompleted = false;
     for (const job of jobs) {
       if (job.status !== 'running' && !completedIdsRef.current.has(job.id)) {
         completedIdsRef.current.add(job.id);
+        hasNewCompleted = true;
         if (job.status === 'failed') {
           const stdout = job.logs.filter((l) => !l.startsWith('stderr:')).join('\n');
           const stderr = job.logs.filter((l) => l.startsWith('stderr:')).map((l) => l.slice(7)).join('\n');
@@ -311,10 +327,24 @@ export function UploadPage() {
             returncode: job.returncode ?? 1,
           });
         }
-        refreshGraphDataRef.current();
-        loadFilesRef.current();
+        if (job.status === 'completed') {
+          showToastRef.current(`${tRef.current('upload.success.ingest')}: ${job.name}`, 'success');
+        }
       }
     }
+    if (hasNewCompleted) {
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshGraphDataRef.current();
+        loadFilesRef.current();
+      }, 300);
+    }
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
   }, [jobs]);
 
   // Global Escape handler for batch delete modal (motion.div doesn't auto-focus)
