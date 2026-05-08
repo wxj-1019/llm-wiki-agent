@@ -222,33 +222,26 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
     transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow: 0 0 8px rgba(255,87,34,0.3);
   }}
-  /* Keyframes */
+  /* Keyframes — only transform and opacity for 60fps compositor animation */
   @keyframes kbCorePulse {{
     0%, 100% {{ transform: scale(1); opacity: 1; }}
-    45% {{ transform: scale(1.35); opacity: 0.92; }}
-    55% {{ transform: scale(1.35); opacity: 0.92; }}
+    50% {{ transform: scale(1.35); opacity: 0.85; }}
+  }}
+  @keyframes kbCoreRing {{
+    0%, 100% {{ transform: scale(1); opacity: 0.25; }}
+    50% {{ transform: scale(1.6); opacity: 0; }}
   }}
   @keyframes kbSpin {{
     from {{ transform: translate(-50%, -50%) rotate(0deg); }}
     to {{ transform: translate(-50%, -50%) rotate(360deg); }}
   }}
-  @keyframes kbNodeGlow {{
-    0%, 100% {{
-      opacity: 0.5;
-      box-shadow: 0 0 4px var(--color), 0 0 10px var(--color);
-      transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1);
-    }}
-    50% {{
-      opacity: 1;
-      box-shadow: 0 0 8px var(--color), 0 0 18px var(--color), 0 0 28px var(--color);
-      transform: rotate(var(--angle)) translateY(calc(var(--orbit-r) * -1)) scale(1.18);
-    }}
+  @keyframes kbNodeBreathe {{
+    0%, 100% {{ opacity: 0.35; }}
+    50% {{ opacity: 1; }}
   }}
-  @keyframes kbParticleTravel {{
-    0% {{ opacity: 0; transform: rotate(var(--p-angle)) translateY(calc(var(--orbit-r) * -1)) scale(0.4); }}
-    12% {{ opacity: 0.85; transform: rotate(calc(var(--p-angle) + 24deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
-    88% {{ opacity: 0.85; transform: rotate(calc(var(--p-angle) + 156deg)) translateY(calc(var(--orbit-r) * -1)) scale(1); }}
-    100% {{ opacity: 0; transform: rotate(calc(var(--p-angle) + 180deg)) translateY(calc(var(--orbit-r) * -1)) scale(0.4); }}
+  @keyframes kbAmbient {{
+    0%, 100% {{ opacity: 0.15; }}
+    50% {{ opacity: 0.35; }}
   }}
 </style>
 </head>
@@ -274,21 +267,20 @@ def render_html(nodes: list[dict], edges: list[dict]) -> str:
 </div>
 <div id="loading-overlay">
   <div class="kb-loader">
+    <div class="kb-ambient"></div>
     <div class="kb-core"></div>
+    <div class="kb-core-ring"></div>
     <div class="kb-orbit o1">
       <div class="kb-node" style="--angle:0deg;--color:#4fc3f7;--delay:0s;"></div>
-      <div class="kb-particle" style="--p-angle:180deg;--p-delay:0.5s;"></div>
     </div>
     <div class="kb-orbit o2">
-      <div class="kb-node" style="--angle:60deg;--color:#81c784;--delay:0.4s;"></div>
-      <div class="kb-node" style="--angle:240deg;--color:#ffb74d;--delay:0.8s;"></div>
-      <div class="kb-particle" style="--p-angle:300deg;--p-delay:1.2s;"></div>
+      <div class="kb-node" style="--angle:70deg;--color:#81c784;--delay:0.5s;"></div>
+      <div class="kb-node" style="--angle:250deg;--color:#ffb74d;--delay:1.1s;"></div>
     </div>
     <div class="kb-orbit o3">
-      <div class="kb-node" style="--angle:120deg;--color:#ba68c8;--delay:0.2s;"></div>
-      <div class="kb-node" style="--angle:240deg;--color:#e57373;--delay:1.0s;"></div>
-      <div class="kb-node" style="--angle:0deg;--color:#4dd0e1;--delay:1.4s;"></div>
-      <div class="kb-particle" style="--p-angle:90deg;--p-delay:2.0s;"></div>
+      <div class="kb-node" style="--angle:140deg;--color:#ba68c8;--delay:0.2s;"></div>
+      <div class="kb-node" style="--angle:260deg;--color:#e57373;--delay:1.3s;"></div>
+      <div class="kb-node" style="--angle:20deg;--color:#4dd0e1;--delay:1.9s;"></div>
     </div>
   </div>
   <div class="loader-text" id="loader-text">Synthesizing knowledge graph...</div>

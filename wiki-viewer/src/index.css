@@ -463,33 +463,30 @@
 }
 
 /* ── Knowledge Graph Loader Animations ── */
-/* GPU-accelerated, will-change hints for compositor-only properties */
+/* ONLY transform and opacity — the two properties guaranteed to run at 60fps
+   on the compositor thread. No box-shadow, no filter animations. */
 @keyframes kb-core-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  45% { transform: scale(1.35); opacity: 0.92; }
-  55% { transform: scale(1.35); opacity: 0.92; }
+  50% { transform: scale(1.35); opacity: 0.85; }
+}
+/* Separate ambient ring — pure opacity + scale, no shadow animation */
+@keyframes kb-core-ring {
+  0%, 100% { transform: scale(1); opacity: 0.25; }
+  50% { transform: scale(1.6); opacity: 0; }
 }
 @keyframes kb-spin {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
-@keyframes kb-node-glow {
-  0%, 100% {
-    opacity: 0.5;
-    box-shadow: 0 0 4px var(--kb-color), 0 0 10px var(--kb-color);
-    transform: rotate(var(--kb-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 8px var(--kb-color), 0 0 18px var(--kb-color), 0 0 28px var(--kb-color);
-    transform: rotate(var(--kb-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1.18);
-  }
+/* Node breathes only opacity; transform is static (no scale jitter on orbit) */
+@keyframes kb-node-breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
 }
-@keyframes kb-particle-travel {
-  0% { opacity: 0; transform: rotate(var(--kb-p-angle)) translateY(calc(var(--kb-orbit-r) * -1)) scale(0.4); }
-  12% { opacity: 0.85; transform: rotate(calc(var(--kb-p-angle) + 24deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1); }
-  88% { opacity: 0.85; transform: rotate(calc(var(--kb-p-angle) + 156deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(1); }
-  100% { opacity: 0; transform: rotate(calc(var(--kb-p-angle) + 180deg)) translateY(calc(var(--kb-orbit-r) * -1)) scale(0.4); }
+/* A single ambient glow behind the whole loader — pure opacity */
+@keyframes kb-ambient {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
 }
 
 @media print {

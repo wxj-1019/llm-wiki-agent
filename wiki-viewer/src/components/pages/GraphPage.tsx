@@ -393,137 +393,97 @@ export function GraphPage() {
             className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]"
           >
             <div className="text-center">
-              {/* Neural Constellation Loader */}
+              {/* Neural Constellation Loader — pure transform + opacity only */}
               <div className="relative w-[140px] h-[140px] mx-auto mb-5">
+                {/* Ambient glow behind everything — single element, opacity only */}
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(255,87,34,0.12) 0%, transparent 65%)',
+                    animation: 'kb-ambient 4s ease-in-out infinite',
+                  }}
+                />
+
                 {/* Core */}
                 <div
-                  className="absolute top-1/2 left-1/2 w-4 h-4 -ml-2 -mt-2 rounded-full z-10"
+                  className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full z-10"
                   style={{
                     background: 'radial-gradient(circle, #ffab91 0%, #ff5722 70%)',
-                    boxShadow: '0 0 20px rgba(255,87,34,0.5), 0 0 40px rgba(255,87,34,0.25), 0 0 80px rgba(255,87,34,0.1)',
                     animation: 'kb-core-pulse 2.4s ease-in-out infinite',
                   }}
                 />
+                {/* Core expanding ring — simulates glow without box-shadow animation */}
+                <div
+                  className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full border border-[#ff5722]/40"
+                  style={{
+                    animation: 'kb-core-ring 2.4s ease-in-out infinite',
+                  }}
+                />
+
                 {/* Orbit 1 */}
                 <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-                  style={{ width: 44, height: 44, animation: 'kb-spin 6s linear infinite', transformOrigin: 'center' }}
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
+                  style={{ width: 40, height: 40, animation: 'kb-spin 6.7s linear infinite' }}
                 >
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#4fc3f7]"
                     style={{
-                      background: '#4fc3f7',
-                      '--kb-color': '#4fc3f7',
-                      '--kb-angle': '0deg',
-                      '--kb-orbit-r': '22px',
-                      transform: 'rotate(0deg) translateY(-22px)',
-                      animation: 'kb-node-glow 2.2s ease-in-out infinite',
-                    } as React.CSSProperties}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                    style={{
-                      '--kb-p-angle': '180deg',
-                      '--kb-orbit-r': '22px',
-                      transform: 'rotate(180deg) translateY(-22px)',
-                      animation: 'kb-particle-travel 3s ease-out infinite',
-                      animationDelay: '0.5s',
-                      opacity: 0,
-                    } as React.CSSProperties}
+                      transform: 'rotate(0deg) translateY(-20px)',
+                      animation: 'kb-node-breathe 2.3s ease-in-out infinite',
+                      animationDelay: '0s',
+                    }}
                   />
                 </div>
                 {/* Orbit 2 */}
                 <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-                  style={{ width: 76, height: 76, animation: 'kb-spin 10s linear infinite reverse', transformOrigin: 'center' }}
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
+                  style={{ width: 72, height: 72, animation: 'kb-spin 10.3s linear infinite reverse' }}
                 >
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#81c784]"
                     style={{
-                      background: '#81c784',
-                      '--kb-color': '#81c784',
-                      '--kb-angle': '60deg',
-                      '--kb-orbit-r': '38px',
-                      transform: 'rotate(60deg) translateY(-38px)',
-                      animation: 'kb-node-glow 2.8s ease-in-out infinite',
-                      animationDelay: '0.4s',
-                    } as React.CSSProperties}
+                      transform: 'rotate(70deg) translateY(-36px)',
+                      animation: 'kb-node-breathe 2.9s ease-in-out infinite',
+                      animationDelay: '0.5s',
+                    }}
                   />
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#ffb74d]"
                     style={{
-                      background: '#ffb74d',
-                      '--kb-color': '#ffb74d',
-                      '--kb-angle': '240deg',
-                      '--kb-orbit-r': '38px',
-                      transform: 'rotate(240deg) translateY(-38px)',
-                      animation: 'kb-node-glow 2.8s ease-in-out infinite',
-                      animationDelay: '0.8s',
-                    } as React.CSSProperties}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                    style={{
-                      '--kb-p-angle': '300deg',
-                      '--kb-orbit-r': '38px',
-                      transform: 'rotate(300deg) translateY(-38px)',
-                      animation: 'kb-particle-travel 3s ease-out infinite',
-                      animationDelay: '1.2s',
-                      opacity: 0,
-                    } as React.CSSProperties}
+                      transform: 'rotate(250deg) translateY(-36px)',
+                      animation: 'kb-node-breathe 2.9s ease-in-out infinite',
+                      animationDelay: '1.1s',
+                    }}
                   />
                 </div>
                 {/* Orbit 3 */}
                 <div
-                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.07]"
-                  style={{ width: 108, height: 108, animation: 'kb-spin 14s linear infinite', transformOrigin: 'center' }}
+                  className="absolute top-1/2 left-1/2 rounded-full border border-dashed border-white/[0.06]"
+                  style={{ width: 104, height: 104, animation: 'kb-spin 14.9s linear infinite' }}
                 >
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#ba68c8]"
                     style={{
-                      background: '#ba68c8',
-                      '--kb-color': '#ba68c8',
-                      '--kb-angle': '120deg',
-                      '--kb-orbit-r': '54px',
-                      transform: 'rotate(120deg) translateY(-54px)',
-                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
+                      transform: 'rotate(140deg) translateY(-52px)',
+                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
                       animationDelay: '0.2s',
-                    } as React.CSSProperties}
+                    }}
                   />
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#e57373]"
                     style={{
-                      background: '#e57373',
-                      '--kb-color': '#e57373',
-                      '--kb-angle': '240deg',
-                      '--kb-orbit-r': '54px',
-                      transform: 'rotate(240deg) translateY(-54px)',
-                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
-                      animationDelay: '1.0s',
-                    } as React.CSSProperties}
+                      transform: 'rotate(260deg) translateY(-52px)',
+                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
+                      animationDelay: '1.3s',
+                    }}
                   />
                   <div
-                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full"
+                    className="absolute top-1/2 left-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#4dd0e1]"
                     style={{
-                      background: '#4dd0e1',
-                      '--kb-color': '#4dd0e1',
-                      '--kb-angle': '0deg',
-                      '--kb-orbit-r': '54px',
-                      transform: 'rotate(0deg) translateY(-54px)',
-                      animation: 'kb-node-glow 3.4s ease-in-out infinite',
-                      animationDelay: '1.4s',
-                    } as React.CSSProperties}
-                  />
-                  <div
-                    className="absolute top-1/2 left-1/2 w-[3px] h-[3px] -ml-[1.5px] -mt-[1.5px] rounded-full bg-white"
-                    style={{
-                      '--kb-p-angle': '90deg',
-                      '--kb-orbit-r': '54px',
-                      transform: 'rotate(90deg) translateY(-54px)',
-                      animation: 'kb-particle-travel 3s ease-out infinite',
-                      animationDelay: '2.0s',
-                      opacity: 0,
-                    } as React.CSSProperties}
+                      transform: 'rotate(20deg) translateY(-52px)',
+                      animation: 'kb-node-breathe 3.5s ease-in-out infinite',
+                      animationDelay: '1.9s',
+                    }}
                   />
                 </div>
               </div>
@@ -539,7 +499,6 @@ export function GraphPage() {
                       style={{
                         width: `${loadProgress}%`,
                         background: 'linear-gradient(90deg, #ff5722, #ff8a65)',
-                        boxShadow: '0 0 8px rgba(255,87,34,0.3)',
                       }}
                     />
                   </div>
