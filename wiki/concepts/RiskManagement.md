@@ -1,28 +1,36 @@
 ---
 title: "RiskManagement"
 type: concept
-tags: [finance, risk, system-design]
+tags: [risk, control, stock-selection]
 sources: [main-fund-selection-system-analysis]
-last_updated: 2026-05-07
+last_updated: 2026-05-08
 ---
 
 # RiskManagement
 
-[[MainFundSelection|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。
+[[MainFundSelectionSystem|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。
 
-## Key Components
+## 多层防御式筛选
 
-- **多层防御式筛选**：每一层都是Fail-Closed设计，失败时返回空而非放行
-- **降级策略**：
-  - 数据源失败（问财API 3次重试 → 返回失败）
-  - 数据质量不达标 → 不生成推荐
-  - AI服务不可用 → 按量化+风控规则降级推荐
-  - 推荐数量不足 → 量化回填，标记为degraded
-- **推荐分层**："优先推荐"（strict）和"谨慎参考"（caution，含4种具体场景）
+每一层都是Fail-Closed（失败时返回空而非放行）：
+1. 数据质量检查
+2. 硬过滤（涨跌幅/市值/ST）
+3. 策略硬过滤（净流入/换手率）
+4. 财务Guardrails（PE/PB/ROE/负债率）
+5. 技术指标筛选
+6. 量化预评分排序
+7. AI五维分析
+8. 策略适配检查
+9. 资深研究员综合
+
+## 降级策略
+
+- AI不可用时：按量化+风控规则降级
+- 推荐数量不足时：量化回填
+- 数据获取失败：返回空
 
 ## Connections
 
-- [[MainFundSelection]] — 应用系统
-- [[QuantitativeAnalysis]] — 量化评分作为风险控制手段
-- [[Backtesting]] — 回测验证风险模型
-- [[AIAgent]] — AI分析中的风险评估
+- [[MainFundSelectionSystem]] — 所属系统
+- [[Backtesting]] — 回测验证
+- [[QuantPreScoring]] — 量化预评分

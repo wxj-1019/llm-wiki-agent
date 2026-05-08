@@ -1,38 +1,22 @@
 ---
 title: "Attention Mechanism"
 type: concept
-tags: [mechanism, nlp, deep-learning]
-sources: [attention-is-all-you-need]
-last_updated: 2024-02-28
+tags: [neural-network, attention]
+sources: [graph-rebuild-verify]
+last_updated: 2026-05-08
 ---
 
-# Attention Mechanism
+## Summary
 
-**Attention** is a technique in neural networks that allows models to focus on specific parts of the input when producing each part of the output.
+The attention mechanism is a neural network technique that allows the model to focus on specific parts of the input sequence when generating output. It was first introduced for machine translation and later became the foundation of the [[Transformer]] architecture.
 
-## Self-Attention
+## Key Ideas
 
-In self-attention, each position in the sequence attends to all other positions:
-
-```
-Attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V
-```
-
-Where:
-- **Q** (Query): What am I looking for?
-- **K** (Key): What do I contain?
-- **V** (Value): What information do I provide?
-
-## Multi-Head Attention
-Multiple attention heads operate in parallel, allowing the model to jointly attend to information from different representation subspaces.
-
-## Types
-- **Scaled Dot-Product Attention**: Used in the [[Transformer]]
-- **Cross-Attention**: Queries from one sequence attend to keys/values from another
-- **Causal/Masked Attention**: Prevents attending to future positions (used in [[GPT]])
+- Computes a weighted sum of values based on compatibility between query and key vectors
+- Enables handling of long-range dependencies without recurrence
+- Variants include self-attention, cross-attention, and multi-head attention
 
 ## Connections
-- [[Transformer]] — architecture built entirely on attention
-- [[GPT]] — uses causal self-attention
-- [[BERT]] — uses bidirectional self-attention
-- [[OpenAI]] — pioneered scaling attention-based models
+
+- [[Transformer]] — the architecture that relies solely on attention mechanisms
+- [[DeepLearning]] — attention is a key component of modern deep learning models

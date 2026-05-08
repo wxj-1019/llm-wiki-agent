@@ -6,6 +6,19 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Finally Block Test](sources/finally-block-test.md) — minimal test for finally block in background graph rebuild
+- [Log File Test](sources/log-file-test.md) — minimal test for background graph rebuild with file logging
+- [Threading Rebuild Test](sources/threading-rebuild-test.md) — minimal test for background graph rebuild via threading
+- [Log Verify Test](sources/log-verify-test.md) — minimal test for background graph rebuild logging
+- [Final Iteration Test](sources/final-iteration-test.md) — minimal test document for verifying complete ingestion and auto graph rebuild pipeline
+- [Graph Rebuild Verify](sources/graph-rebuild-verify.md) — minimal test for automatic graph rebuild verification
+- [Auto Graph Test](sources/auto-graph-test.md) — minimal test for automatic graph rebuilding after ingestion
+- [Iteration Test](sources/iteration-test.md) — minimal test document for iteration verification
+- [Test Document 4](sources/test-document-4.md) — final validation test for SSE streaming endpoint
+- [Test Document 3](sources/test-document-3.md) — minimal test document about AI, machine learning, and neural networks
+- [Test Document 2](sources/test-document-2.md) — minimal test document for ingestion analysis
+- [Test Document](sources/test-document.md) — minimal test document for ingestion analysis
+- [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理14种A股常见量化交易策略，分析其核心逻辑、A股适用性和实战落地要点
 - [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte 项目的操作指引，Anthropic Claude Code CLI 的可构建分支，移除遥测、解锁 54 个实验性功能、中文界面与多模型支持
 - [王信杰 — 后端开发工程师简历](sources/wangxinjie-backend-developer-resume.md) — 王信杰个人简历，包含海康威视实习经历、能源大数据平台和慧公寓管理系统项目，以及Spring Boot/区块链/AI混合技术栈
 - [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点
@@ -16,6 +29,26 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
+- [GraphRebuildVerify](entities/GraphRebuildVerify.md) — auto-created entity
+- [ThreadingRebuildTest](entities/ThreadingRebuildTest.md) — auto-created entity
+- [LogVerifyTest](entities/LogVerifyTest.md) — auto-created entity
+- [MainFundSelectionSystem](entities/MainFundSelectionSystem.md) — auto-created entity
+- [HighDividendLowVol](entities/HighDividendLowVol.md) — auto-created entity
+- [QualityStrategy](entities/QualityStrategy.md) — auto-created entity
+- [GrowthStrategy](entities/GrowthStrategy.md) — auto-created entity
+- [ValueStrategy](entities/ValueStrategy.md) — auto-created entity
+- [ConvertibleBondArbitrage](entities/ConvertibleBondArbitrage.md) — auto-created entity
+- [StatisticalArbitrage](entities/StatisticalArbitrage.md) — auto-created entity
+- [EventDriven](entities/EventDriven.md) — auto-created entity
+- [SectorRotation](entities/SectorRotation.md) — auto-created entity
+- [VolumePriceBreakout](entities/VolumePriceBreakout.md) — auto-created entity
+- [MeanReversion](entities/MeanReversion.md) — auto-created entity
+- [MomentumStrategy](entities/MomentumStrategy.md) — auto-created entity
+- [TrendTracking](entities/TrendTracking.md) — auto-created entity
+- [MultiFactorSelection](entities/MultiFactorSelection.md) — auto-created entity
+- [TrendMomentum](entities/TrendMomentum.md) — auto-created entity
+- [MoneyFlowStrategy](entities/MoneyFlowStrategy.md) — auto-created entity
+- [A股市场](entities/A股市场.md) — auto-created entity
 - [Claude Code](entities/ClaudeCode.md) — auto-created entity
 - [Ink](entities/Ink.md) — auto-created entity
 - [Latte](entities/Latte.md) — auto-created entity
@@ -106,6 +139,14 @@ This file is maintained by the LLM. Updated on every ingest.
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [NeuralNetworks](concepts/NeuralNetworks.md) — auto-created concept
+- [Attention Mechanism](concepts/AttentionMechanism.md) — auto-created concept
+- [StockSelectionStrategy](concepts/StockSelectionStrategy.md) — auto-created concept
+- [RiskManagement](concepts/RiskManagement.md) — auto-created concept
+- [Backtesting](concepts/Backtesting.md) — auto-created concept
+- [DataPipeline](concepts/DataPipeline.md) — auto-created concept
+- [QuantPreScoring](concepts/QuantPreScoring.md) — auto-created concept
+- [AIMultiAgentStockAnalysis](concepts/AIMultiAgentStockAnalysis.md) — auto-created concept
 - [Platform Subpackage Publishing](concepts/PlatformSubpackagePublishing.md) — auto-created concept
 - [Feature Flag Dead Code Elimination](concepts/FeatureFlagDeadCodeElimination.md) — auto-created concept
 - [Attention Mechanism](concepts/AttentionMechanism.md) — neural network technique for focusing on specific parts of input

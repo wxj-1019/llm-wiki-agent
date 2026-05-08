@@ -6,6 +6,103 @@
 
 ---
 
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+163 nodes, 629 edges (629 extracted, 0 inferred).
+
+## [2026-05-08] ingest | Log File Test
+
+Added source. Key claims: This document tests whether the graph rebuild pipeline's file-based logging mechanism correctly records operations after ingestion.
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+160 nodes, 618 edges (618 extracted, 0 inferred).
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+160 nodes, 618 edges (618 extracted, 0 inferred).
+
+## [2026-05-08] ingest | Finally Block Test
+
+Added source. Key claims: tests the finally block in the background graph rebuild pipeline, ensuring graph regeneration completes after source ingestion even if unexpected errors occur.
+Connections: [[Transformer]], [[NeuralNetworks]]
+
+## [2026-05-08] ingest | Log File Test
+
+Added source. Key claims: background graph rebuild with file logging test.
+
+## [2026-05-08] ingest | Threading Rebuild Test
+
+Added source. Key claims: minimal test document for verifying background graph rebuild via threading.
+
+## [2026-05-08] ingest | Log Verify Test
+
+Added source. Key claims: This document verifies background graph rebuild logging is working correctly.
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+156 nodes, 609 edges (609 extracted, 0 inferred).
+
+## [2026-05-08] ingest | Final Iteration Test
+
+Added source. Key claims: This document tests the complete ingestion and auto graph rebuild pipeline, referencing Transformer and NeuralNetworks.
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+154 nodes, 604 edges (604 extracted, 0 inferred).
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+154 nodes, 604 edges (604 extracted, 0 inferred).
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+154 nodes, 604 edges (604 extracted, 0 inferred).
+
+## [2026-05-08] ingest | Graph Rebuild Verify
+
+Added source. Key claims: minimal test document that triggers automatic graph rebuild after ingestion; references AttentionMechanism as core concept.
+
+## [2026-05-08] ingest | Auto Graph Test
+
+Added source. Key claims: minimal document testing automatic graph rebuilding after ingestion. References the [[Transformer]] architecture.
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+152 nodes, 602 edges (602 extracted, 0 inferred).
+
+## [2026-05-08] ingest | Iteration Test
+
+Added source. Key claims: simple placeholder for iteration verification, mentions ArtificialIntelligence and MachineLearning.
+
+## [2026-05-08] graph | Knowledge graph rebuilt
+
+151 nodes, 602 edges (602 extracted, 0 inferred).
+
+## [2026-05-08] ingest | 主力选股系统整体分析文档
+
+Added source. Key claims: AI驱动的旗舰选股系统六层流水线架构；7种策略、量化预评分、5位AI分析师并行分析；推荐分层双轨制；回测引擎设计（T+1开盘价、0.23%成本）；丰富的降级策略机制。Created entities: MainFundSelectionSystem. Created concepts: AIMultiAgentStockAnalysis, QuantPreScoring, DataPipeline, Backtesting, RiskManagement, StockSelectionStrategy.
+
+## [2026-05-08] ingest | Test Document 4
+
+Added source. Key claims: minimal test document for SSE streaming endpoint validation.
+
+## [2026-05-08] ingest | Test Document 3
+
+Added source. Key claims: AI transforms industries, machine learning relies on data, neural networks are a powerful technique.
+
+## [2026-05-08] ingest | Test Document 2
+
+Added source. No new entities or concepts.
+
+## [2026-05-08] ingest | Test Document
+
+Added source. Key claims: Minimal test document with no substantive content.
+
+## [2026-05-08] ingest | A股常见量化交易策略指南
+
+Added source covering 14 quantitative trading strategies for A-share market. Key claims: A股特色（涨跌停、T+1、政策驱动）影响策略有效性；四种优先策略（资金流、板块轮动、趋势+动量复合、多因子评分）适合主力选股系统工程化；最稳妥路线是"多因子底座 + A股特色信号 + 严格交易风控"。Created 16 entity pages: [[A股市场]], [[MoneyFlowStrategy]], [[TrendMomentum]], [[MultiFactorSelection]], [[TrendTracking]], [[MomentumStrategy]], [[MeanReversion]], [[VolumePriceBreakout]], [[SectorRotation]], [[EventDriven]], [[StatisticalArbitrage]], [[ConvertibleBondArbitrage]], [[ValueStrategy]], [[GrowthStrategy]], [[QualityStrategy]], [[HighDividendLowVol]]. Updated overview.md with new theme for A-Share quantitative trading. No contradictions found with existing wiki content.
+
 ## [2026-05-08] ingest | Latte — Claude Code 可构建分支 (AGENTS.md)
 
 Added source page for latte project — a fork of Anthropic's Claude Code CLI. Key claims: removes telemetry and hard-coded safety guards, unlocks 54 experimental features, supports Chinese interface and multi-model access via OpenAI-compatible adapters. Created entity pages for Bun, Latte, Ink, and ClaudeCode. Created concept pages for Feature Flag Dead Code Elimination and Platform Subpackage Publishing. No contradictions with existing wiki content.
