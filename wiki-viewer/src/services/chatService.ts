@@ -16,6 +16,24 @@ export interface WikiChatChunk {
   done?: boolean;
 }
 
+export interface WebSearchResult {
+  title: string;
+  body: string;
+  href: string;
+}
+
+export interface WikiSearchResult {
+  title: string;
+  excerpt: string;
+  path: string;
+}
+
+export interface GenerateResult {
+  explanation?: string;
+  code: string;
+  sources: { path: string }[];
+}
+
 function parseSseEvent(eventText: string): WikiChatChunk | null {
   const lines = eventText.split('\n');
   let data = '';
@@ -39,22 +57,9 @@ function parseSseEvent(eventText: string): WikiChatChunk | null {
   return null;
 }
 
-export async function* chatWithWikiStream(
-  query: string,
-  messages: WikiChatMessage[],
-  contextPages?: string[],
-  signal?: AbortSignal
+async function* readSseStream(
+  res: Response
 ): AsyncGenerator<WikiChatChunk, void, unknown> {
-  const res = await fetch('/api/wiki-chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, messages, context_pages: contextPages }),
-    signal,
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Wiki chat failed: ${res.status}`);
-  }
   if (!res.body) {
     throw new Error('No response body');
   }
@@ -81,9 +86,89 @@ export async function* chatWithWikiStream(
     }
     if (done) break;
   }
-  // Process any remaining buffered data after stream ends
   if (buffer.trim()) {
     const chunk = parseSseEvent(buffer);
     if (chunk) yield chunk;
   }
+}
+
+export async function* chatWithWikiStream(
+  query: string,
+  messages: WikiChatMessage[],
+  contextPages?: string[],
+  signal?: AbortSignal
+): AsyncGenerator<WikiChatChunk, void, unknown> {
+  const res = await fetch('/api/wiki-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, messages, context_pages: contextPages }),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Wiki chat failed: ${res.status}`);
+  }
+  yield* readSseStream(res);
+}
+
+export async function* chatWithLLMStream(
+  messages: WikiChatMessage[],
+  systemPrompt?: string,
+  signal?: AbortSignal
+): AsyncGenerator<WikiChatChunk, void, unknown> {
+  const res = await fetch('/api/agent-kit/llm-chat-stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, system_prompt: systemPrompt }),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `LLM chat failed: ${res.status}`);
+  }
+  yield* readSseStream(res);
+}
+
+export async function searchWeb(
+  query: string,
+  limit = 10
+): Promise<{ results: WebSearchResult[] }> {
+  // TODO: Add a real web search backend endpoint
+  // For now, return empty results
+  console.warn('Web search is not implemented on backend yet');
+  return { results: [] };
+}
+
+export async function searchWiki(
+  query: string,
+  limit = 20
+): Promise<{ results: WikiSearchResult[] }> {
+  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Search failed: ${res.status}`);
+  }
+  const data = await res.json();
+  const results: WikiSearchResult[] = (data.results || []).map((r: { id?: string; path?: string; preview?: string }) => ({
+    title: r.id || r.path || 'Untitled',
+    excerpt: r.preview || '',
+    path: r.path || r.id || '',
+  }));
+  return { results };
+}
+
+export async function generateFromKnowledge(
+  query: string,
+  target: 'skill' | 'mcp'
+): Promise<GenerateResult> {
+  const res = await fetch('/api/agent-kit/generate-from-knowledge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, target }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || `Generate failed: ${res.status}`);
+  }
+  return res.json();
 }

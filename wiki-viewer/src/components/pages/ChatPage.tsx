@@ -18,6 +18,7 @@ import {
 import { useNotificationStore } from '@/stores/notificationStore';
 import { safeGet, safeSet, isObject, isArray } from '@/lib/safeStorage';
 import { StreamDeduplicator, mergeStreamChunk } from '@/lib/streamUtils';
+import { extractWikiLinks } from '@/lib/wikilink';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 const SESSIONS_KEY = 'wiki-chat-sessions';
@@ -465,7 +466,7 @@ export function ChatPage() {
         // Auto-retry with exponential backoff (max 2 retries)
         if (retryCount < 2) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-          addNotification(t('chat.retrying', 'Connection error, retrying...') + ` (${retryCount + 1}/2)`, 'warning');
+          addNotification(t('chat.retrying', 'Connection error, retrying...') + ` (${retryCount + 1}/2)`, 'info');
           await new Promise((resolve) => setTimeout(resolve, delay));
           // Remove the failed assistant entry and retry
           setEntries((prev) => prev.slice(0, -1));
@@ -499,7 +500,9 @@ export function ChatPage() {
     const drafts = safeGet(DRAFTS_KEY, (v): v is Record<string, string> => isObject(v) && Object.values(v).every((x) => typeof x === 'string'), {});
     delete drafts[activeId];
     safeSet(DRAFTS_KEY, drafts);
-    doSend(query);
+    // Extract [[wikilink]] references as context pages for the API
+    const contextPages = extractWikiLinks(query);
+    doSend(query, contextPages.length > 0 ? contextPages : undefined);
   }, [input, loading, doSend, setEntries, activeId]);
 
   const handleRegenerate = useCallback(() => {
@@ -1264,7 +1267,7 @@ export function ChatPage() {
       {/* Message list */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 pb-8 space-y-3 relative"
         role="log"
         aria-live="polite"
         aria-label={t('chat.title')}
@@ -1369,6 +1372,26 @@ export function ChatPage() {
             })}
           </AnimatePresence>
         )}
+
+        {/* Floating scroll-to-bottom */}
+        <AnimatePresence>
+          {showScrollToBottom && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => {
+                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+                setShowScrollToBottom(false);
+              }}
+              className="absolute bottom-4 right-6 w-9 h-9 flex items-center justify-center bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-secondary)] rounded-full shadow-lg hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors z-30"
+              title={t('chat.scrollToBottom', 'Scroll to bottom')}
+            >
+              <ChevronDown size={16} />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Search Panel */}
@@ -1616,54 +1639,53 @@ export function ChatPage() {
           )}
         </AnimatePresence>
         {/* Toolbar */}
-        <div className="flex items-center gap-1.5 mb-2 max-w-3xl mx-auto overflow-x-auto">
+        <div className="flex items-center gap-1 mb-2 max-w-3xl mx-auto overflow-x-auto no-scrollbar">
           <button
             onClick={() => { setShowSearchPanel(true); setShowGeneratePanel(false); }}
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg"
             title={t('chat.tools.search', 'Search')}
           >
-            <Search size={12} />
+            <Search size={11} />
             {t('chat.tools.search', 'Search')}
           </button>
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={handleSummarize}
-              disabled={loading || entries.length === 0}
-              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
-              title={t('chat.tools.summarize', 'Summarize')}
-            >
-              <FileText size={12} />
-              {t('chat.tools.summarize', 'Summarize')}
-            </button>
-            <select
-              value={summarizeStyle}
-              onChange={(e) => setSummarizeStyle(e.target.value as 'brief' | 'detailed' | 'bullet' | 'action')}
-              className="text-[10px] bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none py-1 pr-4 pl-1 appearance-none"
-              style={{ backgroundImage: 'none' }}
-              title={t('chat.summarize.style', 'Summary style')}
-            >
-              <option value="brief">{t('chat.summarize.styleBrief', 'Brief')}</option>
-              <option value="detailed">{t('chat.summarize.styleDetailed', 'Detailed')}</option>
-              <option value="bullet">{t('chat.summarize.styleBullet', 'Bullet')}</option>
-              <option value="action">{t('chat.summarize.styleAction', 'Action')}</option>
-            </select>
-          </div>
+          <div className="w-px h-3 bg-[var(--border-default)] mx-0.5" />
+          <button
+            onClick={handleSummarize}
+            disabled={loading || entries.length === 0}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
+            title={t('chat.tools.summarize', 'Summarize')}
+          >
+            <FileText size={11} />
+            {t('chat.tools.summarize', 'Summarize')}
+          </button>
+          <select
+            value={summarizeStyle}
+            onChange={(e) => setSummarizeStyle(e.target.value as 'brief' | 'detailed' | 'bullet' | 'action')}
+            className="text-[10px] bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none py-0.5 px-1.5 rounded-md border border-[var(--border-default)] appearance-none"
+            title={t('chat.summarize.style', 'Summary style')}
+          >
+            <option value="brief">{t('chat.summarize.styleBrief', 'Brief')}</option>
+            <option value="detailed">{t('chat.summarize.styleDetailed', 'Detailed')}</option>
+            <option value="bullet">{t('chat.summarize.styleBullet', 'Bullet')}</option>
+            <option value="action">{t('chat.summarize.styleAction', 'Action')}</option>
+          </select>
+          <div className="w-px h-3 bg-[var(--border-default)] mx-0.5" />
           <button
             onClick={() => handleGenerate('skill')}
             disabled={loading || entries.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
             title={t('chat.tools.skill', 'Generate Skill')}
           >
-            <Zap size={12} />
+            <Zap size={11} />
             {t('chat.tools.skill', 'Skill')}
           </button>
           <button
             onClick={() => handleGenerate('mcp')}
             disabled={loading || entries.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
             title={t('chat.tools.mcp', 'Generate MCP')}
           >
-            <Plug size={12} />
+            <Plug size={11} />
             {t('chat.tools.mcp', 'MCP')}
           </button>
         </div>
@@ -1757,7 +1779,7 @@ export function ChatPage() {
                 const files = Array.from(e.clipboardData.files);
                 if (files.length > 0) {
                   e.preventDefault();
-                  addNotification(t('chat.pasteFilesNotSupported', 'File upload is not supported yet'), 'warning');
+                  addNotification(t('chat.pasteFilesNotSupported', 'File upload is not supported yet'), 'info');
                 }
               }}
               placeholder={t('chat.inputPlaceholder')}
@@ -1845,24 +1867,6 @@ export function ChatPage() {
           )}
         </div>
 
-        {/* Scroll to bottom hint */}
-        <AnimatePresence>
-          {showScrollToBottom && (
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              onClick={() => {
-                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-                setShowScrollToBottom(false);
-              }}
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-secondary)] text-xs rounded-full shadow-lg hover:bg-[var(--bg-tertiary)] transition-colors z-20"
-            >
-              <ChevronDown size={12} />
-              {t('chat.newMessages', 'New messages')}
-            </motion.button>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

@@ -202,8 +202,10 @@ export function GraphPage() {
     // Defer heavy VisNetwork creation to next frame so the loader animation
     // gets one unblocked frame to start smoothly.
     const rafId = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) return;
       const network = new VisNetwork(
-        containerRef.current,
+        container,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { nodes: nodesDataSet as any, edges: edgesDataSet as any },
         {
@@ -614,7 +616,11 @@ export function GraphPage() {
             // Strip heavy content fields to avoid OOM on large wikis
             const exportData = {
               ...graphData,
-              nodes: graphData.nodes.map(({ content, markdown, body, description, ...rest }) => rest),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              nodes: graphData.nodes.map((n: any) => {
+                const { content, markdown, body, description, ...rest } = n;
+                return rest;
+              }),
             };
             const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);

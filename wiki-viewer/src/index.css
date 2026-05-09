@@ -147,6 +147,14 @@
 }
 
 @layer components {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass {
     background-color: var(--bg-glass);
     backdrop-filter: blur(24px) saturate(1.2);
