@@ -139,7 +139,7 @@ export const ChatMessage = memo(function ChatMessage({
       <div className="max-w-[90%] sm:max-w-[80%] relative">
         {/* Avatar + bubble wrapper */}
         <div className="flex items-start gap-2">
-          {/* Assistant avatar */}
+          {/* Assistant avatar — left side */}
           {isAssistant && (
             <div className="w-7 h-7 rounded-full bg-apple-blue/10 border border-apple-blue/20 flex items-center justify-center shrink-0 mt-1">
               <SparkleIcon size={14} className="text-apple-blue" />
@@ -147,9 +147,9 @@ export const ChatMessage = memo(function ChatMessage({
           )}
 
           <div
-            className={`px-4 py-3 rounded-2xl relative group ${
+            className={`px-4 py-3 rounded-2xl relative ${
               isUser
-                ? 'bg-apple-blue text-white rounded-br-md'
+                ? 'bg-apple-blue text-white rounded-br-md ml-auto'
                 : 'bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-bl-md'
             }`}
           >
@@ -186,7 +186,7 @@ export const ChatMessage = memo(function ChatMessage({
               </div>
             ) : isUser ? (
               <>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{entry.content}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-right">{entry.content}</p>
                 {entry.timestamp && (
                   <p className="text-[10px] mt-1 text-white/60 text-right">{formatTime(entry.timestamp)}</p>
                 )}
@@ -252,19 +252,24 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
-          {/* User avatar */}
+          {/* Avatar — right side for all messages */}
           {isUser && (
             <div className="w-7 h-7 rounded-full bg-apple-blue flex items-center justify-center shrink-0 mt-1">
               <span className="text-[10px] text-white font-medium">Me</span>
             </div>
           )}
+          {isAssistant && (
+            <div className="w-7 h-7 rounded-full bg-apple-blue/10 border border-apple-blue/20 flex items-center justify-center shrink-0 mt-1">
+              <SparkleIcon size={14} className="text-apple-blue" />
+            </div>
+          )}
         </div>
 
-        {/* Action bar */}
-        {showActions && !isEditing && (
+        {/* Action bar — always occupies space to prevent layout shift on hover */}
+        {!isEditing && (
           <div
-            className={`flex items-center flex-wrap gap-0.5 mt-1 transition-opacity ${
-              showActions ? 'opacity-100' : 'opacity-0'
+            className={`flex items-center flex-wrap gap-0.5 mt-1 h-[26px] transition-all duration-150 ${
+              showActions ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             } ${isUser ? 'justify-end pr-9' : 'justify-start pl-9'}`}
           >
             {/* Copy */}
