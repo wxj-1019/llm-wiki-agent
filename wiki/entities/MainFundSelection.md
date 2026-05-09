@@ -1,28 +1,18 @@
 ---
 title: "MainFundSelection"
 type: entity
-tags: [stock-selection, ai-system, finance]
-sources: [main-fund-selection-system-analysis]
-last_updated: 2026-05-07
+tags: []
+sources: [data-model-overview]
+last_updated: 2026-05-09
 ---
 
 # MainFundSelection
 
-主力选股系统，一个[[AIAgent|AI驱动的]]旗舰智能选股系统，采用六层流水线架构，从全市场主力资金流入股票中每日精选3-10只最优标的。
+[[MainFundSelectionDataModel|数据模型]]中的主力选股系统对应 `stock_analysis` Schema 下的 `main_fund_selections` 和 `main_fund_selected_stocks` 两张核心表。
 
-## Key Facts
+## 关键数据结构
 
-- 六层架构：数据获取 → 多层级筛选 → 量化预评分 → AI五维分析 → 资深研究员综合 → 回测验证
-- 集成7种选股策略（主力吸筹、短期爆发、价值稳健、成长潜力、板块轮动、低风险收益、温和回调多头）
-- 5位[[AIAgent|AI分析师]]并行工作：资金流向、行业板块、财务基本面、技术形态、量化
-- 使用[[WencaiAPI]]和[[Tushare]]作为数据源
+- `main_fund_selections`: 存储每次选股记录，包含筛选参数、策略配置、结果统计、Token 消耗、AI 分析结果（资金流分析、行业分析、基本面分析、技术形态分析、资深研究员推荐）
+- `main_fund_selected_stocks`: 存储推荐股票明细，含资金面、基本面、财务评分、AI 推荐理由、交易区间、量化评分、深度学习分析结果、数据快照
 
-## Connections
-
-- [[AIAgent]] — 核心智能驱动层
-- [[LargeLanguageModels]] — AI分析师和研究员基于LLM
-- [[QuantitativeAnalysis]] — 量化预评分系统
-- [[Backtesting]] — 自动回测验证
-- [[RiskManagement]] — 多层防御式筛选
-- [[WencaiAPI]] — 主数据源
-- [[Tushare]] — 备选数据源
+相关页面：[[MainFundSelection]]、[[data-model-overview|数据模型总览]]、[[main-fund-selection-system-analysis|主力选股系统整体分析文档]]

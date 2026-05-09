@@ -374,3 +374,86 @@ Ingested paper introducing the Transformer architecture. Created entities (Googl
 ## [2026-05-09] graph | Knowledge graph rebuilt
 
 163 nodes, 629 edges (629 extracted, 0 inferred).
+## [2026-05-09] ingest | 后台管理系统
+
+Added source describing the platform's admin backend system — a standalone service (port 8586) for operations, monitoring, user management, AI configuration, audit logging, stock data management, and backtest/strategy management. Key modules include AI configuration management, user management, stock data management, longhubang management, main fund management, sector management, position management, backtest management, three-layer system/database/Redis monitoring, alert management, announcement management, subscription management, data quality checks, audit logs, system config, and task management. Design highlights: independent service architecture, audit middleware, comprehensive monitoring, data quality management, and strategy version management with approval workflow.
+## [2026-05-09] ingest | 数据模型总览
+
+Added source: A股量化交易系统的完整数据模型设计文档，定义了7个PostgreSQL Schema、40+张表的字段和关联关系。关键内容包括：主力选股模块的数据结构（main_fund_selections/main_fund_selected_stocks）、回测模块（支持1/3/5/10天持有期胜率统计）、监控模块（分时数据+止盈止损）、用户画像模块（投资风格/偏好/能力评分）和支付模块（幂等键+乐观锁）。补充了 MainFundSelection 数据模型实体、PostgreSQL/SQLAlchemy 技术实体和 UserProfiling 概念。
+## [2026-05-09] ingest | 用户画像系统 — 用户行为分析与个性化服务引擎
+
+Added source on user profile system for A-share investment platform. Key claims: 5 parallel collectors cover 5 behavioral dimensions; LLM (DeepSeek/Qwen/Kimi/GLM) generates 4-dimension persona (investment style, preferences, behavior traits, capability scores); auto-sync watchlist stocks analyzed ≥3 times; version history with score trend tracking. Created entities: UserProfileSystem, Kimi, GLM. Created concepts: UserProfiling, BehavioralCollectorPattern.
+## [2026-05-09] ingest | 通知与消息系统
+
+Added source: 通知与消息系统 — 整合邮件、短信、站内信三种渠道的统一用户触达平台。
+Key claims:
+- 统一通知入口 NotificationService 整合三个渠道，支持 AI 交易计划自动推送
+- 邮件支持 HTML 富文本模板和 3 次指数退避重试
+- 系统公告支持 Markdown、置顶和分页查询
+- 所有通知持久化到数据库，记录投递状态和失败原因
+- 告警系统分系统异常告警和监控告警两个层面
+
+Created entities: NotificationService, 系统公告
+Created concepts: NotificationChannels, NotificationPersistence, AlertSystem
+Updated overview.md with new source reference.
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+179 nodes, 717 edges (717 extracted, 0 inferred).
+## [2026-05-09] ingest | 订阅与支付系统
+
+Added source: 订阅与支付系统 (subscription-payment-system). Describes the platform's subscription and payment engine with free/pro/max membership tiers, Alipay integration, factory pattern for payment providers, RSA2 signing, and detailed usage limit controls. Key entities created: AlipayProvider, BasePaymentProvider, PaymentFactory, SubscriptionPlan, UserSubscription, DailyUsageStats, OrderStatus. Key concepts created: PaymentFactoryPattern, MembershipTiering.
+## [2026-05-09] ingest | 任务调度与基础设施 — 平台底层运行支撑模块
+
+Added source. Key claims: APScheduler 统一调度 12+ 定时任务，Redis 多 TTL 缓存策略，滑动窗口限流，trace_id 全链路追踪，Prometheus 标准化监控。新增实体/概念：APScheduler、Prometheus、RateLimiting、DistributedTracing、TaskScheduling、CacheManagement、ConfigurationManagement。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+197 nodes, 801 edges (801 extracted, 0 inferred).
+## [2026-05-09] ingest | 新闻订阅系统 — 舆情监控与AI情感分析
+
+Added source. Key claims: 5大财经新闻源⨯Qwen AI情感分析⨯52个板块标签⨯6位A股代码提取⨯每30分钟自动抓取⨯30天自动清理
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+205 nodes, 818 edges (818 extracted, 0 inferred).
+## [2026-05-09] ingest | 持仓管理与组合分析
+
+Added source. Key claims: Facade模式聚合5个AI智能体实现组合诊断；SSE流式分析逐只返回评级；评级系统STRONG_BUY/BUY/HOLD/SELL/STRONG_SELL；Redis缓存+并发控制优化性能。
+## [2026-05-09] ingest | 价格监控与预警系统
+
+Added source. Key claims: 实时价格监控引擎支持四级数据获取优先级；价格阈值+技术指标+AI智能盯盘多维度告警；触发告警后自动停用并生成交易计划；分时线服务缓存日内价格数据减少API调用；多规则风险预警系统覆盖价格、波动率、成交量、技术面、基本面。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+225 nodes, 873 edges (873 extracted, 0 inferred).
+## [2026-05-09] ingest | 回测引擎
+
+Added source. Key claims: 基于 BackTrader 封装的6策略回测引擎，支持 A股真实手续费和自适应滑点；高级分析含 Walk-Forward、蒙特卡洛、组合回测和实时纸面交易；异步 Redis 任务队列确保大回测不阻塞前端；回测数据通过 Tushare/AKShare 获取。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+239 nodes, 928 edges (928 extracted, 0 inferred).
+## [2026-05-09] ingest | 龙虎榜分析系统 — 游资追踪与主力资金行为分析工具
+
+Added source. Key claims: 双数据源整合（AKShare + Tushare）；5个AI分析师并行分析；四维评分系统（资金面/游资质量/技术/风险）；追踪闭环（发现→分析→追踪→复盘）。新增实体：[[AKShare]]。
+## [2026-05-09] ingest | 板块策略与大盘分析
+
+Added source. Key claims: 板块数据采集基于SectorDataProvider，四源降级链保证数据高可用；5分钟快照缓存+双表版本管理（Raw/Published）支持数据溯源；AI板块分析调用SectorAgentsService多智能体；K线缓存服务（24h TTL）+ 8大指数每1分钟刷新。提出了3处潜在矛盾。创建了SectorDataProvider、SectorStrategyService、StockKlineCacheService、SectorAgentsService实体页，以及MarketMapTreemap和FourSourceDegradationChain概念页。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+247 nodes, 987 edges (987 extracted, 0 inferred).
+## [2026-05-09] ingest | 用户与权限系统
+
+Added source. Key claims: JWT+bcrypt认证体系，验证码三层防刷机制，RBAC角色权限控制，用户级联删除，开发友好验证码旁路。
+## [2026-05-09] ingest | 股票数据服务
+
+Added source. Key claims: 统一数据源管理器（Tushare Pro主/多级降级）；实时行情三级降级链；大盘指数服务（每分钟刷新，8只指数）；大盘云图双表版本机制；板块策略数据服务（7种数据类型，并发控制）；分层降级与多层缓存策略。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+262 nodes, 1037 edges (1037 extracted, 0 inferred).
+## [2026-05-09] ingest | AI智能分析系统 — 多智能体协同分析引擎
+
+Added source. Key claims: 9个AI分析师智能体并行分析（三阶段流水线：分析→讨论→决策）；支持DeepSeek/Qwen/Kimi/GLM四大AI提供商；五层请求防护（并发控制+熔断器+连接池+重试+缓存）；WebSocket流式分析分10阶段推送；SSE批量分析（最多50只股票）；决策卡片自动校验价格逻辑。
+
+Created entity pages: DeepSeek, DeepSeekClient, AsyncDeepSeekClient, AsyncClientPool, AIRequestOptimizer, TechnicalAnalystAgent, FundamentalAnalystAgent, FundFlowAnalystAgent, RiskAnalystAgent, NewsAnalystAgent, SentimentAnalystAgent, MacroAnalystAgent, QuantitativeAnalystAgent, EventAnalystAgent, StockDataCoordinator, ConnectionManager, StreamingAnalysisService.
+
+Created concept pages: MultiAgentCoordinationArchitecture, ThreeStageAnalysisPipeline, DecisionCardValidation, AIRequestOptimization, StreamingAnalysis, AIProviderFactoryPattern.
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+285 nodes, 1195 edges (1195 extracted, 0 inferred).

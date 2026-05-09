@@ -6,6 +6,21 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [AI智能分析系统](sources/ai-intelligent-analysis-system.md) — 核心智能引擎，多智能体协同架构，9维度深度分析，支持DeepSeek/Qwen/Kimi/GLM四大AI提供商
+- [股票数据服务](sources/stock-data-service.md) — 统一数据源管理、多级降级、大盘指数云图与板块策略数据
+- [用户与权限系统](sources/user-auth-and-permission-system.md) — 基于JWT+bcrypt+RBAC的完整用户生命周期管理和权限控制系统
+- [板块策略与大盘分析](sources/sector-strategy-and-market-analysis.md) — 平台中观市场分析工具，覆盖板块资金流向、AI诊断、大盘云图Treemap和8大指数实时行情
+- [龙虎榜分析系统 — 游资追踪与主力资金行为分析工具](sources/longhubang-analysis-system.md) — 游资追踪与主力资金行为分析工具，双数据源整合 + 5个AI分析师 + 评分系统
+- [回测引擎](sources/backtest-engine.md) — 基于 BackTrader 的策略验证与评估工具，支持6种技术指标策略回测、参数优化、高级分析和异步任务队列
+- [价格监控与预警系统](sources/price-monitoring-and-alert-system.md) — 实时盯盘与风控工具，支持价格监控、技术指标告警、AI智能盯盘和多规则风险预警
+- [持仓管理与组合分析](sources/portfolio-management-and-analysis.md) — 投资组合管理工具，支持持仓记录、AI诊断、组合健康评估和风险分析
+- [新闻订阅系统 — 舆情监控与AI情感分析](sources/news-feed-system.md) — 5大财经新闻源×AI情感分析×A股个股/板块提取
+- [任务调度与基础设施](sources/task-scheduler-and-infrastructure.md) — 平台底层运行支撑模块，包含 APScheduler 任务调度、Redis 缓存管理、请求限流、链路追踪及 Prometheus 监控
+- [订阅与支付系统](sources/subscription-payment-system.md) — 平台的商业化变现引擎，三档会员套餐，集成支付宝支付，支持订阅购买、自动续费、退款和使用限额控制
+- [通知与消息系统](sources/notification-and-messaging-system.md) — 整合邮件、短信、站内信三种渠道的统一用户触达与沟通系统，支持系统公告、价格监控告警和AI交易计划推送
+- [用户画像系统 — 用户行为分析与个性化服务引擎](sources/user-profile-system.md) — 5个并行收集器×AI大模型4维度画像×关注股票自动同步的A股投资用户画像系统
+- [数据模型总览](sources/data-model-overview.md) — A 股量化交易系统的完整数据模型设计，涵盖 7 个 Schema、40+ 张表的字段定义、索引设计和关联关系
+- [后台管理系统](sources/admin-backend-system.md) — 平台运维与运营管理中枢，独立服务（端口8586），涵盖系统监控、AI配置、用户权限、股票数据管理、回测策略、审计日志等完整管理功能
 - [Finally Block Test](sources/finally-block-test.md) — minimal test for finally block in background graph rebuild
 - [Log File Test](sources/log-file-test.md) — minimal test for background graph rebuild with file logging
 - [Threading Rebuild Test](sources/threading-rebuild-test.md) — minimal test for background graph rebuild via threading
@@ -29,6 +44,89 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
+- [StreamingAnalysisService](entities/StreamingAnalysisService.md) — auto-created entity
+- [ConnectionManager](entities/ConnectionManager.md) — auto-created entity
+- [StockDataCoordinator](entities/StockDataCoordinator.md) — auto-created entity
+- [EventAnalystAgent](entities/EventAnalystAgent.md) — auto-created entity
+- [QuantitativeAnalystAgent](entities/QuantitativeAnalystAgent.md) — auto-created entity
+- [MacroAnalystAgent](entities/MacroAnalystAgent.md) — auto-created entity
+- [SentimentAnalystAgent](entities/SentimentAnalystAgent.md) — auto-created entity
+- [NewsAnalystAgent](entities/NewsAnalystAgent.md) — auto-created entity
+- [RiskAnalystAgent](entities/RiskAnalystAgent.md) — auto-created entity
+- [FundFlowAnalystAgent](entities/FundFlowAnalystAgent.md) — auto-created entity
+- [FundamentalAnalystAgent](entities/FundamentalAnalystAgent.md) — auto-created entity
+- [TechnicalAnalystAgent](entities/TechnicalAnalystAgent.md) — auto-created entity
+- [AIRequestOptimizer](entities/AIRequestOptimizer.md) — auto-created entity
+- [AsyncClientPool](entities/AsyncClientPool.md) — auto-created entity
+- [AsyncDeepSeekClient](entities/AsyncDeepSeekClient.md) — auto-created entity
+- [DeepSeekClient](entities/DeepSeekClient.md) — auto-created entity
+- [DeepSeek](entities/DeepSeek.md) — auto-created entity
+- [大盘云图双表机制](entities/大盘云图双表机制.md) — auto-created entity
+- [板块策略数据服务](entities/板块策略数据服务.md) — auto-created entity
+- [大盘云图](entities/大盘云图.md) — auto-created entity
+- [大盘指数服务](entities/大盘指数服务.md) — auto-created entity
+- [TushareClient](entities/TushareClient.md) — auto-created entity
+- [统一数据源管理器](entities/统一数据源管理器.md) — auto-created entity
+- [TusharePro](entities/TusharePro.md) — auto-created entity
+- [RBAC](entities/RBAC.md) — auto-created entity
+- [bcrypt](entities/bcrypt.md) — auto-created entity
+- [JWT](entities/JWT.md) — auto-created entity
+- [SectorAgentsService](entities/SectorAgentsService.md) — auto-created entity
+- [StockKlineCacheService](entities/StockKlineCacheService.md) — auto-created entity
+- [SectorStrategyService](entities/SectorStrategyService.md) — auto-created entity
+- [SectorDataProvider](entities/SectorDataProvider.md) — auto-created entity
+- [AKShare](entities/AKShare.md) — auto-created entity
+- [Tushare](entities/Tushare.md) — auto-created entity
+- [KDJStrategy](entities/KDJStrategy.md) — auto-created entity
+- [BollingerStrategy](entities/BollingerStrategy.md) — auto-created entity
+- [MAStrategy](entities/MAStrategy.md) — auto-created entity
+- [MACDStrategy](entities/MACDStrategy.md) — auto-created entity
+- [EnhancedRSIStrategy](entities/EnhancedRSIStrategy.md) — auto-created entity
+- [RSIStrategy](entities/RSIStrategy.md) — auto-created entity
+- [BacktestEngine](entities/BacktestEngine.md) — auto-created entity
+- [MonteCarloSimulation](entities/MonteCarloSimulation.md) — auto-created entity
+- [WalkForwardAnalysis](entities/WalkForwardAnalysis.md) — auto-created entity
+- [BackTrader](entities/BackTrader.md) — auto-created entity
+- [交易时间](entities/交易时间.md) — auto-created entity
+- [风险预警](entities/风险预警.md) — auto-created entity
+- [AI智能盯盘](entities/AI智能盯盘.md) — auto-created entity
+- [分时线服务](entities/分时线服务.md) — auto-created entity
+- [监控引擎](entities/监控引擎.md) — auto-created entity
+- [STRONG_SELL](entities/STRONG_SELL.md) — auto-created entity
+- [SELL](entities/SELL.md) — auto-created entity
+- [HOLD](entities/HOLD.md) — auto-created entity
+- [BUY](entities/BUY.md) — auto-created entity
+- [STRONG_BUY](entities/STRONG_BUY.md) — auto-created entity
+- [RiskIdentificationAgent](entities/RiskIdentificationAgent.md) — auto-created entity
+- [StressTestingAgent](entities/StressTestingAgent.md) — auto-created entity
+- [HealthAssessmentAgent](entities/HealthAssessmentAgent.md) — auto-created entity
+- [DynamicWeightAdjuster](entities/DynamicWeightAdjuster.md) — auto-created entity
+- [PortfolioStrategyAgent](entities/PortfolioStrategyAgent.md) — auto-created entity
+- [第一财经](entities/第一财经.md) — auto-created entity
+- [同花顺](entities/同花顺.md) — auto-created entity
+- [财联社](entities/财联社.md) — auto-created entity
+- [新浪财经](entities/新浪财经.md) — auto-created entity
+- [东方财富](entities/东方财富.md) — auto-created entity
+- [DistributedTracing](entities/DistributedTracing.md) — auto-created entity
+- [RateLimiting](entities/RateLimiting.md) — auto-created entity
+- [Prometheus](entities/Prometheus.md) — auto-created entity
+- [APScheduler](entities/APScheduler.md) — auto-created entity
+- [OrderStatus](entities/OrderStatus.md) — auto-created entity
+- [DailyUsageStats](entities/DailyUsageStats.md) — auto-created entity
+- [UserSubscription](entities/UserSubscription.md) — auto-created entity
+- [SubscriptionPlan](entities/SubscriptionPlan.md) — auto-created entity
+- [PaymentFactory](entities/PaymentFactory.md) — auto-created entity
+- [BasePaymentProvider](entities/BasePaymentProvider.md) — auto-created entity
+- [AlipayProvider](entities/AlipayProvider.md) — auto-created entity
+- [系统公告](entities/系统公告.md) — auto-created entity
+- [NotificationService](entities/NotificationService.md) — auto-created entity
+- [GLM](entities/GLM.md) — auto-created entity
+- [Kimi](entities/Kimi.md) — auto-created entity
+- [UserProfileSystem](entities/UserProfileSystem.md) — auto-created entity
+- [Backtesting](entities/Backtesting.md) — auto-created entity
+- [SQLAlchemy](entities/SQLAlchemy.md) — auto-created entity
+- [PostgreSQL](entities/PostgreSQL.md) — auto-created entity
+- [MainFundSelection](entities/MainFundSelection.md) — auto-created entity
 - [GraphRebuildVerify](entities/GraphRebuildVerify.md) — auto-created entity
 - [ThreadingRebuildTest](entities/ThreadingRebuildTest.md) — auto-created entity
 - [LogVerifyTest](entities/LogVerifyTest.md) — auto-created entity
@@ -139,6 +237,34 @@ This file is maintained by the LLM. Updated on every ingest.
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [AI Provider Factory Pattern](concepts/AIProviderFactoryPattern.md) — auto-created concept
+- [Streaming Analysis](concepts/StreamingAnalysis.md) — auto-created concept
+- [AI Request Optimization](concepts/AIRequestOptimization.md) — auto-created concept
+- [Decision Card Validation](concepts/DecisionCardValidation.md) — auto-created concept
+- [Three-Stage Analysis Pipeline](concepts/ThreeStageAnalysisPipeline.md) — auto-created concept
+- [Multi-Agent Coordination Architecture](concepts/MultiAgentCoordinationArchitecture.md) — auto-created concept
+- [分层降级策略](concepts/分层降级策略.md) — auto-created concept
+- [多层缓存策略](concepts/多层缓存策略.md) — auto-created concept
+- [RBACModel](concepts/RBACModel.md) — auto-created concept
+- [FourSourceDegradationChain](concepts/FourSourceDegradationChain.md) — auto-created concept
+- [MarketMapTreemap](concepts/MarketMapTreemap.md) — auto-created concept
+- [A股手续费模型](concepts/A股手续费模型.md) — auto-created concept
+- [PaperTrading](concepts/PaperTrading.md) — auto-created concept
+- [预警规则组合](concepts/预警规则组合.md) — auto-created concept
+- [技术指标告警](concepts/技术指标告警.md) — auto-created concept
+- [实时价格获取](concepts/实时价格获取.md) — auto-created concept
+- [News Aggregration](concepts/NewsAggregration.md) — auto-created concept
+- [Sentiment Analysis](concepts/SentimentAnalysis.md) — auto-created concept
+- [ConfigurationManagement](concepts/ConfigurationManagement.md) — auto-created concept
+- [CacheManagement](concepts/CacheManagement.md) — auto-created concept
+- [TaskScheduling](concepts/TaskScheduling.md) — auto-created concept
+- [MembershipTiering](concepts/MembershipTiering.md) — auto-created concept
+- [PaymentFactoryPattern](concepts/PaymentFactoryPattern.md) — auto-created concept
+- [AlertSystem](concepts/AlertSystem.md) — auto-created concept
+- [NotificationPersistence](concepts/NotificationPersistence.md) — auto-created concept
+- [NotificationChannels](concepts/NotificationChannels.md) — auto-created concept
+- [BehavioralCollectorPattern](concepts/BehavioralCollectorPattern.md) — auto-created concept
+- [UserProfiling](concepts/UserProfiling.md) — auto-created concept
 - [NeuralNetworks](concepts/NeuralNetworks.md) — auto-created concept
 - [Attention Mechanism](concepts/AttentionMechanism.md) — auto-created concept
 - [StockSelectionStrategy](concepts/StockSelectionStrategy.md) — auto-created concept

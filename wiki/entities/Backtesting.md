@@ -1,11 +1,20 @@
 ---
 title: "Backtesting"
 type: entity
-tags: [backtest, finance, stock-selection]
-sources: [main-fund-selection-system-analysis]
-last_updated: 2026-05-07
+tags: []
+sources: [data-model-overview]
+last_updated: 2026-05-09
 ---
 
 # Backtesting
 
-回测验证系统是[[main-fund-selection-system-analysis|主力选股系统]]的重要组成部分，用于验证选股策略和AI推荐的有效性。使用T+1开盘价作为买入价，支持1/3/5/10日持有期，双边总成本模型为0.23%（含滑点、市场冲击、佣金和印花税）。输出指标包括胜率、平均收益率、最大/最小收益等，支持按策略版本对比分析。
+[[data-model-overview|数据模型总览]] 中定义了完整的回测模块，包含 `main_fund_backtest_summary`（回测日汇总表）和 `main_fund_backtest_detail`（回测个股明细表）。
+
+## 关键能力
+
+- 支持 1/3/5/10 天持有期的胜率和收益率统计
+- 分策略统计（strategy_stats JSON）
+- 行业分布统计（industry_stats JSON）
+- 个股级回测明细（entry_price, return_1d/3d/5d/10d, recommend_count）
+
+相关页面：[[MainFundSelection]]、[[data-model-overview|数据模型总览]]、[[main-fund-selection-system-analysis|主力选股系统整体分析文档]]

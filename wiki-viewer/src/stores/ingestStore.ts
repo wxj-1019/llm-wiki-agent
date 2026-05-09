@@ -76,6 +76,15 @@ export const useIngestStore = create<IngestState>((set, get) => ({
       persist(jobs);
       return { jobs };
     });
+    // Auto-dismiss completed/failed jobs after 5 seconds
+    if (partial.status === 'completed' || partial.status === 'failed') {
+      setTimeout(() => {
+        const current = get().jobs.find((j) => j.id === id);
+        if (current && (current.status === 'completed' || current.status === 'failed')) {
+          get().dismissJob(id);
+        }
+      }, 5000);
+    }
   },
 
   dismissJob: (id) => {

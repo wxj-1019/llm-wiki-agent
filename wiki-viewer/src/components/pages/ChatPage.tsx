@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { ChatMessage } from '@/components/chat/ChatMessage';
+import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
   chatWithWikiStream, chatWithLLMStream, searchWeb, searchWiki,
@@ -164,6 +165,11 @@ export function ChatPage() {
   const [generateTarget, setGenerateTarget] = useState<'skill' | 'mcp'>('skill');
   const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
   const [generateLoading, setGenerateLoading] = useState(false);
+  const [generateStage, setGenerateStage] = useState<'searching' | 'extracting' | 'generating' | null>(null);
+  const [editedCode, setEditedCode] = useState('');
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [refineInput, setRefineInput] = useState('');
+  const [refineLoading, setRefineLoading] = useState(false);
   const [summarizeStyle, setSummarizeStyle] = useState<'brief' | 'detailed' | 'bullet' | 'action'>('brief');
   const [showSummarizeMenu, setShowSummarizeMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -1066,17 +1072,48 @@ export function ChatPage() {
     setGenerateResult(null);
     setGenerateLoading(true);
     setShowGeneratePanel(true);
+    setIsEditingCode(false);
+    setEditedCode('');
+    setRefineInput('');
+    setGenerateStage('searching');
     try {
+      await new Promise((r) => setTimeout(r, 600));
+      setGenerateStage('extracting');
+      await new Promise((r) => setTimeout(r, 400));
+      setGenerateStage('generating');
       const history = entries.map((e) => ({ role: e.role, content: e.content }));
       const data = await generateFromKnowledge(genQuery, target, history);
       setGenerateResult(data);
+      setEditedCode(data.code);
+      setGenerateStage(null);
     } catch (err) {
       addNotification((err as Error).message, 'error');
       setShowGeneratePanel(false);
+      setGenerateStage(null);
     } finally {
       setGenerateLoading(false);
     }
   }, [entries, input, addNotification, t]);
+
+  const handleRefineGenerate = useCallback(async () => {
+    if (!refineInput.trim() || !generateResult || refineLoading) return;
+    setRefineLoading(true);
+    setGenerateStage('generating');
+    try {
+      const history = entries.map((e) => ({ role: e.role, content: e.content }));
+      history.push({ role: 'assistant', content: `Previous generated code:\n\`\`\`\n${generateResult.code}\n\`\`\`` });
+      const data = await generateFromKnowledge(refineInput, generateTarget, history);
+      setGenerateResult(data);
+      setEditedCode(data.code);
+      setRefineInput('');
+      setGenerateStage(null);
+    } catch (err) {
+      addNotification((err as Error).message, 'error');
+      setGenerateStage(null);
+    } finally {
+      setRefineLoading(false);
+    }
+  }, [refineInput, generateResult, refineLoading, entries, generateTarget, addNotification]);
 
   const slashCommands = useMemo(() => [
     { id: 'clear', label: t('chat.cmd.clear', 'Clear conversation'), icon: 'trash', action: () => { handleClear(); setInput(''); } },
@@ -1100,6 +1137,7 @@ export function ChatPage() {
 
   const handleInstallGenerated = async () => {
     if (!generateResult) return;
+    const codeToInstall = isEditingCode ? editedCode : generateResult.code;
     try {
       const endpoint = generateTarget === 'mcp' ? '/api/mcp/install' : '/api/skills/install';
       const res = await fetch(endpoint, {
@@ -1108,7 +1146,7 @@ export function ChatPage() {
         body: JSON.stringify({
           source: 'generated',
           name: generateTarget === 'mcp' ? 'chat-generated-mcp' : 'chat-generated-skill',
-          code: generateResult.code,
+          code: codeToInstall,
         }),
       });
       if (res.ok) {
@@ -1560,34 +1598,135 @@ export function ChatPage() {
                   <X size={14} />
                 </button>
               </div>
-              {generateLoading && (
+
+              {/* Progress stages */}
+              {generateLoading && generateStage && (
+                <div className="flex items-center gap-3 py-3 px-2">
+                  {(['searching', 'extracting', 'generating'] as const).map((stage, i) => {
+                    const stages = ['searching', 'extracting', 'generating'];
+                    const currentIdx = stages.indexOf(generateStage);
+                    const isActive = stage === generateStage;
+                    const isDone = i < currentIdx;
+                    return (
+                      <div key={stage} className="flex items-center gap-2">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                          isActive ? 'bg-apple-purple text-white animate-pulse' : isDone ? 'bg-apple-green text-white' : 'bg-[var(--bg-primary)] text-[var(--text-tertiary)] border border-[var(--border-default)]'
+                        }`}>
+                          {isDone ? '✓' : i + 1}
+                        </div>
+                        <span className={`text-[11px] ${isActive ? 'text-apple-purple font-medium' : isDone ? 'text-apple-green' : 'text-[var(--text-tertiary)]'}`}>
+                          {t(`chat.generate.stage.${stage}`, stage === 'searching' ? 'Searching wiki' : stage === 'extracting' ? 'Extracting knowledge' : 'Generating code')}
+                        </span>
+                        {i < 2 && <div className={`w-6 h-px ${isDone ? 'bg-apple-green' : 'bg-[var(--border-default)]'}`} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Loading fallback */}
+              {generateLoading && !generateStage && (
                 <div className="flex items-center gap-2 py-4">
                   <Loader2 size={16} className="animate-spin text-apple-purple" />
                   <span className="text-xs text-[var(--text-secondary)]">{t('chat.generate.loading', 'Generating...')}</span>
                 </div>
               )}
+
               {generateResult && !generateLoading && (
                 <div className="space-y-2">
                   {generateResult.explanation && (
-                    <p className="text-xs text-[var(--text-secondary)]">{generateResult.explanation}</p>
+                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{generateResult.explanation}</p>
                   )}
-                  <pre className="text-[11px] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg p-3 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                    {generateResult.code}
-                  </pre>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => navigator.clipboard.writeText(generateResult.code)}
-                      className="apple-button text-xs py-1.5"
-                    >
-                      {t('chat.copy', 'Copy')}
-                    </button>
+
+                  {/* Code display / edit */}
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                        {generateTarget === 'mcp' ? 'Python' : 'Markdown'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setIsEditingCode(!isEditingCode)}
+                          className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isEditingCode ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+                        >
+                          {isEditingCode ? t('chat.generate.preview', 'Preview') : t('chat.generate.edit', 'Edit')}
+                        </button>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(isEditingCode ? editedCode : generateResult.code)}
+                          className="text-[10px] px-2 py-0.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                        >
+                          {t('chat.copy', 'Copy')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditingCode ? (
+                      <textarea
+                        value={editedCode}
+                        onChange={(e) => setEditedCode(e.target.value)}
+                        className="w-full text-[11px] font-mono bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg p-3 max-h-64 overflow-y-auto resize-y focus:outline-none focus:border-apple-blue/40"
+                        rows={Math.min(editedCode.split('\n').length + 2, 20)}
+                        spellCheck={false}
+                      />
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto rounded-lg border border-[var(--border-default)]">
+                        <MarkdownRenderer content={`\`\`\`${generateTarget === 'mcp' ? 'python' : 'markdown'}\n${generateResult.code}\n\`\`\``} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={handleInstallGenerated}
                       className="apple-button text-xs py-1.5 bg-apple-green/10 text-apple-green border-apple-green/20"
                     >
                       {t('chat.generate.install', 'Install {{target}}', { target: generateTarget.toUpperCase() })}
                     </button>
+                    <button
+                      onClick={() => handleGenerate(generateTarget)}
+                      className="apple-button text-xs py-1.5"
+                    >
+                      {t('chat.generate.regenerate', 'Regenerate')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const codeToSave = isEditingCode ? editedCode : generateResult.code;
+                        const ext = generateTarget === 'mcp' ? 'py' : 'md';
+                        const blob = new Blob([codeToSave], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `generated.${ext}`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="apple-button text-xs py-1.5"
+                    >
+                      {t('chat.generate.download', 'Download')}
+                    </button>
                   </div>
+
+                  {/* Refinement input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      value={refineInput}
+                      onChange={(e) => setRefineInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleRefineGenerate()}
+                      placeholder={t('chat.generate.refinePlaceholder', 'Refine: e.g. add error handling, change file paths...')}
+                      className="flex-1 text-[11px] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 focus:outline-none focus:border-apple-blue/40 placeholder:text-[var(--text-tertiary)]"
+                      disabled={refineLoading}
+                    />
+                    <button
+                      onClick={handleRefineGenerate}
+                      disabled={!refineInput.trim() || refineLoading}
+                      className="apple-button text-xs py-1.5 disabled:opacity-40"
+                    >
+                      {refineLoading ? <Loader2 size={12} className="animate-spin" /> : t('chat.generate.refine', 'Refine')}
+                    </button>
+                  </div>
+
+                  {/* Sources */}
                   {generateResult.sources.length > 0 && (
                     <div className="pt-1">
                       <p className="text-[10px] text-[var(--text-tertiary)] mb-1">{t('chat.generate.sources', 'Sources')}:</p>

@@ -20,6 +20,15 @@ export function IngestProgress() {
 
   if (jobs.length === 0) return null;
 
+  // Limit to 8 most recent jobs: running first, then failed, then completed
+  const visibleJobs = [...jobs]
+    .sort((a, b) => {
+      const priority = { running: 0, failed: 1, completed: 2 };
+      if (priority[a.status] !== priority[b.status]) return priority[a.status] - priority[b.status];
+      return b.updatedAt - a.updatedAt;
+    })
+    .slice(0, 8);
+
   const runningCount = jobs.filter((j) => j.status === 'running').length;
   const completedCount = jobs.filter((j) => j.status === 'completed').length;
   const failedCount = jobs.filter((j) => j.status === 'failed').length;
@@ -65,6 +74,11 @@ export function IngestProgress() {
               {runningCount} 进行中
             </span>
           )}
+          {jobs.length > 8 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] font-medium">
+              +{jobs.length - 8} 隐藏
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {(completedCount > 0 || failedCount > 0) && (
@@ -87,7 +101,7 @@ export function IngestProgress() {
 
       {/* Job Cards */}
       <AnimatePresence>
-        {jobs.map((job) => (
+        {visibleJobs.map((job) => (
           <motion.div
             key={job.id}
             initial={{ opacity: 0, y: 12, scale: 0.97 }}
