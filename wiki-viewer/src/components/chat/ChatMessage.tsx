@@ -110,25 +110,26 @@ export const ChatMessage = memo(function ChatMessage({
     }
   };
 
-  const actionIcon = (
-    onClick: () => void,
-    icon: React.ReactNode,
+  const actionBtn = (
     label: string,
+    icon: React.ReactNode,
+    onClick: () => void,
     active?: boolean,
     danger?: boolean
   ) => (
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 ${
+      className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md transition-colors ${
         danger
           ? 'text-apple-red/70 hover:text-apple-red hover:bg-apple-red/10'
           : active
           ? 'text-apple-yellow hover:bg-apple-yellow/10'
-          : 'text-white/50 hover:text-white hover:bg-white/10'
+          : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
       }`}
       title={label}
     >
       {icon}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 
@@ -177,64 +178,9 @@ export const ChatMessage = memo(function ChatMessage({
               <Bookmark size={10} className="absolute top-2.5 right-2.5 text-apple-yellow fill-apple-yellow" />
             )}
 
-            {/* Inline action bar — inside bubble, bottom-right */}
-            {!isEditing && (
-              <div
-                className={`absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-lg px-1 py-0.5 transition-all duration-200 ${
-                  isUser
-                    ? 'bg-white/10 backdrop-blur-sm'
-                    : 'bg-[var(--bg-primary)]/80 backdrop-blur-sm border border-[var(--border-default)]/50'
-                } ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 pointer-events-none'}`}
-              >
-                {entry.content && actionIcon(
-                  () => onCopy(entry.content, index),
-                  isCopied ? <Check size={12} className="text-apple-green" /> : <Copy size={12} />,
-                  isCopied ? t('chat.copied', 'Copied') : t('chat.copy', 'Copy')
-                )}
-                {isUser && onEdit && actionIcon(
-                  () => setIsEditing(true),
-                  <Pencil size={12} />,
-                  t('chat.edit', 'Edit')
-                )}
-                {onReply && actionIcon(
-                  onReply,
-                  <CornerDownLeft size={12} />,
-                  t('chat.reply', 'Reply')
-                )}
-                {onToggleBookmark && actionIcon(
-                  onToggleBookmark,
-                  <Bookmark size={12} className={bookmarked ? 'fill-apple-yellow text-apple-yellow' : ''} />,
-                  bookmarked ? t('chat.unbookmark', 'Unbookmark') : t('chat.bookmark', 'Bookmark'),
-                  bookmarked
-                )}
-                {isAssistant && isLastAssistant && !streaming && actionIcon(
-                  onRegenerate,
-                  <RefreshCw size={12} />,
-                  t('chat.regenerate', 'Regenerate')
-                )}
-                {entry.meta?.type === 'summary' && onSaveSummary && actionIcon(
-                  onSaveSummary,
-                  <SquarePen size={12} />,
-                  t('chat.saveSummary', 'Save')
-                )}
-                {entry.meta?.type === 'summary' && onQuoteSummary && actionIcon(
-                  onQuoteSummary,
-                  <Quote size={12} />,
-                  t('chat.quoteSummary', 'Quote')
-                )}
-                {onDelete && actionIcon(
-                  onDelete,
-                  <Trash2 size={12} />,
-                  t('chat.delete', 'Delete'),
-                  false,
-                  true
-                )}
-              </div>
-            )}
-
             {/* Content */}
             {isUser && isEditing ? (
-              <div className="min-w-[240px] pr-8">
+              <div className="min-w-[240px]">
                 <textarea
                   ref={editRef}
                   value={editValue}
@@ -259,30 +205,26 @@ export const ChatMessage = memo(function ChatMessage({
                 </div>
               </div>
             ) : isUser ? (
-              <div className="pr-6">
-                <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{entry.content}</p>
-              </div>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{entry.content}</p>
             ) : (
-              <div className="pr-6">
-                <div className="prose prose-sm max-w-none">
-                  {entry.content ? (
-                    <MarkdownRenderer
-                      content={entry.content}
-                      enableSourceCitations
-                      onSourceClick={onSourceClick}
-                    />
-                  ) : entry.sources && entry.sources.length > 0 ? (
-                    <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                      <TypingIndicator />
-                      {t('chat.typing')}
-                    </div>
-                  ) : streaming && isLastAssistant ? (
-                    <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                      <TypingIndicator />
-                      {t('chat.searching')}
-                    </div>
-                  ) : null}
-                </div>
+              <div className="prose prose-sm max-w-none">
+                {entry.content ? (
+                  <MarkdownRenderer
+                    content={entry.content}
+                    enableSourceCitations
+                    onSourceClick={onSourceClick}
+                  />
+                ) : entry.sources && entry.sources.length > 0 ? (
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <TypingIndicator />
+                    {t('chat.typing')}
+                  </div>
+                ) : streaming && isLastAssistant ? (
+                  <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <TypingIndicator />
+                    {t('chat.searching')}
+                  </div>
+                ) : null}
               </div>
             )}
 
@@ -320,9 +262,68 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
+          {/* Action bar — below bubble, never overlaps content */}
+          {!isEditing && (
+            <div
+              className={`flex items-center flex-wrap gap-0.5 mt-1 transition-all duration-150 ${
+                showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              } ${isUser ? 'justify-end' : 'justify-start'}`}
+            >
+              {entry.content && actionBtn(
+                isCopied ? t('chat.copied', 'Copied') : t('chat.copy', 'Copy'),
+                isCopied ? <Check size={11} className="text-apple-green" /> : <Copy size={11} />,
+                () => onCopy(entry.content, index)
+              )}
+
+              {isUser && onEdit && actionBtn(
+                t('chat.edit', 'Edit'),
+                <Pencil size={11} />,
+                () => setIsEditing(true)
+              )}
+
+              {onReply && actionBtn(
+                t('chat.reply', 'Reply'),
+                <CornerDownLeft size={11} />,
+                onReply
+              )}
+
+              {onToggleBookmark && actionBtn(
+                bookmarked ? t('chat.unbookmark', 'Unbookmark') : t('chat.bookmark', 'Bookmark'),
+                <Bookmark size={11} className={bookmarked ? 'fill-apple-yellow text-apple-yellow' : ''} />,
+                onToggleBookmark,
+                bookmarked
+              )}
+
+              {isAssistant && isLastAssistant && !streaming && actionBtn(
+                t('chat.regenerate', 'Regenerate'),
+                <RefreshCw size={11} />,
+                onRegenerate
+              )}
+
+              {entry.meta?.type === 'summary' && onSaveSummary && actionBtn(
+                t('chat.saveSummary', 'Save'),
+                <SquarePen size={11} />,
+                onSaveSummary
+              )}
+              {entry.meta?.type === 'summary' && onQuoteSummary && actionBtn(
+                t('chat.quoteSummary', 'Quote'),
+                <Quote size={11} />,
+                onQuoteSummary
+              )}
+
+              {onDelete && actionBtn(
+                t('chat.delete', 'Delete'),
+                <Trash2 size={11} />,
+                onDelete,
+                false,
+                true
+              )}
+            </div>
+          )}
+
           {/* Timestamp */}
           {entry.timestamp && (
-            <p className={`text-[10px] mt-1 text-[var(--text-tertiary)] opacity-0 group-hover/message:opacity-100 transition-opacity duration-200 ${isUser ? 'text-right' : 'text-left'}`}>
+            <p className={`text-[10px] mt-0.5 text-[var(--text-tertiary)] opacity-0 group-hover/message:opacity-100 transition-opacity duration-200 ${isUser ? 'text-right' : 'text-left'}`}>
               {formatTime(entry.timestamp)}
             </p>
           )}

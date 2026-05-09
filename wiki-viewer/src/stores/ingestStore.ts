@@ -34,14 +34,14 @@ function loadJobs(): IngestJob[] {
           : j
       );
     }
-  } catch {}
+  } catch { /* localStorage unavailable */ }
   return [];
 }
 
 function persist(jobs: IngestJob[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
-  } catch {}
+  } catch { /* localStorage unavailable */ }
 }
 
 export const useIngestStore = create<IngestState>((set, get) => ({

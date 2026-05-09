@@ -368,3 +368,9 @@ Ingested overview article covering LLMs from tokenization to autoregressive gene
 ## [2024-03-15] ingest | Attention Is All You Need
 
 Ingested paper introducing the Transformer architecture. Created entities (Google) and concepts (AttentionMechanism, Transformer).
+
+## [2026-05-09]
+
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+163 nodes, 629 edges (629 extracted, 0 inferred).

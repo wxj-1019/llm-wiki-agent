@@ -242,7 +242,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
 
   refreshGraphData: async () => {
     if (_initPromise) {
-      try { await _initPromise; } catch {}
+      try { await _initPromise; } catch { /* init failed, proceed with refresh */ }
     }
     set({ loading: true, error: null });
     try {

@@ -247,6 +247,7 @@ def build_nodes(pages: list[Path]) -> list[dict]:
             "type": node_type,
             "color": TYPE_COLORS.get(node_type, TYPE_COLORS["unknown"]),
             "path": p.relative_to(REPO_ROOT).as_posix(),
+            "markdown": content,
             "preview": preview,
             "links": links,
         }

@@ -2,7 +2,7 @@ import { useRef, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FolderOpen, Search, ArrowUpDown, Filter, CheckSquare, Square,
-  Play, Loader2, X, Eye, Trash2, Clock, Inbox, Upload, CheckCircle2,
+  Play, Loader2, X, Eye, Trash2, Clock, Inbox, Upload,
   FileCheck, AlertCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

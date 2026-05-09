@@ -8,7 +8,6 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  FileText,
   Zap,
 } from 'lucide-react';
 

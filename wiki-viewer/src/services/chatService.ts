@@ -131,7 +131,7 @@ export async function* chatWithLLMStream(
 
 export async function searchWeb(
   query: string,
-  limit = 10
+  _limit = 10
 ): Promise<{ results: WebSearchResult[] }> {
   // TODO: Add a real web search backend endpoint
   // For now, return empty results

@@ -115,7 +115,7 @@ export function UploadZone({ dragActive, uploading, onDrag, onDrop, onFileInput 
           ref={fileInputRef}
           type="file"
           multiple
-          // @ts-ignore webkitdirectory is non-standard but widely supported
+          // @ts-expect-error webkitdirectory is non-standard but widely supported
           webkitdirectory=""
           className="hidden"
           onChange={onFileInput}
