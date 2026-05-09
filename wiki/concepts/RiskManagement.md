@@ -8,7 +8,7 @@ last_updated: 2026-05-08
 
 # RiskManagement
 
-[[MainFundSelectionSystem|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。
+[[main-fund-selection-system|主力选股系统]]的风险管理体系体现在多层防御式筛选和丰富的降级策略上。
 
 ## 多层防御式筛选
 
@@ -31,6 +31,6 @@ last_updated: 2026-05-08
 
 ## Connections
 
-- [[MainFundSelectionSystem]] — 所属系统
+- [[main-fund-selection-system]] — 所属系统
 - [[Backtesting]] — 回测验证
 - [[QuantPreScoring]] — 量化预评分

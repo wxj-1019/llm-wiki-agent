@@ -25,5 +25,5 @@ A 股有明显的风格外溢和情绪扩散效应，龙头先涨、板块跟涨
 
 ## 参见
 - [[TrendTracking]]
-- [[MainFundSelectionSystem]]
+- [[main-fund-selection-system]]
 - [[VolumePriceBreakout]]

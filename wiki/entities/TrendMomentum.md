@@ -18,6 +18,6 @@ last_updated: 2026-05-08
 特别适合A股的板块轮动和热点扩散特征，能较好捕捉主线板块中的强势股。
 
 ## Connection
-- [[MainFundSelectionSystem]] — 作为四种优先工程化策略之一
+- [[main-fund-selection-system]] — 作为四种优先工程化策略之一
 - [[SectorRotation]] — 可与板块轮动叠加使用
 - [[MoneyFlowStrategy]] — 可与资金流策略组合

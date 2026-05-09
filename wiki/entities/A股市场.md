@@ -16,7 +16,7 @@ last_updated: 2026-05-08
 - **题材轮动**：板块和主题轮动特征明显，情绪对短中期收益影响大
 
 ## Related to
-- [[MainFundSelectionSystem]] — 针对A股的主力选股系统
+- [[main-fund-selection-system]] — 针对A股的主力选股系统
 - [[TrendTracking]] — 适用A股的量化策略
 - [[MomentumStrategy]] — A股动量策略特性
 - [[MoneyFlowStrategy]] — 特别适合A股的策略

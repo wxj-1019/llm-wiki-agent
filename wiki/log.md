@@ -463,3 +463,6 @@ Added source. Key claims: 六层流水线架构（数据获取→量化预评分
 ## [2026-05-09] graph | Knowledge graph rebuilt
 
 286 nodes, 1241 edges (1241 extracted, 0 inferred).
+## [2026-05-09] heal | Auto-healed missing entities
+
+Created entity pages for: 板块策略与大盘分析, 新闻订阅系统, 用户与权限系统, 股票数据服务, 价格监控与预警系统, 持仓管理与组合分析.

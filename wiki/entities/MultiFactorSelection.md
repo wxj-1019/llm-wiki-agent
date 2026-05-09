@@ -20,6 +20,6 @@ last_updated: 2026-05-08
 需加入硬过滤：剔除ST、停牌、涨跌停、流动性不足、次新股。
 
 ## Connection
-- [[MainFundSelectionSystem]] — 作为四种优先工程化策略和"统一底座"
+- [[main-fund-selection-system]] — 作为四种优先工程化策略和"统一底座"
 - [[QuantitativeAnalysis]] — 与量化预评分系统战略一致
 - [[AIAgent]] — 可作为AI推荐层的底层框架

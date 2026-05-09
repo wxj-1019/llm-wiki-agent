@@ -8,7 +8,7 @@ last_updated: 2026-05-08
 
 # StockSelectionStrategy
 
-AI驱动的股票选择策略框架。在[[MainFundSelectionSystem|主力选股系统]]中，选股策略定义了从数据过滤到量化评分的全套规则。
+AI驱动的股票选择策略框架。在[[main-fund-selection-system|主力选股系统]]中，选股策略定义了从数据过滤到量化评分的全套规则。
 
 ## 7种内置策略
 
@@ -28,7 +28,7 @@ GLOBAL → STRATEGY-SPECIFIC → DATABASE VERSION → USER OVERRIDE
 
 ## Connections
 
-- [[MainFundSelectionSystem]] — 所属系统
+- [[main-fund-selection-system]] — 所属系统
 - [[QuantPreScoring]] — 策略自适应权重
 - [[RiskManagement]] — 策略风控
 - [[Backtesting]] — 回测验证

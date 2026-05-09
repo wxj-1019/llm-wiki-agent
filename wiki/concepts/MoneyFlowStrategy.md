@@ -23,6 +23,6 @@ A 股是典型的资金驱动市场，尤其题材启动初期，很多股票会
 不要只看"单日净流入金额"，应该关注连续性、占成交额比例、流入时股价所处位置、板块是否同步共振。
 
 ## 参见
-- [[MainFundSelectionSystem]]
+- [[main-fund-selection-system]]
 - [[SectorRotation]]
 - [[QuantitativeAnalysis]]

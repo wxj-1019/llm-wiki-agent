@@ -22,7 +22,7 @@ last_updated: 2026-05-07
 在 A 股，多因子策略通常要加入硬过滤：剔除 ST、剔除停牌、剔除涨跌停、剔除流动性不足、剔除上市时间过短的次新股。
 
 ## 与系统关联
-本系统[[MainFundSelectionSystem|主力选股系统]]的量化预评分系统（Quant Scorer）与多因子评分理念一致，从资金强度、量价配合、基本面、估值安全四个维度综合评分，并可叠加策略专属公式 Overlay。
+本系统[[main-fund-selection-system|主力选股系统]]的量化预评分系统（Quant Scorer）与多因子评分理念一致，从资金强度、量价配合、基本面、估值安全四个维度综合评分，并可叠加策略专属公式 Overlay。
 
 ## 优缺点
 - 优点：更稳健、易于扩展和工程化，适合作为平台型选股框架
@@ -30,5 +30,5 @@ last_updated: 2026-05-07
 
 ## 参见
 - [[QuantitativeAnalysis]]
-- [[MainFundSelectionSystem]]
+- [[main-fund-selection-system]]
 - [[AIAgent]]

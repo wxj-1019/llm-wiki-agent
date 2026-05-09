@@ -8,7 +8,7 @@ last_updated: 2026-05-08
 
 # Backtesting
 
-回测验证是[[MainFundSelectionSystem|主力选股系统]]六层架构的最后一环，用于验证推荐质量。
+回测验证是[[main-fund-selection-system|主力选股系统]]六层架构的最后一环，用于验证推荐质量。
 
 ## 回测引擎核心设计
 
@@ -25,6 +25,6 @@ last_updated: 2026-05-08
 
 ## Connections
 
-- [[MainFundSelectionSystem]] — 所属系统
+- [[main-fund-selection-system]] — 所属系统
 - [[RiskManagement]] — 风控验证
 - [[QuantitativeAnalysis]] — 量化分析

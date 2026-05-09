@@ -19,5 +19,5 @@ A股一旦出现主线板块，龙头和核心趋势股经常有明显"沿均线
 
 ## Connection
 - [[MomentumStrategy]] — 战略关联
-- [[MainFundSelectionSystem]] — 与系统中"温和回调多头"策略相关
+- [[main-fund-selection-system]] — 与系统中"温和回调多头"策略相关
 - [[TrendMomentum]] — 可与动量组合使用

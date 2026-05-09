@@ -37,7 +37,7 @@ source_file: raw/uploads/MAIN_FUND_SELECTION_ANALYSIS.md
 - [[DataPipeline]] — 数据获取层（[[WencaiAPI|问财API]]、[[Tushare|Tushare]]）构成基础
 - [[Tushare]] — 技术指标计算与备选数据源
 - [[WencaiAPI]] — 主要数据源
-- [[MainFundSelectionSystem|MainFundSelection]] — 主力选股系统的核心实体
+- [[main-fund-selection-system|MainFundSelection]] — 主力选股系统的核心实体
 
 ## Contradictions
 

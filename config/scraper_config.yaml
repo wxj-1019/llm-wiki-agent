@@ -1,0 +1,97 @@
+# LLM 爬虫全局配置
+# 文件: config/scraper_config.yaml
+# 用途: 控制 LLM 爬虫的所有行为参数
+
+scraper:
+  # ── 浏览器设置 (Phase 3 启用) ──
+  browser:
+    enabled: false           # Phase 3 安装 Playwright 后启用
+    timeout: 30
+    wait_for_selector: "article, main, .content, #content"
+
+  # ── LLM 提取策略 ──
+  extraction:
+    provider: "litellm"
+    model: "claude-haiku-4-5-20251001"    # 日常提取用小模型
+    fallback_model: "claude-sonnet-4-6"    # 复杂页面用大模型
+    max_input_tokens: 6000
+    max_output_tokens: 2000
+    temperature: 0.1
+
+    # Prompt 模板 (支持从外部文件加载)
+    # 注意: 每个模板必须包含 {html} 或 {content} 占位符
+    prompts:
+      # 正文提取 (必须包含 {html})
+      content_extraction: |
+        你是一个专业的内容提取助手。从网页HTML中提取正文，输出为干净的Markdown。
+
+        规则:
+        1. 排除导航链接、侧边栏、页脚、广告、评论区、推荐阅读
+        2. 保留原文标题层级结构 (h1-h6)
+        3. 保留表格、列表、代码块等结构化内容
+        4. 图片保留 alt 文本，标注 [Image: alt文本]
+        5. 若页面主要是链接列表/导航，回复 "NOT_ARTICLE: <原因>"
+        6. 仅输出Markdown正文，不加任何解释
+
+        <article>标签内的内容优先；<main>次之；没有则从<body>提取。
+
+        ---
+        HTML source:
+        {html}
+        ---
+
+      # 内容摘要生成 (必须包含 {content})
+      summarization: |
+        请用2-3句话总结以下文章的核心内容。
+        只输出摘要文本，不要加标题、标签或任何解释。
+
+        ---
+        {content}
+        ---
+
+      # 实体识别 (必须包含 {content})
+      entity_extraction: |
+        从以下文章提取关键实体，输出JSON数组:
+        [
+          {{
+            "name": "实体名称",
+            "type": "person|organization|project|concept|technology",
+            "context": "文中的一句话上下文"
+          }}
+        ]
+
+        实体类型说明:
+        - person: 人物
+        - organization: 公司/机构/组织
+        - project: 项目/产品名
+        - concept: 概念/方法论/理论
+        - technology: 技术/框架/工具/编程语言
+
+        只输出JSON数组，不要加任何解释。
+
+        ---
+        {content}
+        ---
+
+  # ── 质量阈值 ──
+  quality:
+    min_content_length: 200            # 低于此字符数标记为低质量
+    trafilatura_bypass_length: 1000    # trafilatura 结果高于此值则跳过 LLM
+    llm_min_quality_score: 30          # LLM 质量评分低于此值则丢弃
+
+  # ── 速率控制 ──
+  rate_limit:
+    max_concurrent: 3                  # 最大并发 LLM 调用
+    max_concurrent_http: 5             # 最大并发 HTTP 请求
+    requests_per_minute: 10            # 每分钟最大 HTTP 请求数
+    retry_max: 3                       # 最大重试次数
+    retry_backoff: "exponential"       # 指数退避: 1s, 2s, 4s
+
+  # ── 去重 ──
+  dedup:
+    url_hash: true                     # 基于 URL 去重 (通过 state.json)
+
+  # ── 日志 ──
+  logging:
+    level: "INFO"
+    file: "logs/scraper.log"

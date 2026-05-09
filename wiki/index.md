@@ -45,6 +45,12 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
+- [持仓管理与组合分析](entities/持仓管理与组合分析.md) — auto-healed entity
+- [价格监控与预警系统](entities/价格监控与预警系统.md) — auto-healed entity
+- [股票数据服务](entities/股票数据服务.md) — auto-healed entity
+- [用户与权限系统](entities/用户与权限系统.md) — auto-healed entity
+- [新闻订阅系统](entities/新闻订阅系统.md) — auto-healed entity
+- [板块策略与大盘分析](entities/板块策略与大盘分析.md) — auto-healed entity
 - [WencaiAPI — 问财API](entities/WencaiAPI.md) — auto-created entity
 - [ControlledPullback — 温和回调多头策略](entities/ControlledPullback.md) — auto-created entity
 - [LowRiskIncome — 低风险收益策略](entities/LowRiskIncome.md) — auto-created entity

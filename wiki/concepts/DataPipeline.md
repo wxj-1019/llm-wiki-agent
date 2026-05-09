@@ -8,7 +8,7 @@ last_updated: 2026-05-08
 
 # DataPipeline
 
-[[MainFundSelectionSystem|主力选股系统]]的数据管道从多种来源获取并处理数据。
+[[main-fund-selection-system|主力选股系统]]的数据管道从多种来源获取并处理数据。
 
 ## 数据源
 
@@ -26,5 +26,5 @@ last_updated: 2026-05-08
 
 ## Connections
 
-- [[MainFundSelectionSystem]] — 所属系统
+- [[main-fund-selection-system]] — 所属系统
 - [[TechnicalAnalysis]] — 技术指标分析

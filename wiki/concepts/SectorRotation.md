@@ -25,9 +25,9 @@ A 股历来有明显的板块轮动特征，比如新能源、算力、半导体
 - 缺点：轮动太快时容易追涨杀跌，板块定义和成分更新需要维护
 
 ## 系统集成
-本系统[[MainFundSelectionSystem|主力选股系统]]已内置"板块轮动"策略，与[[MoneyFlowStrategy|资金流]]、[[TrendTracking|趋势]]等策略可叠加使用。
+本系统[[main-fund-selection-system|主力选股系统]]已内置"板块轮动"策略，与[[MoneyFlowStrategy|资金流]]、[[TrendTracking|趋势]]等策略可叠加使用。
 
 ## 参见
-- [[MainFundSelectionSystem]]
+- [[main-fund-selection-system]]
 - [[MoneyFlowStrategy]]
 - [[AIAgent]]

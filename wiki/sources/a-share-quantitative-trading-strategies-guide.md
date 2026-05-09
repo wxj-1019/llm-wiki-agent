@@ -30,7 +30,7 @@ source_file: raw/uploads/A股常见量化交易策略指南.md
 
 - [[AIAgent]] — 主力选股系统的AI分析层可利用本指南中的策略框架
 - [[QuantitativeAnalysis]] — 多因子评分策略与量化预评分系统直接相关
-- [[MainFundSelectionSystem|主力选股系统]] — 本指南中的四种优先策略直接服务于主力选股系统的策略体系
+- [[main-fund-selection-system|主力选股系统]] — 本指南中的四种优先策略直接服务于主力选股系统的策略体系
 - [[RiskManagement]] — 每种策略特有的风控参数和失败原因与系统风控设计相关
 - [[DataPipeline]] — 资金流数据和板块数据的获取需求与数据获取层相关
 - [[TrendTracking]] — 趋势跟踪策略与系统中"温和回调多头"策略相关
