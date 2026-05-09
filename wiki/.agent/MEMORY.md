@@ -151,6 +151,7 @@ updated_at: "2026-05-06"
 - 新来源 ingest 后需更新 overview.md 的交叉引用；每个来源页面至少包含 Summary、Key Claims、Connections 三个段落；矛盾信息记录在 Contradictions 段落中；学术论文类来源应提取核心贡献、关键实体和概念链接；操作日志日期需与日志条目严格一致，避免手动录入错误；定期检查并合并重复条目，保持 Memory 简洁；对于无来源页面的 ingest，应标记为待补充来源摘要。
 - 新来源 ingest 后需更新 overview.md 的交叉引用；每个来源页面至少包含 Summary、Key Claims、Connections 三个段落；矛盾信息记录在 Contradictions 段落中；学术论文类来源应提取核心贡献、关键实体和概念链接；操作日志日期需与日志条目严格一致，避免手动录入错误；定期检查并合并重复条目，保持 Memory 简洁；对于无来源页面的 ingest，应标记为待补充来源摘要。
 - 新来源 ingest 后需更新 overview.md 的交叉引用；每个来源页面至少包含 Summary、Key Claims、Connections 三个段落；矛盾信息记录在 Contradictions 段落中；学术论文类来源应提取核心贡献、关键实体和概念链接；操作日志日期需与日志条目严格一致，避免手动录入错误；定期检查并合并重复条目，保持 Memory 简洁；对于无来源页面的 ingest，应标记为待补充来源摘要。
+- 新来源 ingest 后需更新 overview.md 的交叉引用；每个来源页面至少包含 Summary、Key Claims、Connections 三个段落；矛盾信息记录在 Contradictions 段落中；学术论文类来源应提取核心贡献、关键实体和概念链接；操作日志日期需与日志条目严格一致，避免手动录入错误；定期检查并合并重复条目，保持 Memory 简洁；对于无来源页面的 ingest，应标记为待补充来源摘要。
 
 ## Operation Log
 - [2026-05-08] ## [2024-03-15] ingest | Attention Is All You Need
@@ -176,6 +177,7 @@ updated_at: "2026-05-06"
 - [2026-05-09] - [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
 - [2026-05-09] - [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
 - [2026-05-09] - [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
+- [2026-05-09] [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
 - [2026-05-09] [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
 - [2026-05-09] [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充
 - [2026-05-09] [2026-05-09] reflection | 分析 ingest 操作，修复日志格式和重复问题，合并 Memory 重复条目，标记无来源页面待补充

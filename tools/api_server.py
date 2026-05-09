@@ -3,6 +3,13 @@ from __future__ import annotations
 
 """Lightweight API server for LLM Wiki Agent."""
 
+import sys
+from pathlib import Path
+# Ensure tools/ is on sys.path so sibling imports work regardless of launch method
+_tools_dir = str(Path(__file__).parent)
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
+
 import asyncio
 import hmac
 import io
@@ -329,6 +336,10 @@ def _get_search_engine():
     if _search_engine is None:
         with _search_engine_lock:
             if _search_engine is None:
+                # Ensure tools/ is on sys.path for the import to work
+                tools_dir = str(Path(__file__).parent)
+                if tools_dir not in sys.path:
+                    sys.path.insert(0, tools_dir)
                 from search_engine import WikiSearchEngine
                 _search_engine = WikiSearchEngine()
     return _search_engine

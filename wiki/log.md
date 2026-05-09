@@ -457,3 +457,9 @@ Created concept pages: MultiAgentCoordinationArchitecture, ThreeStageAnalysisPip
 ## [2026-05-09] graph | Knowledge graph rebuilt
 
 285 nodes, 1195 edges (1195 extracted, 0 inferred).
+## [2026-05-09] ingest | Main Fund Selection System — 主力选股系统
+
+Added source. Key claims: 六层流水线架构（数据获取→量化预评分→AI五维分析→回测验证），7策略体系，量化评分四大维度，5位AI分析师并行，推荐分层双轨制。
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+286 nodes, 1241 edges (1241 extracted, 0 inferred).

@@ -1,24 +1,21 @@
 ---
-title: "SectorRotation"
+title: "SectorRotation — 板块轮动策略"
 type: entity
-tags: [strategy, sector, rotation]
-sources: [a-share-quantitative-trading-strategies-guide]
-last_updated: 2026-05-08
+tags: [strategy, stock-selection, quantitative]
+sources: [main-fund-selection-system]
+last_updated: 2026-05-09
 ---
 
-板块轮动策略（Sector Rotation）是先判断当前市场最强行业或主题，再从强板块中挑选最强个股的量化方法。核心是"先选赛道，再选个股"。
+**板块轮动策略**是[[MainFundSelection|主力选股系统]]内置的7种策略之一，ID为 `sector_rotation`。核心特征是板块热度+龙头效应。
 
-## Common Signals
-- 板块涨幅排名靠前
-- 板块成交额放大
-- 板块净流入持续增强
-- 板块内涨停家数增加
-- 龙头股持续创新高
+## 策略特点
 
-## A股适用性
-A股历来有明显的板块轮动特征，如新能源、算力、半导体、军工等，经常呈现"板块先强，个股扩散"的结构。
+- **量化权重偏向**: 资金强度45% + 量价配合30%
+- **关键信号**: 强势板块中的领涨个股
+- **应用场景**: 板块轮动行情中的龙头股捕捉
 
-## Connection
-- [[MainFundSelectionSystem]] — 作为四种优先工程化策略之一
-- [[MoneyFlowStrategy]] — 可与资金流结合
-- [[TrendMomentum]] — 可与趋势动量结合
+## Connections
+
+- [[MainFundSelection]] — 所属系统
+- [[MainForceAccumulation]] — 对比策略
+- [[sector-strategy-and-market-analysis|板块策略与大盘分析]] — 板块数据支撑

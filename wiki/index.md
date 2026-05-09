@@ -6,6 +6,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Main Fund Selection System — 主力选股系统](sources/main-fund-selection-system.md) — 六层流水线旗舰选股系统，7种策略×5位AI分析师×量化评分×回测验证
 - [AI智能分析系统](sources/ai-intelligent-analysis-system.md) — 核心智能引擎，多智能体协同架构，9维度深度分析，支持DeepSeek/Qwen/Kimi/GLM四大AI提供商
 - [股票数据服务](sources/stock-data-service.md) — 统一数据源管理、多级降级、大盘指数云图与板块策略数据
 - [用户与权限系统](sources/user-auth-and-permission-system.md) — 基于JWT+bcrypt+RBAC的完整用户生命周期管理和权限控制系统
@@ -44,6 +45,14 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
 
 ## Entities
+- [WencaiAPI — 问财API](entities/WencaiAPI.md) — auto-created entity
+- [ControlledPullback — 温和回调多头策略](entities/ControlledPullback.md) — auto-created entity
+- [LowRiskIncome — 低风险收益策略](entities/LowRiskIncome.md) — auto-created entity
+- [SectorRotation — 板块轮动策略](entities/SectorRotation.md) — auto-created entity
+- [GrowthPotential — 成长潜力策略](entities/GrowthPotential.md) — auto-created entity
+- [ValueStable — 价值稳健策略](entities/ValueStable.md) — auto-created entity
+- [ShortTermBreakout — 短期爆发策略](entities/ShortTermBreakout.md) — auto-created entity
+- [MainForceAccumulation — 主力吸筹策略](entities/MainForceAccumulation.md) — auto-created entity
 - [StreamingAnalysisService](entities/StreamingAnalysisService.md) — auto-created entity
 - [ConnectionManager](entities/ConnectionManager.md) — auto-created entity
 - [StockDataCoordinator](entities/StockDataCoordinator.md) — auto-created entity
@@ -237,6 +246,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [QuantPreScoring — 量化预评分](concepts/QuantPreScoring.md) — auto-created concept
 - [AI Provider Factory Pattern](concepts/AIProviderFactoryPattern.md) — auto-created concept
 - [Streaming Analysis](concepts/StreamingAnalysis.md) — auto-created concept
 - [AI Request Optimization](concepts/AIRequestOptimization.md) — auto-created concept
