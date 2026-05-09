@@ -372,6 +372,25 @@ async def reindex_embeddings():
         raise HTTPException(status_code=500, detail=f"Reindex failed: {e}")
 
 
+@app.post("/api/search/reindex")
+async def reindex_fts():
+    """Force full FTS5 index rebuild for all wiki pages."""
+    try:
+        global _search_engine
+        if _search_engine is not None:
+            await asyncio.to_thread(_search_engine.rebuild_index)
+        else:
+            engine = _get_search_engine()
+            await asyncio.to_thread(engine.rebuild_index)
+        count = 0
+        if _search_engine:
+            count = _search_engine._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()[0]
+        return {"success": True, "pages": count}
+    except Exception as e:
+        logging.warning("FTS reindex failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Reindex failed: {e}")
+
+
 def _fallback_search(query: str, limit: int) -> list[dict]:
     """Fallback substring search when FTS5 is unavailable."""
     q_clean = query.lower()
@@ -826,6 +845,8 @@ async def multimodal_ingest_image(file: UploadFile = File(...)):
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0:
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "description": description,
@@ -901,8 +922,21 @@ async def api_ingest(payload: IngestPayload):
         raise HTTPException(status_code=500, detail=f"Ingest failed: {e}")
 
 
+def _invalidate_search_index() -> None:
+    """Force FTS index to recheck wiki files on next search.
+    Called after any subprocess that modifies wiki/ (ingest, heal, refresh, etc.)."""
+    global _search_engine
+    if _search_engine is not None:
+        try:
+            _search_engine._last_check = 0.0
+            _search_engine._set_meta("wiki_fingerprint", "")
+        except Exception:
+            pass
+
+
 def _rebuild_graph_sync() -> None:
     """Trigger a lightweight graph rebuild after ingestion completes (runs in a background thread)."""
+    _invalidate_search_index()
     if not _GRAPH_REBUILD_LOCK.acquire(blocking=False):
         return
     try:
@@ -1207,6 +1241,8 @@ source_url: "{safe_url}"
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0:
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "filename": filename,
@@ -1256,6 +1292,8 @@ async def webhook_ingest(payload: WebhookIngestPayload, _=Depends(_require_webho
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0:
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "source": payload.source,
@@ -1302,6 +1340,8 @@ async def webhook_github(request: Request, _=Depends(_require_webhook_token)):
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0:
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "event": event,
@@ -1410,6 +1450,8 @@ async def agent_kit_generate(payload: AgentKitGeneratePayload):
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0:
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "stdout": result.stdout,
@@ -2591,6 +2633,8 @@ def _run_tool_script(script_name: str, extra_args: list[str] | None = None) -> d
             cwd=str(REPO),
             timeout=300,
         )
+        if result.returncode == 0 and script_name in ("heal.py", "refresh.py", "lint.py"):
+            _invalidate_search_index()
         return {
             "success": result.returncode == 0,
             "stdout": result.stdout[-2000:] if result.stdout else "",

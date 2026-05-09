@@ -116,21 +116,28 @@ class WikiSearchEngine:
             self._set_meta("wiki_hash", current_hash)
 
     def check_stale(self) -> None:
-        """Lightweight stale check — rehash only if wiki dir mtime changed. Called on every search."""
+        """Lightweight stale check using file count + total size. Called on every search."""
         import time
         now = time.monotonic()
-        if now - self._last_check < 5.0:
+        if now - self._last_check < 3.0:
             return
         self._last_check = now
         try:
-            wiki_stat = WIKI.stat()
-            stored = self._get_meta("wiki_dir_mtime")
-            current = f"{wiki_stat.st_mtime}:{wiki_stat.st_size}"
+            stored = self._get_meta("wiki_fingerprint")
+            count = 0
+            total_size = 0
+            for p in _wiki_page_paths():
+                try:
+                    total_size += p.stat().st_size
+                    count += 1
+                except OSError:
+                    pass
+            current = f"{count}:{total_size}"
             if stored != current:
-                logger.info("Wiki directory changed, checking index freshness")
+                logger.info("Wiki changed (files=%d size=%d), reindexing", count, total_size)
                 self._ensure_indexed()
-                self._set_meta("wiki_dir_mtime", current)
-        except OSError:
+                self._set_meta("wiki_fingerprint", current)
+        except Exception:
             pass
 
     def _compute_wiki_hash(self) -> str:
