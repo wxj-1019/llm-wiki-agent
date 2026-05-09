@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Send, Square, MessageCircle, Trash2, Sparkles,
   ChevronDown, Plus, X, Search, FileText, Zap, Plug,
-  Globe, BookOpen, Quote, Wand2, Loader2, Pencil
+  Globe, BookOpen, Quote, Wand2, Loader2, Pencil,
+  MoreHorizontal, Download, ArrowUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -165,6 +166,10 @@ export function ChatPage() {
   const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
   const [generateLoading, setGenerateLoading] = useState(false);
   const [summarizeStyle, setSummarizeStyle] = useState<'brief' | 'detailed' | 'bullet' | 'action'>('brief');
+  const [showSummarizeMenu, setShowSummarizeMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const summarizeMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [showMention, setShowMention] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionResults, setMentionResults] = useState<WikiSearchResult[]>([]);
@@ -1584,7 +1589,7 @@ export function ChatPage() {
       </AnimatePresence>
 
       {/* Input area */}
-      <div className="px-4 sm:px-6 py-4 border-t border-[var(--border-default)] shrink-0 glass">
+      <div className="px-4 sm:px-6 py-3 border-t border-[var(--border-default)] shrink-0 bg-[var(--bg-primary)]">
         {/* Find in conversation */}
         <AnimatePresence>
           {showFindPanel && (
@@ -1594,7 +1599,7 @@ export function ChatPage() {
               exit={{ opacity: 0, height: 0 }}
               className="max-w-3xl mx-auto mb-2 overflow-hidden"
             >
-              <div className="flex items-center gap-2 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg px-2 py-1">
+              <div className="flex items-center gap-2 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl px-3 py-1.5">
                 <Search size={12} className="text-[var(--text-tertiary)] shrink-0" />
                 <input
                   ref={findInputRef}
@@ -1610,7 +1615,7 @@ export function ChatPage() {
                   className="flex-1 bg-transparent text-xs focus:outline-none text-[var(--text-primary)]"
                 />
                 {findMatches.length > 0 && (
-                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0">
+                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
                     {findIndex + 1}/{findMatches.length}
                   </span>
                 )}
@@ -1638,137 +1643,92 @@ export function ChatPage() {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Toolbar */}
-        <div className="flex items-center gap-1 mb-2 max-w-3xl mx-auto overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => { setShowSearchPanel(true); setShowGeneratePanel(false); }}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg"
-            title={t('chat.tools.search', 'Search')}
-          >
-            <Search size={11} />
-            {t('chat.tools.search', 'Search')}
-          </button>
-          <div className="w-px h-3 bg-[var(--border-default)] mx-0.5" />
-          <button
-            onClick={handleSummarize}
-            disabled={loading || entries.length === 0}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
-            title={t('chat.tools.summarize', 'Summarize')}
-          >
-            <FileText size={11} />
-            {t('chat.tools.summarize', 'Summarize')}
-          </button>
-          <select
-            value={summarizeStyle}
-            onChange={(e) => setSummarizeStyle(e.target.value as 'brief' | 'detailed' | 'bullet' | 'action')}
-            className="text-[10px] bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none py-0.5 px-1.5 rounded-md border border-[var(--border-default)] appearance-none"
-            title={t('chat.summarize.style', 'Summary style')}
-          >
-            <option value="brief">{t('chat.summarize.styleBrief', 'Brief')}</option>
-            <option value="detailed">{t('chat.summarize.styleDetailed', 'Detailed')}</option>
-            <option value="bullet">{t('chat.summarize.styleBullet', 'Bullet')}</option>
-            <option value="action">{t('chat.summarize.styleAction', 'Action')}</option>
-          </select>
-          <div className="w-px h-3 bg-[var(--border-default)] mx-0.5" />
-          <button
-            onClick={() => handleGenerate('skill')}
-            disabled={loading || entries.length === 0}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
-            title={t('chat.tools.skill', 'Generate Skill')}
-          >
-            <Zap size={11} />
-            {t('chat.tools.skill', 'Skill')}
-          </button>
-          <button
-            onClick={() => handleGenerate('mcp')}
-            disabled={loading || entries.length === 0}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors rounded-lg disabled:opacity-40"
-            title={t('chat.tools.mcp', 'Generate MCP')}
-          >
-            <Plug size={11} />
-            {t('chat.tools.mcp', 'MCP')}
-          </button>
-        </div>
 
-        <div className="flex items-end gap-2 max-w-3xl mx-auto">
-          <div className="flex-1 relative">
-            {/* Mention dropdown */}
-            <AnimatePresence>
-              {showMention && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  className="absolute left-0 right-0 bottom-full mb-1 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 overflow-hidden"
-                >
-                  <div className="max-h-40 overflow-y-auto py-1">
-                    {mentionLoading && (
-                      <div className="px-3 py-2 text-xs text-[var(--text-tertiary)] flex items-center gap-2">
-                        <Loader2 size={12} className="animate-spin" />
-                        {t('chat.searching')}
-                      </div>
-                    )}
-                    {!mentionLoading && mentionResults.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">
-                        {t('chat.mention.noResults', 'No pages found')}
-                      </div>
-                    )}
-                    {mentionResults.map((r, i) => (
-                      <button
-                        key={r.path}
-                        onClick={() => handleMentionSelect(r.path.replace('.md', ''))}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                          i === mentionIndex ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]'
-                        }`}
-                      >
-                        <span className="font-medium">{r.title}</span>
-                        <span className="text-[var(--text-tertiary)] ml-1.5">{r.path}</span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {showSlashMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  className="absolute left-0 right-0 bottom-full mb-1 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 overflow-hidden"
-                >
-                  <div className="max-h-40 overflow-y-auto py-1">
-                    {filteredSlashCommands.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">
-                        {t('chat.cmd.noResults', 'No commands found')}
-                      </div>
-                    )}
-                    {filteredSlashCommands.map((cmd, i) => (
-                      <button
-                        key={cmd.id}
-                        onClick={() => {
-                          const el = textareaRef.current;
-                          if (el && slashStartRef.current >= 0) {
-                            const before = input.slice(0, slashStartRef.current);
-                            const after = input.slice(el.selectionStart);
-                            setInput(before + after);
-                          }
-                          cmd.action();
-                          setShowSlashMenu(false);
-                          slashStartRef.current = -1;
-                        }}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 ${
-                          i === slashIndex ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]'
-                        }`}
-                      >
-                        <span className="text-[var(--text-tertiary)] font-mono">/{cmd.id}</span>
-                        <span>{cmd.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        {/* Main input card */}
+        <div className="max-w-3xl mx-auto relative">
+          {/* Mention dropdown */}
+          <AnimatePresence>
+            {showMention && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                className="absolute left-0 right-0 bottom-full mb-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 overflow-hidden"
+              >
+                <div className="max-h-40 overflow-y-auto py-1">
+                  {mentionLoading && (
+                    <div className="px-3 py-2 text-xs text-[var(--text-tertiary)] flex items-center gap-2">
+                      <Loader2 size={12} className="animate-spin" />
+                      {t('chat.searching')}
+                    </div>
+                  )}
+                  {!mentionLoading && mentionResults.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">
+                      {t('chat.mention.noResults', 'No pages found')}
+                    </div>
+                  )}
+                  {mentionResults.map((r, i) => (
+                    <button
+                      key={r.path}
+                      onClick={() => handleMentionSelect(r.path.replace('.md', ''))}
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                        i === mentionIndex ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]'
+                      }`}
+                    >
+                      <span className="font-medium">{r.title}</span>
+                      <span className="text-[var(--text-tertiary)] ml-1.5">{r.path}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Slash menu */}
+          <AnimatePresence>
+            {showSlashMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                className="absolute left-0 right-0 bottom-full mb-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 overflow-hidden"
+              >
+                <div className="max-h-40 overflow-y-auto py-1">
+                  {filteredSlashCommands.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">
+                      {t('chat.cmd.noResults', 'No commands found')}
+                    </div>
+                  )}
+                  {filteredSlashCommands.map((cmd, i) => (
+                    <button
+                      key={cmd.id}
+                      onClick={() => {
+                        const el = textareaRef.current;
+                        if (el && slashStartRef.current >= 0) {
+                          const before = input.slice(0, slashStartRef.current);
+                          const after = input.slice(el.selectionStart);
+                          setInput(before + after);
+                        }
+                        cmd.action();
+                        setShowSlashMenu(false);
+                        slashStartRef.current = -1;
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 ${
+                        i === slashIndex ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]'
+                      }`}
+                    >
+                      <span className="text-[var(--text-tertiary)] font-mono">/{cmd.id}</span>
+                      <span>{cmd.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Input card */}
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl focus-within:border-apple-blue/30 focus-within:shadow-sm transition-all">
+            {/* Textarea */}
             <textarea
               ref={textareaRef}
               value={input}
@@ -1785,88 +1745,207 @@ export function ChatPage() {
               placeholder={t('chat.inputPlaceholder')}
               aria-label={t('chat.inputPlaceholder')}
               rows={1}
-              className="w-full apple-input resize-none max-h-32 text-sm py-2.5"
+              className="w-full bg-transparent resize-none max-h-32 text-sm px-4 pt-3 pb-1 focus:outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
               disabled={loading}
             />
+
+            {/* Toolbar row */}
+            <div className="px-2 pb-2 flex items-center justify-between">
+              {/* Left tools */}
+              <div className="flex items-center gap-0.5">
+                {/* Search */}
+                <button
+                  onClick={() => { setShowSearchPanel(true); setShowGeneratePanel(false); }}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
+                  title={t('chat.tools.search', 'Search')}
+                >
+                  <Search size={14} />
+                </button>
+
+                {/* Summarize with style dropdown */}
+                <div className="relative" ref={summarizeMenuRef}>
+                  <button
+                    onClick={() => {
+                      if (entries.length === 0) return;
+                      setShowSummarizeMenu((v) => !v);
+                    }}
+                    disabled={loading || entries.length === 0}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors disabled:opacity-40"
+                    title={t('chat.tools.summarize', 'Summarize')}
+                  >
+                    <FileText size={14} />
+                  </button>
+                  <AnimatePresence>
+                    {showSummarizeMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute left-0 bottom-full mb-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 py-1 min-w-[120px]"
+                      >
+                        {([
+                          { key: 'brief', label: t('chat.summarize.styleBrief', 'Brief') },
+                          { key: 'detailed', label: t('chat.summarize.styleDetailed', 'Detailed') },
+                          { key: 'bullet', label: t('chat.summarize.styleBullet', 'Bullet') },
+                          { key: 'action', label: t('chat.summarize.styleAction', 'Action') },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.key}
+                            onClick={() => {
+                              setSummarizeStyle(opt.key);
+                              setShowSummarizeMenu(false);
+                              handleSummarize();
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                              summarizeStyle === opt.key
+                                ? 'text-apple-blue bg-apple-blue/5'
+                                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-primary)]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Skill */}
+                <button
+                  onClick={() => handleGenerate('skill')}
+                  disabled={loading || entries.length === 0}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-apple-purple hover:bg-apple-purple/10 transition-colors disabled:opacity-40"
+                  title={t('chat.tools.skill', 'Generate Skill')}
+                >
+                  <Zap size={14} />
+                </button>
+
+                {/* MCP */}
+                <button
+                  onClick={() => handleGenerate('mcp')}
+                  disabled={loading || entries.length === 0}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-apple-green hover:bg-apple-green/10 transition-colors disabled:opacity-40"
+                  title={t('chat.tools.mcp', 'Generate MCP')}
+                >
+                  <Plug size={14} />
+                </button>
+
+                <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+
+                {/* More menu: Export */}
+                <div className="relative" ref={moreMenuRef}>
+                  <button
+                    onClick={() => setShowMoreMenu((v) => !v)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
+                    title={t('chat.more', 'More')}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+                  <AnimatePresence>
+                    {showMoreMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 4, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute left-0 bottom-full mb-1.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl shadow-lg z-30 py-1 min-w-[140px]"
+                      >
+                        <div className="px-3 py-1 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                          {t('chat.export', 'Export')}
+                        </div>
+                        {([
+                          { key: 'markdown' as const, label: 'Markdown' },
+                          { key: 'json' as const, label: 'JSON' },
+                          { key: 'text' as const, label: 'Plain Text' },
+                        ]).map((fmt) => (
+                          <button
+                            key={fmt.key}
+                            onClick={() => {
+                              setExportFormat(fmt.key);
+                              setShowMoreMenu(false);
+                              if (entries.length === 0) return;
+                              const slug = (activeSession?.title || 'chat').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                              let blob: Blob;
+                              let ext: string;
+                              if (fmt.key === 'markdown') {
+                                const md = entries.map((e) => {
+                                  const header = e.role === 'user' ? '## User' : '## Assistant';
+                                  const time = e.timestamp ? ` (${formatTime(e.timestamp)})` : '';
+                                  return `${header}${time}\n\n${e.content}\n`;
+                                }).join('\n---\n\n');
+                                blob = new Blob([`# ${activeSession?.title || t('chat.title')}\n\n${md}`], { type: 'text/markdown' });
+                                ext = 'md';
+                              } else if (fmt.key === 'json') {
+                                blob = new Blob([JSON.stringify({ title: activeSession?.title || t('chat.title'), messages: entries, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+                                ext = 'json';
+                              } else {
+                                const txt = entries.map((e) => {
+                                  const header = e.role === 'user' ? 'User' : 'Assistant';
+                                  const time = e.timestamp ? ` [${formatTime(e.timestamp)}]` : '';
+                                  return `${header}${time}:\n${e.content}\n`;
+                                }).join('\n---\n\n');
+                                blob = new Blob([`${activeSession?.title || t('chat.title')}\n\n${txt}`], { type: 'text/plain' });
+                                ext = 'txt';
+                              }
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${slug}.${ext}`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                              addNotification(t('chat.exportSuccess', '导出成功'), 'success');
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] transition-colors flex items-center gap-2"
+                          >
+                            <Download size={12} />
+                            {fmt.label}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Right: char count + send */}
+              <div className="flex items-center gap-1.5">
+                {input.length > 0 && (
+                  <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
+                    {input.length}
+                  </span>
+                )}
+                <button
+                  onClick={streaming ? handleStop : handleSend}
+                  disabled={(!streaming && !input.trim()) || !online}
+                  className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all ${
+                    streaming
+                      ? 'bg-apple-red/10 text-apple-red hover:bg-apple-red/20'
+                      : input.trim() && online
+                      ? 'bg-apple-blue text-white hover:bg-apple-blue/90 shadow-sm'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]'
+                  } disabled:opacity-40`}
+                  aria-label={streaming ? t('chat.stop') : t('chat.send')}
+                  title={!online ? t('chat.offline') : undefined}
+                >
+                  {streaming ? <Square size={14} fill="currentColor" aria-hidden="true" /> : <ArrowUp size={16} aria-hidden="true" />}
+                </button>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={streaming ? handleStop : handleSend}
-            disabled={(!streaming && !input.trim()) || !online}
-            className={`shrink-0 p-2.5 transition-colors ${
-              streaming
-                ? 'rounded-full bg-transparent text-apple-red border border-red-200 hover:border-apple-red'
-                : 'apple-button disabled:opacity-40 disabled:cursor-not-allowed'
-            }`}
-            aria-label={streaming ? t('chat.stop') : t('chat.send')}
-            title={!online ? t('chat.offline') : undefined}
-          >
-            {streaming ? <Square size={16} fill="currentColor" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
-          </button>
-        </div>
-        <div className="max-w-3xl mx-auto mt-1.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+
+          {/* Bottom hint */}
+          <div className="mt-1.5 flex items-center justify-between">
             <p className="text-[10px] text-[var(--text-tertiary)]">
-              {t('chat.shortcuts')}
+              {t('chat.shortcuts', 'Enter 发送 · Shift+Enter 换行 · @ 引用页面 · Ctrl+K 搜索')}
             </p>
-            {input.length > 0 && (
+            {llmConfig && (
               <span className="text-[10px] text-[var(--text-tertiary)]">
-                {input.length} {t('chat.chars', 'chars')}
+                {llmConfig.provider}
               </span>
             )}
           </div>
-          {entries.length > 0 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  const slug = (activeSession?.title || 'chat').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                  let blob: Blob;
-                  let ext: string;
-                  if (exportFormat === 'markdown') {
-                    const md = entries.map((e) => {
-                      const header = e.role === 'user' ? '## User' : '## Assistant';
-                      const time = e.timestamp ? ` (${formatTime(e.timestamp)})` : '';
-                      return `${header}${time}\n\n${e.content}\n`;
-                    }).join('\n---\n\n');
-                    blob = new Blob([`# ${activeSession?.title || t('chat.title')}\n\n${md}`], { type: 'text/markdown' });
-                    ext = 'md';
-                  } else if (exportFormat === 'json') {
-                    blob = new Blob([JSON.stringify({ title: activeSession?.title || t('chat.title'), messages: entries, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
-                    ext = 'json';
-                  } else {
-                    const txt = entries.map((e) => {
-                      const header = e.role === 'user' ? 'User' : 'Assistant';
-                      const time = e.timestamp ? ` [${formatTime(e.timestamp)}]` : '';
-                      return `${header}${time}:\n${e.content}\n`;
-                    }).join('\n---\n\n');
-                    blob = new Blob([`${activeSession?.title || t('chat.title')}\n\n${txt}`], { type: 'text/plain' });
-                    ext = 'txt';
-                  }
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${slug}.${ext}`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  addNotification(t('chat.exportSuccess', '导出成功'), 'success');
-                }}
-                className="text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                {t('chat.export')}
-              </button>
-              <select
-                value={exportFormat}
-                onChange={(e) => setExportFormat(e.target.value as 'markdown' | 'json' | 'text')}
-                className="text-[10px] bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer focus:outline-none py-0.5 pr-3 pl-0.5 appearance-none"
-                style={{ backgroundImage: 'none' }}
-              >
-                <option value="markdown">MD</option>
-                <option value="json">JSON</option>
-                <option value="text">TXT</option>
-              </select>
-            </div>
-          )}
         </div>
-
       </div>
     </div>
   );
