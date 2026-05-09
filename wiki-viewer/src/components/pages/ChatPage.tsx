@@ -2,7 +2,7 @@ import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'rea
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Send, Square, MessageCircle, Trash2, Sparkles,
+  Square, MessageCircle, Trash2, Sparkles,
   ChevronDown, Plus, X, Search, FileText, Zap, Plug,
   Globe, BookOpen, Quote, Wand2, Loader2, Pencil,
   MoreHorizontal, Download, ArrowUp
@@ -152,7 +152,6 @@ export function ChatPage() {
   const [findIndex, setFindIndex] = useState(0);
   const findInputRef = useRef<HTMLInputElement>(null);
   const [llmConfig, setLlmConfig] = useState<{ model: string; provider: string } | null>(null);
-  const [exportFormat, setExportFormat] = useState<'markdown' | 'json' | 'text'>('markdown');
   const [online, setOnline] = useState(true);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1057,29 +1056,19 @@ export function ChatPage() {
     }
   }, [entries, t, setEntries, addNotification, summarizeStyle, getSummarizePrompt]);
 
-  const slashCommands = useMemo(() => [
-    { id: 'clear', label: t('chat.cmd.clear', 'Clear conversation'), icon: 'trash', action: () => { handleClear(); setInput(''); } },
-    { id: 'summarize', label: t('chat.cmd.summarize', 'Summarize conversation'), icon: 'file', action: () => { handleSummarize(); setInput(''); } },
-    { id: 'search', label: t('chat.cmd.search', 'Search wiki'), icon: 'search', action: () => { setShowSearchPanel(true); setSearchType('wiki'); setInput(''); } },
-    { id: 'web', label: t('chat.cmd.web', 'Web search'), icon: 'globe', action: () => { setShowSearchPanel(true); setSearchType('web'); setInput(''); } },
-  ], [t, handleClear, handleSummarize]);
-
-  const filteredSlashCommands = useMemo(() => {
-    if (!slashQuery) return slashCommands;
-    return slashCommands.filter((c) => c.id.includes(slashQuery.toLowerCase()) || c.label.toLowerCase().includes(slashQuery.toLowerCase()));
-  }, [slashQuery, slashCommands]);
-
-  const handleGenerate = useCallback(async (target: 'skill' | 'mcp') => {
-    if (entries.length === 0) {
-      addNotification(t('chat.emptyForGenerate', 'No conversation to generate from'), 'error');
+  const handleGenerate = useCallback(async (target: 'skill' | 'mcp', customQuery?: string) => {
+    const genQuery = customQuery || (entries.length > 0 ? entries.map((e) => `${e.role}: ${e.content}`).join('\n\n') : input.trim());
+    if (!genQuery) {
+      addNotification(t('chat.generateNoQuery', 'Please enter a query or have a conversation first'), 'info');
       return;
     }
     setGenerateTarget(target);
+    setGenerateResult(null);
     setGenerateLoading(true);
     setShowGeneratePanel(true);
     try {
-      const query = entries.map((e) => `${e.role}: ${e.content}`).join('\n\n');
-      const data = await generateFromKnowledge(query, target);
+      const history = entries.map((e) => ({ role: e.role, content: e.content }));
+      const data = await generateFromKnowledge(genQuery, target, history);
       setGenerateResult(data);
     } catch (err) {
       addNotification((err as Error).message, 'error');
@@ -1087,7 +1076,21 @@ export function ChatPage() {
     } finally {
       setGenerateLoading(false);
     }
-  }, [entries, addNotification, t]);
+  }, [entries, input, addNotification, t]);
+
+  const slashCommands = useMemo(() => [
+    { id: 'clear', label: t('chat.cmd.clear', 'Clear conversation'), icon: 'trash', action: () => { handleClear(); setInput(''); } },
+    { id: 'summarize', label: t('chat.cmd.summarize', 'Summarize conversation'), icon: 'file', action: () => { handleSummarize(); setInput(''); } },
+    { id: 'skill', label: t('chat.cmd.skill', 'Generate Skill from wiki'), icon: 'zap', action: () => { handleGenerate('skill'); setInput(''); } },
+    { id: 'mcp', label: t('chat.cmd.mcp', 'Generate MCP Server from wiki'), icon: 'plug', action: () => { handleGenerate('mcp'); setInput(''); } },
+    { id: 'search', label: t('chat.cmd.search', 'Search wiki'), icon: 'search', action: () => { setShowSearchPanel(true); setSearchType('wiki'); setInput(''); } },
+    { id: 'web', label: t('chat.cmd.web', 'Web search'), icon: 'globe', action: () => { setShowSearchPanel(true); setSearchType('web'); setInput(''); } },
+  ], [t, handleClear, handleSummarize, handleGenerate]);
+
+  const filteredSlashCommands = useMemo(() => {
+    if (!slashQuery) return slashCommands;
+    return slashCommands.filter((c) => c.id.includes(slashQuery.toLowerCase()) || c.label.toLowerCase().includes(slashQuery.toLowerCase()));
+  }, [slashQuery, slashCommands]);
 
   const handleQuoteResult = (text: string) => {
     setInput((prev) => (prev ? prev + '\n\n' : '') + text);
@@ -1289,7 +1292,7 @@ export function ChatPage() {
               </div>
               <h2 className="text-xl font-semibold mb-2">{t('chat.empty.title')}</h2>
               <p className="text-sm text-[var(--text-secondary)] mb-6">{t('chat.empty.description')}</p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
                 {['chat.empty.example1', 'chat.empty.example2', 'chat.empty.example3'].map((key) => (
                   <button
                     key={key}
@@ -1299,6 +1302,22 @@ export function ChatPage() {
                     {t(key)}
                   </button>
                 ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  onClick={() => handleGenerate('skill')}
+                  className="group px-3 py-1.5 bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] hover:text-apple-purple hover:border-apple-purple/30 hover:bg-apple-purple/5 transition-all border border-[var(--border-default)] rounded-full flex items-center gap-1.5"
+                >
+                  <Zap size={12} className="text-[var(--text-tertiary)] group-hover:text-apple-purple transition-colors" />
+                  {t('chat.quick.genSkill', 'Generate Skill')}
+                </button>
+                <button
+                  onClick={() => handleGenerate('mcp')}
+                  className="group px-3 py-1.5 bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] hover:text-apple-green hover:border-apple-green/30 hover:bg-apple-green/5 transition-all border border-[var(--border-default)] rounded-full flex items-center gap-1.5"
+                >
+                  <Plug size={12} className="text-[var(--text-tertiary)] group-hover:text-apple-green transition-colors" />
+                  {t('chat.quick.genMcp', 'Generate MCP Server')}
+                </button>
               </div>
             </motion.div>
           </div>
@@ -1814,7 +1833,7 @@ export function ChatPage() {
                 {/* Skill */}
                 <button
                   onClick={() => handleGenerate('skill')}
-                  disabled={loading || entries.length === 0}
+                  disabled={loading}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-apple-purple hover:bg-apple-purple/10 transition-colors disabled:opacity-40"
                   title={t('chat.tools.skill', 'Generate Skill')}
                 >
@@ -1824,7 +1843,7 @@ export function ChatPage() {
                 {/* MCP */}
                 <button
                   onClick={() => handleGenerate('mcp')}
-                  disabled={loading || entries.length === 0}
+                  disabled={loading}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-apple-green hover:bg-apple-green/10 transition-colors disabled:opacity-40"
                   title={t('chat.tools.mcp', 'Generate MCP')}
                 >
@@ -1862,7 +1881,6 @@ export function ChatPage() {
                           <button
                             key={fmt.key}
                             onClick={() => {
-                              setExportFormat(fmt.key);
                               setShowMoreMenu(false);
                               if (entries.length === 0) return;
                               const slug = (activeSession?.title || 'chat').replace(/[^a-z0-9]/gi, '_').toLowerCase();

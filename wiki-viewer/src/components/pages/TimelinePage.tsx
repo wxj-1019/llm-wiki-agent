@@ -98,7 +98,7 @@ export function TimelinePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadEvents();

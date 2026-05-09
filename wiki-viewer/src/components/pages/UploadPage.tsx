@@ -293,6 +293,19 @@ export function UploadPage() {
     }
   }, [selectedPaths, files, showToast, t]);
 
+  const handleIngestAllUningested = useCallback(() => {
+    const uningested = files.filter((f) => !f.ingested);
+    if (uningested.length === 0) {
+      showToast(t('upload.allIngested') || '所有文件已摄取', 'info');
+      return;
+    }
+    for (const file of uningested) {
+      const jobId = useIngestStore.getState().startJob(file.path, file.name);
+      connectIngestStream(jobId, file.path);
+    }
+    showToast(t('upload.ingestingAll', { count: uningested.length }) || `开始摄取 ${uningested.length} 个文件`, 'success');
+  }, [files, showToast, t]);
+
   const [batchDeleting, setBatchDeleting] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const deleteDialogRef = useFocusTrap<HTMLDivElement>(showBatchDeleteConfirm);
@@ -603,6 +616,7 @@ export function UploadPage() {
           onToggleSelectAll={toggleSelectAll}
           onBatchIngest={handleBatchIngest}
           onBatchDelete={handleBatchDelete}
+          onIngestAllUningested={handleIngestAllUningested}
           onClearSelection={() => setSelectedPaths(new Set())}
           onPreview={handlePreview}
           onIngest={handleIngest}

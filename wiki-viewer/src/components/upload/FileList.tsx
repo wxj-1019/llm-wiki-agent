@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   FolderOpen, Search, ArrowUpDown, Filter, CheckSquare, Square,
   Play, Loader2, X, Eye, Trash2, Clock, Inbox, Upload,
-  FileCheck, AlertCircle,
+  FileCheck, AlertCircle, Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RawFile } from '@/services/dataService';
@@ -33,6 +33,7 @@ interface Props {
   onToggleSelectAll: () => void;
   onBatchIngest: () => void;
   onBatchDelete: () => void;
+  onIngestAllUningested: () => void;
   onClearSelection: () => void;
   onPreview: (file: RawFile) => void;
   onIngest: (file: RawFile) => void;
@@ -225,6 +226,7 @@ export function FileList({
   onToggleSelectAll,
   onBatchIngest,
   onBatchDelete,
+  onIngestAllUningested,
   onClearSelection,
   onPreview,
   onIngest,
@@ -348,6 +350,22 @@ export function FileList({
               {uningestedCount}
             </span>
           </button>
+          {uningestedCount > 0 && (
+            <>
+              <div className="w-px h-4 bg-[var(--border-default)] mx-1 shrink-0" />
+              <button
+                onClick={onIngestAllUningested}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 bg-apple-blue text-white hover:bg-apple-blue-hover shadow-sm shadow-apple-blue/20"
+                title={t('upload.ingestAllUningested') || '一键摄入所有未摄取的文档'}
+              >
+                <Zap size={12} />
+                <span>{t('upload.ingestAll') || '一键摄入'}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-white/20">
+                  {uningestedCount}
+                </span>
+              </button>
+            </>
+          )}
         </div>
       )}
 

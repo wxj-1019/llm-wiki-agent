@@ -400,7 +400,7 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
         value: Math.max(0, Math.round(base + noise)),
       };
     });
-  }, [currentPages, days]);
+  }, [currentPages, days, i18n.language]);
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 

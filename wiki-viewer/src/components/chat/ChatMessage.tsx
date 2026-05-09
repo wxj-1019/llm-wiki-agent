@@ -90,6 +90,7 @@ export const ChatMessage = memo(function ChatMessage({
       editRef.current.focus();
       editRef.current.setSelectionRange(editValue.length, editValue.length);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
   const handleSaveEdit = () => {

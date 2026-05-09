@@ -134,12 +134,17 @@ export interface GenerateFromKnowledgeResponse {
 
 export async function generateFromKnowledge(
   query: string,
-  target: 'mcp' | 'skill'
+  target: 'mcp' | 'skill',
+  conversationHistory?: ChatMessage[]
 ): Promise<GenerateFromKnowledgeResponse> {
   const res = await fetchWithTimeout('/api/agent-kit/generate-from-knowledge', { timeoutMs: 300000, 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, target }),
+    body: JSON.stringify({
+      query,
+      target,
+      conversation_history: conversationHistory || [],
+    }),
   });
   if (!res.ok) {
     const err = await res.text();

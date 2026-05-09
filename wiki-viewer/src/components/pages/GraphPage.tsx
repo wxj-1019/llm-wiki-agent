@@ -618,6 +618,7 @@ export function GraphPage() {
               ...graphData,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               nodes: graphData.nodes.map((n: any) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { content, markdown, body, description, ...rest } = n;
                 return rest;
               }),

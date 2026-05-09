@@ -1866,6 +1866,21 @@ def _extract_relevant_snippets(content: str, query: str, max_chars: int = MAX_WI
     return snippet
 
 
+def _load_wiki_overview_context(max_chars: int = 2000) -> str:
+    """Load wiki overview and index as global context for generation."""
+    parts = []
+    for name in ("overview.md", "index.md"):
+        p = WIKI / name
+        if p.exists():
+            try:
+                content = p.read_text(encoding="utf-8").strip()
+                if content:
+                    parts.append(f"=== {name} ===\n{content[:max_chars // 2]}\n")
+            except (OSError, UnicodeDecodeError):
+                pass
+    return "\n".join(parts) if parts else ""
+
+
 @app.post("/api/agent-kit/generate-from-knowledge")
 async def agent_kit_generate_from_knowledge(request: Request):
     """Generate MCP Server or Skill code based on wiki knowledge retrieved from a user query."""
@@ -1875,6 +1890,7 @@ async def agent_kit_generate_from_knowledge(request: Request):
     body = await request.json()
     query = body.get("query", "").strip()
     target = body.get("target", "skill")  # "mcp" or "skill"
+    conversation_history = body.get("conversation_history", [])
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
     if target not in ("mcp", "skill"):
@@ -1899,60 +1915,105 @@ async def agent_kit_generate_from_knowledge(request: Request):
         knowledge_chunks.append(f"--- Source: {r['wiki_path']} ---\n{snippet}\n")
 
     knowledge_context = "\n".join(knowledge_chunks)
+    wiki_overview = _load_wiki_overview_context()
 
     # 3. Build generation prompt
+    wiki_structure_hint = (
+        "\n\nWiki Structure Reference:\n"
+        "- wiki/sources/ — source document summaries (one per ingested document)\n"
+        "- wiki/entities/ — key people, companies, projects (TitleCase.md)\n"
+        "- wiki/concepts/ — ideas, frameworks, methods (TitleCase.md)\n"
+        "- wiki/syntheses/ — saved query answers\n"
+        "- Pages use [[PageName]] wikilinks for cross-references\n"
+        "- Each page has YAML frontmatter with title, type, tags, sources, last_updated\n"
+    )
+
     if target == "mcp":
         system_prompt = (
-            "You are an expert MCP (Model Context Protocol) server developer. "
+            "You are an expert MCP (Model Context Protocol) server developer specializing in knowledge management systems. "
             "Given the user's request and the retrieved wiki knowledge below, "
-            "generate a complete, production-ready Python MCP server. "
-            "Use FastMCP or the stdio-based MCP SDK. Include proper typing, docstrings, and error handling. "
-            "The server should expose tools and/or resources that surface the wiki knowledge. "
-            "Return ONLY the Python code wrapped in a single markdown code block (```python ... ```), "
-            "followed by a brief explanation of the tools/resources provided."
+            "generate a complete, production-ready Python MCP server.\n\n"
+            "Requirements:\n"
+            "1. Use FastMCP or the stdio-based MCP SDK with proper typing, docstrings, and error handling\n"
+            "2. The server should expose tools and/or resources that surface the wiki knowledge effectively\n"
+            "3. Include tools for: searching wiki content, reading pages, listing entities/concepts, "
+            "traversing wikilink connections, and querying the knowledge graph\n"
+            "4. Handle file I/O with proper encoding (utf-8) and path validation\n"
+            "5. Add meaningful resource URIs (e.g., wiki://entities/{name}, wiki://concepts/{name})\n"
+            "6. Return ONLY the Python code wrapped in a single markdown code block (```python ... ```), "
+            "followed by a brief explanation of the tools/resources provided"
+            + wiki_structure_hint
         )
     else:
         system_prompt = (
-            "You are an expert in designing LLM Skills (Kimi Skills / Agent Skills). "
+            "You are an expert in designing LLM Skills (Agent Skills / SKILL.md format) for knowledge management systems. "
             "Given the user's request and the retrieved wiki knowledge below, "
-            "generate a complete SKILL.md file and any supporting files. "
-            "The skill should help an AI agent leverage the wiki knowledge effectively. "
-            "Include: description, usage instructions, example prompts, and workflow guidance. "
-            "Return the SKILL.md content wrapped in a markdown code block (```markdown ... ```), "
-            "followed by a brief explanation of how the skill works."
+            "generate a complete SKILL.md file and any supporting files.\n\n"
+            "Requirements:\n"
+            "1. The skill should help an AI agent effectively leverage the wiki knowledge base\n"
+            "2. Include: description, usage instructions, example prompts, workflow guidance, "
+            "and trigger conditions (when to activate this skill)\n"
+            "3. Define clear input/output formats and expected agent behaviors\n"
+            "4. Include reference to wiki page types (sources, entities, concepts, syntheses) "
+            "and how the skill should navigate between them using [[wikilinks]]\n"
+            "5. Provide 3-5 concrete example prompts that demonstrate the skill's capabilities\n"
+            "6. Return the SKILL.md content wrapped in a markdown code block (```markdown ... ```), "
+            "followed by a brief explanation of how the skill works"
+            + wiki_structure_hint
         )
+
+    # 4. Build messages with optional conversation history
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add wiki overview as a system-level context injection
+    if wiki_overview:
+        messages.append({
+            "role": "system",
+            "content": f"Here is an overview of the current wiki knowledge base:\n\n{wiki_overview}"
+        })
+
+    # Add conversation history for iterative refinement
+    for m in conversation_history[-6:]:
+        role = m.get("role", "user")
+        content = m.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
 
     user_prompt = (
         f"User Request: {query}\n\n"
         f"Retrieved Wiki Knowledge:\n{knowledge_context}\n\n"
-        f"Please generate a complete {target.upper()} implementation based on the above knowledge."
+        f"Please generate a complete {target.upper()} implementation based on the above knowledge. "
+        f"Make sure the output is practical and can be used directly."
     )
+    messages.append({"role": "user", "content": user_prompt})
 
     cfg = _load_llm_config()
     model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
     api_key = cfg.get("api_key", "")
     kwargs: dict = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "max_tokens": 4096,
+        "messages": messages,
+        "max_tokens": 8192,
     }
     if api_key:
         kwargs["api_key"] = api_key
 
+    logger.info("Knowledge generation | target=%s query=%s sources=%d history=%d model=%s",
+                target, query[:100], len(sources), len(conversation_history), model)
+
     try:
         from litellm import completion
+        t0 = time.monotonic()
         response = await asyncio.to_thread(completion, **kwargs)
+        elapsed = time.monotonic() - t0
         raw_content = response.choices[0].message.content or ""
+        logger.info("Knowledge generation done | target=%s elapsed=%.2fs chars=%d", target, elapsed, len(raw_content))
     except (ImportError, ConnectionError, TimeoutError, OSError, ValueError) as e:
         raise HTTPException(status_code=500, detail=f"LLM error: {e}")
 
     # Parse code block and explanation
     code = ""
     explanation = ""
-    # Try to extract code block
     code_match = re.search(r"```(?:\w+)?\n(.*?)\n```", raw_content, re.DOTALL)
     if code_match:
         code = code_match.group(1).strip()

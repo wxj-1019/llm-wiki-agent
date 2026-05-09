@@ -131,10 +131,11 @@ export async function* chatWithLLMStream(
 
 export async function searchWeb(
   query: string,
-  _limit = 10
+  limit = 10,
 ): Promise<{ results: WebSearchResult[] }> {
   // TODO: Add a real web search backend endpoint
   // For now, return empty results
+  void query, void limit;
   console.warn('Web search is not implemented on backend yet');
   return { results: [] };
 }
@@ -159,12 +160,17 @@ export async function searchWiki(
 
 export async function generateFromKnowledge(
   query: string,
-  target: 'skill' | 'mcp'
+  target: 'skill' | 'mcp',
+  conversationHistory?: WikiChatMessage[]
 ): Promise<GenerateResult> {
   const res = await fetch('/api/agent-kit/generate-from-knowledge', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, target }),
+    body: JSON.stringify({
+      query,
+      target,
+      conversation_history: conversationHistory || []
+    }),
   });
   if (!res.ok) {
     const err = await res.text();
