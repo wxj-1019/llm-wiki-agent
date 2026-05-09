@@ -1807,11 +1807,11 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
             except (OSError, UnicodeDecodeError):
                 continue
             results.append({
-                "path": str(p.relative_to(REPO)),
-                "wiki_path": str(p.relative_to(WIKI)),
-                "score": r.get("rank", 0),
-                "content": content,
-            })
+            "path": p.relative_to(REPO).as_posix(),
+            "wiki_path": p.relative_to(WIKI).as_posix(),
+            "score": r.get("rank", 0),
+            "content": content,
+        })
         if results:
             return results
     except Exception as e:
@@ -1836,7 +1836,7 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
             if w in title:
                 score += 20
         if score > 0:
-            results.append({"path": str(p.relative_to(REPO)), "wiki_path": str(p.relative_to(WIKI)), "score": score, "content": content})
+            results.append({"path": p.relative_to(REPO).as_posix(), "wiki_path": p.relative_to(WIKI).as_posix(), "score": score, "content": content})
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:max_results]
 
@@ -2519,6 +2519,11 @@ async def wiki_write(payload: WikiWritePayload):
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(payload.content, encoding="utf-8")
+        try:
+            engine = _get_search_engine()
+            engine.index_page(payload.path)
+        except Exception:
+            pass
         return {"success": True, "path": payload.path, "bytes": len(payload.content.encode("utf-8"))}
     except (OSError, UnicodeEncodeError) as e:
         raise HTTPException(status_code=500, detail=f"Write failed: {e}")
@@ -2867,3 +2872,5 @@ if __name__ == "__main__":
 
     logger.info("Starting LLM Wiki API on http://%s:%d", cli_args.host, cli_args.port)
     uvicorn.run(app, host=cli_args.host, port=cli_args.port)
+
+# reload trigger 1778309458.9881206

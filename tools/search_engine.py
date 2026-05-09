@@ -104,6 +104,7 @@ class WikiSearchEngine:
         self.db_path = Path(db_path)
         self._conn = _ensure_db()
         self._lock = threading.RLock()
+        self._last_check = 0.0
         self._ensure_indexed()
 
     def _ensure_indexed(self) -> None:
@@ -113,6 +114,24 @@ class WikiSearchEngine:
         if current_hash != stored_hash:
             self.rebuild_index()
             self._set_meta("wiki_hash", current_hash)
+
+    def check_stale(self) -> None:
+        """Lightweight stale check — rehash only if wiki dir mtime changed. Called on every search."""
+        import time
+        now = time.monotonic()
+        if now - self._last_check < 5.0:
+            return
+        self._last_check = now
+        try:
+            wiki_stat = WIKI.stat()
+            stored = self._get_meta("wiki_dir_mtime")
+            current = f"{wiki_stat.st_mtime}:{wiki_stat.st_size}"
+            if stored != current:
+                logger.info("Wiki directory changed, checking index freshness")
+                self._ensure_indexed()
+                self._set_meta("wiki_dir_mtime", current)
+        except OSError:
+            pass
 
     def _compute_wiki_hash(self) -> str:
         h = hashlib.sha256()
@@ -224,6 +243,7 @@ class WikiSearchEngine:
 
         Returns list of dicts: {path, title, type, rank, excerpt}
         """
+        self.check_stale()
         fts_results = self._search_fts(query, limit * 2 if semantic else limit)
         if not semantic:
             return fts_results
