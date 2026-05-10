@@ -21,3 +21,18 @@ markitdown[all]>=0.1.5,<0.2.0
 
 # Web article extraction (primary engine for web_fetcher.py)
 trafilatura>=1.12.0
+
+# Adaptive extraction fallback (site-change resilient, optional)
+scrapling>=0.1.0
+
+# RSS/Atom feed parsing (used by rss_fetcher.py)
+feedparser>=6.0.11
+
+# Async HTTP client (used by rss_fetcher.py, web_fetcher.py)
+httpx[http2]>=0.28.0
+
+# PDF to Markdown conversion (used by arxiv_fetcher.py)
+pymupdf4llm>=0.1.0
+
+# JS rendering for web_fetcher.py SPA/JS-heavy pages
+playwright>=1.40.0

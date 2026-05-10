@@ -16,8 +16,13 @@ dependencies = [
     "jinja2 (>=3.1.0,<4.0.0)",
     "httpx (>=0.28.0,<1.0.0)",
     "feedparser (>=6.0.11,<7.0.0)",
-    "trafilatura (>=1.12.0,<2.0.0)"
+    "trafilatura (>=1.12.0,<2.0.0)",
+    "pyyaml (>=6.0.0,<7.0.0)"
 ]
+
+[project.optional-dependencies]
+browser = ["playwright (>=1.40.0,<2.0.0)"]
+pdf = ["pymupdf4llm"]
 
 [tool.poetry]
 package-mode = false
