@@ -26,39 +26,20 @@ _state_cache: dict[str, Any] | None = None
 
 def load_state() -> dict[str, Any]:
     """Load shared state from disk with in-memory caching."""
-    global _state_cache
-    with _state_lock:
-        if _state_cache is not None:
-            return _state_cache.copy()
-        if STATE_PATH.exists():
-            try:
-                data = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
-                data = {}
-        else:
-            data = {}
-        defaults = {"processed_urls": {}, "last_runs": {}, "url_meta": {}, "content_hashes": {}}
-        for k, v in defaults.items():
-            data.setdefault(k, v)
-        _state_cache = data
-        return data.copy()
+    from tools.shared.state_manager import get_pipeline_state
+    return get_pipeline_state()
 
 
 def save_state(state: dict[str, Any]) -> None:
     """Atomically save shared state to disk."""
-    with _state_lock:
-        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        tmp = STATE_PATH.with_suffix(".tmp")
-        tmp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(STATE_PATH)
-        global _state_cache
-        _state_cache = state.copy()
+    from tools.shared.state_manager import save_pipeline_state
+    save_pipeline_state(state)
 
 
 def clear_state_cache() -> None:
     """Clear the in-memory state cache (useful in tests)."""
-    global _state_cache
-    _state_cache = None
+    from tools.shared.state_manager import clear_pipeline_state_cache
+    clear_pipeline_state_cache()
 
 
 def slugify(text: str, max_len: int = 80) -> str:
@@ -192,15 +173,56 @@ def save_json(path: Path, data: Any) -> None:
 
 
 class RetryStateManager:
-    """Shared retry state across all fetchers."""
+    """Shared retry state across all fetchers (JSON or PG pipeline_state.extra_meta)."""
 
     def __init__(self, state_file: Path | None = None):
         self._state_file = state_file or (REPO_ROOT / "state" / "retry_state.json")
         self._state_file.parent.mkdir(parents=True, exist_ok=True)
         self._state: dict = load_json(self._state_file) or {}
+        self._pg = self._pg_available()
+
+    def _pg_available(self) -> bool:
+        try:
+            from tools.shared.state_manager import _load_pg_config
+            return _load_pg_config() is not None
+        except Exception:
+            return False
+
+    def _pg_conn(self):
+        from tools.shared.state_manager import _pg_connection
+        return _pg_connection()
+
+    def _get_extra_meta(self, url: str) -> dict:
+        if not self._pg:
+            return {}
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT extra_meta FROM pipeline_state WHERE url = %s", (url,))
+            row = cur.fetchone()
+            cur.close()
+            return row[0] if row and row[0] else {}
+        finally:
+            conn.close()
+
+    def _set_extra_meta(self, url: str, meta: dict) -> None:
+        if not self._pg:
+            return
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO pipeline_state (url, extra_meta) VALUES (%s, %s) "
+                "ON CONFLICT (url) DO UPDATE SET extra_meta = EXCLUDED.extra_meta",
+                (url, json.dumps(meta)),
+            )
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
 
     def should_retry(self, url: str) -> tuple[bool, str]:
-        info = self._state.get(url)
+        info = self._state.get(url) or self._get_extra_meta(url).get("retry", {})
         if not info:
             return True, "first attempt"
         next_retry = info.get("next_retry", "")
@@ -225,21 +247,38 @@ class RetryStateManager:
             from datetime import timedelta
             info["next_retry"] = (datetime.now() + timedelta(minutes=backoff_min)).isoformat()
         self._save()
+        if self._pg:
+            meta = self._get_extra_meta(url)
+            meta["retry"] = info
+            self._set_extra_meta(url, meta)
 
     def _save(self):
         save_json(self._state_file, self._state)
 
 
 class ContentFingerprint:
-    """Detect duplicate content via SHA256."""
+    """Detect duplicate content via SHA256 (JSON or PG content_fingerprints table)."""
 
     def __init__(self, state_file: Path | None = None):
         self._state_file = state_file or (REPO_ROOT / "state" / "content_fingerprints.json")
         self._state_file.parent.mkdir(parents=True, exist_ok=True)
         self._state: dict = load_json(self._state_file) or {}
+        self._pg = self._pg_available()
+
+    def _pg_available(self) -> bool:
+        try:
+            from tools.shared.state_manager import _load_pg_config
+            return _load_pg_config() is not None
+        except Exception:
+            return False
+
+    def _pg_conn(self):
+        from tools.shared.state_manager import _pg_connection
+        return _pg_connection()
 
     def check_and_record(self, content: str, url: str) -> tuple[bool, int]:
         h = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        # Check JSON cache
         if h in self._state:
             entry = self._state[h]
             entry["count"] = entry.get("count", 0) + 1
@@ -247,7 +286,23 @@ class ContentFingerprint:
             if url not in entry.get("urls", []):
                 entry.setdefault("urls", []).append(url)
             self._save()
+            self._upsert_pg(h, url, entry["count"])
             return True, entry["count"]
+
+        # Check PG table
+        if self._pg:
+            seen_count = self._query_pg(h)
+            if seen_count > 0:
+                self._upsert_pg(h, url, seen_count + 1)
+                self._state[h] = {
+                    "count": seen_count + 1,
+                    "first_seen": datetime.now().isoformat(),
+                    "last_seen": datetime.now().isoformat(),
+                    "urls": [url],
+                }
+                self._save()
+                return True, seen_count + 1
+
         self._state[h] = {
             "count": 1,
             "first_seen": datetime.now().isoformat(),
@@ -255,16 +310,98 @@ class ContentFingerprint:
             "urls": [url],
         }
         self._save()
+        self._upsert_pg(h, url, 1)
         return False, 1
+
+    def _query_pg(self, h: str) -> int:
+        if not self._pg:
+            return 0
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT seen_count FROM content_fingerprints WHERE hash = %s", (h,))
+            row = cur.fetchone()
+            cur.close()
+            return row[0] if row else 0
+        finally:
+            conn.close()
+
+    def _upsert_pg(self, h: str, url: str, count: int) -> None:
+        if not self._pg:
+            return
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO content_fingerprints (hash, first_url, seen_count, last_seen) "
+                "VALUES (%s, %s, %s, NOW()) "
+                "ON CONFLICT (hash) DO UPDATE SET seen_count = EXCLUDED.seen_count, last_seen = NOW()",
+                (h, url, count),
+            )
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
+
+    def _save(self):
+        save_json(self._state_file, self._state)
 
 
 class DomainHealthTracker:
-    """Track per-domain failure rates."""
+    """Track per-domain failure rates (JSON or PG domain_strategies table)."""
 
     def __init__(self, state_file: Path | None = None):
         self._state_file = state_file or (REPO_ROOT / "state" / "domain_health.json")
         self._state_file.parent.mkdir(parents=True, exist_ok=True)
         self._state: dict = load_json(self._state_file) or {}
+        self._pg = self._pg_available()
+
+    def _pg_available(self) -> bool:
+        try:
+            from tools.shared.state_manager import _load_pg_config
+            return _load_pg_config() is not None
+        except Exception:
+            return False
+
+    def _pg_conn(self):
+        from tools.shared.state_manager import _pg_connection
+        return _pg_connection()
+
+    def _load_pg(self, domain: str) -> dict:
+        if not self._pg:
+            return {}
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT success_count, failure_count, updated_at FROM domain_strategies WHERE domain = %s",
+                (domain,),
+            )
+            row = cur.fetchone()
+            cur.close()
+            if row:
+                return {"successes": row[0] or 0, "failures": row[1] or 0, "last_attempt": row[2].isoformat() if row[2] else ""}
+            return {}
+        finally:
+            conn.close()
+
+    def _save_pg(self, domain: str, info: dict) -> None:
+        if not self._pg:
+            return
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO domain_strategies (domain, success_count, failure_count, updated_at) "
+                "VALUES (%s, %s, %s, NOW()) "
+                "ON CONFLICT (domain) DO UPDATE SET "
+                "success_count = EXCLUDED.success_count, failure_count = EXCLUDED.failure_count, updated_at = NOW()",
+                (domain, info.get("successes", 0), info.get("failures", 0)),
+            )
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
 
     def record(self, domain: str, success: bool):
         if domain not in self._state:
@@ -276,9 +413,10 @@ class DomainHealthTracker:
             info["failures"] = info.get("failures", 0) + 1
         info["last_attempt"] = datetime.now().isoformat()
         self._save()
+        self._save_pg(domain, info)
 
     def is_dead(self, domain: str) -> bool:
-        info = self._state.get(domain)
+        info = self._state.get(domain) or self._load_pg(domain)
         if not info:
             return False
         total = info.get("successes", 0) + info.get("failures", 0)
@@ -287,7 +425,7 @@ class DomainHealthTracker:
         return info.get("failures", 0) / total > 0.5
 
     def failure_rate(self, domain: str) -> float:
-        info = self._state.get(domain)
+        info = self._state.get(domain) or self._load_pg(domain)
         if not info:
             return 0.0
         total = info.get("successes", 0) + info.get("failures", 0)

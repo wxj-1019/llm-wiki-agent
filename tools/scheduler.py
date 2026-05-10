@@ -34,69 +34,26 @@ log = logging.getLogger(__name__)
 
 
 class JobMetrics:
-    """Track scheduler job execution metrics."""
+    """Track scheduler job execution metrics (PG or SQLite)."""
 
     def __init__(self, db_path: Path | None = None):
-        self._db_path = db_path or (Path(__file__).parent.parent / "state" / "scheduler_metrics.db")
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        import sqlite3
-        self._conn = sqlite3.connect(str(self._db_path))
-        self._conn.execute("CREATE TABLE IF NOT EXISTS job_runs (id INTEGER PRIMARY KEY, job_name TEXT, timestamp TEXT, status TEXT, duration_sec REAL, items_count INTEGER, error_message TEXT)")
-        self._conn.commit()
+        from tools.shared.state_manager import SchedulerMetrics
+        self._metrics = SchedulerMetrics(db_path=db_path)
 
     def record(self, job_name: str, status: str, duration: float, items: int = 0, error: str = ""):
-        from datetime import datetime
-        self._conn.execute("INSERT INTO job_runs (job_name, timestamp, status, duration_sec, items_count, error_message) VALUES (?, ?, ?, ?, ?, ?)", (job_name, datetime.now().isoformat(), status, round(duration, 2), items, error))
-        self._conn.commit()
+        self._metrics.record(job_name, status, duration, items, error)
 
     def get_consecutive_failures(self, job_name: str) -> int:
-        rows = self._conn.execute("SELECT status FROM job_runs WHERE job_name = ? ORDER BY id DESC LIMIT 10", (job_name,)).fetchall()
-        count = 0
-        for (status,) in rows:
-            if status == "failure":
-                count += 1
-            else:
-                break
-        return count
+        return self._metrics.get_consecutive_failures(job_name)
 
     def get_consecutive_zero_results(self, job_name: str) -> int:
-        rows = self._conn.execute("SELECT items_count FROM job_runs WHERE job_name = ? AND status = 'success' ORDER BY id DESC LIMIT 10", (job_name,)).fetchall()
-        count = 0
-        for (items,) in rows:
-            if items == 0:
-                count += 1
-            else:
-                break
-        return count
+        return self._metrics.get_consecutive_zero_results(job_name)
 
     def get_average_items(self, job_name: str, runs: int = 10) -> float:
-        row = self._conn.execute("SELECT AVG(items_count) FROM (SELECT items_count FROM job_runs WHERE job_name = ? AND status = 'success' ORDER BY id DESC LIMIT ?)", (job_name, runs)).fetchone()
-        return round(row[0] or 0, 1)
+        return self._metrics.get_average_items(job_name, runs)
 
     def get_health_panel(self) -> str:
-        lines = ["Job Health Panel", "=" * 60]
-        header = f"{'Job':<20} | {'Status':<10} | {'Last Run':<12} | {'Avg Items':<10} | {'Failures':<8}"
-        lines.append(header)
-        lines.append("-" * 60)
-
-        jobs = self._conn.execute("SELECT DISTINCT job_name FROM job_runs").fetchall()
-        for (job_name,) in jobs:
-            failures = self.get_consecutive_failures(job_name)
-            zero_results = self.get_consecutive_zero_results(job_name)
-            avg_items = self.get_average_items(job_name)
-
-            last_run = self._conn.execute("SELECT timestamp, status FROM job_runs WHERE job_name = ? ORDER BY id DESC LIMIT 1", (job_name,)).fetchone()
-            last_ts = last_run[0][:10] if last_run else "never"
-
-            if failures >= 3:
-                status_str = "!! FAIL"
-            elif zero_results >= 7:
-                status_str = "?? SKIP"
-            else:
-                status_str = "OK"
-
-            fail_info = f"{failures}" if failures > 0 else ("zero×" + str(zero_results) if zero_results >= 3 else "0")
-            lines.append(f"{job_name:<20} | {status_str:<10} | {last_ts:<12} | {avg_items:<10} | {fail_info:<8}")
+        return self._metrics.get_health_panel()
 
         return "\n".join(lines)
 

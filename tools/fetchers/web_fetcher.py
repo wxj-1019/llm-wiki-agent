@@ -67,15 +67,83 @@ _QUALITY_LLM_FAST_THRESHOLD = 40
 
 
 class DomainStrategy:
-    """Learn and apply per-domain extraction strategies."""
+    """Learn and apply per-domain extraction strategies (JSON or PG domain_strategies table)."""
 
     def __init__(self, state_file: Path | None = None):
         self._state_file = state_file or (REPO_ROOT / "state" / "domain_strategy.json")
         self._state_file.parent.mkdir(parents=True, exist_ok=True)
         self._state = self._load()
+        self._pg = self._pg_available()
+
+    def _pg_available(self) -> bool:
+        try:
+            from tools.shared.state_manager import _load_pg_config
+            return _load_pg_config() is not None
+        except Exception:
+            return False
+
+    def _pg_conn(self):
+        from tools.shared.state_manager import _pg_connection
+        return _pg_connection()
+
+    def _load_pg(self, domain: str) -> dict:
+        if not self._pg:
+            return {}
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT best_engine, success_count, failure_count, avg_quality, fast_path, consecutive_successes "
+                "FROM domain_strategies WHERE domain = %s",
+                (domain,),
+            )
+            row = cur.fetchone()
+            cur.close()
+            if row:
+                return {
+                    "best_engine": row[0] or "",
+                    "success_count": row[1] or 0,
+                    "failure_count": row[2] or 0,
+                    "avg_quality": row[3] or 0.0,
+                    "fast_path": row[4] or False,
+                    "consecutive_successes": row[5] or 0,
+                    "last_updated": "",
+                }
+            return {}
+        finally:
+            conn.close()
+
+    def _save_pg(self, domain: str, info: dict) -> None:
+        if not self._pg:
+            return
+        conn = self._pg_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO domain_strategies (domain, best_engine, success_count, failure_count, avg_quality, fast_path, consecutive_successes, updated_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, NOW()) "
+                "ON CONFLICT (domain) DO UPDATE SET "
+                "best_engine = EXCLUDED.best_engine, success_count = EXCLUDED.success_count, "
+                "failure_count = EXCLUDED.failure_count, avg_quality = EXCLUDED.avg_quality, "
+                "fast_path = EXCLUDED.fast_path, consecutive_successes = EXCLUDED.consecutive_successes, "
+                "updated_at = NOW()",
+                (
+                    domain,
+                    info.get("best_engine", ""),
+                    info.get("success_count", 0),
+                    info.get("failure_count", 0),
+                    info.get("avg_quality", 0.0),
+                    info.get("fast_path", False),
+                    info.get("consecutive_successes", 0),
+                ),
+            )
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
 
     def get_fast_path(self, domain: str) -> str | None:
-        info = self._state.get(domain, {})
+        info = self._state.get(domain) or self._load_pg(domain)
         if info.get("fast_path") and info.get("best_engine"):
             return info["best_engine"]
         return None
@@ -104,9 +172,10 @@ class DomainStrategy:
             if info.get("fast_path"):
                 info["fast_path"] = False
         self._save()
+        self._save_pg(domain, info)
 
     def should_skip_engine(self, domain: str, engine: str) -> bool:
-        info = self._state.get(domain, {})
+        info = self._state.get(domain) or self._load_pg(domain)
         if info.get("fast_path") and info.get("best_engine") != engine:
             return True
         return False

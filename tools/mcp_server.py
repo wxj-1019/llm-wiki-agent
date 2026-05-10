@@ -35,19 +35,19 @@ logger = logging.getLogger("wiki-mcp")
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 
-_mcp_search_engine = None
-_mcp_search_engine_lock = __import__('threading').Lock()
+_mcp_search_backend = None
+_mcp_search_backend_lock = __import__('threading').Lock()
 
 
-def _get_mcp_search_engine():
-    global _mcp_search_engine
-    if _mcp_search_engine is not None:
-        return _mcp_search_engine
-    with _mcp_search_engine_lock:
-        if _mcp_search_engine is None:
-            from tools.search_engine import WikiSearchEngine
-            _mcp_search_engine = WikiSearchEngine()
-    return _mcp_search_engine
+def _get_mcp_search_backend():
+    global _mcp_search_backend
+    if _mcp_search_backend is not None:
+        return _mcp_search_backend
+    with _mcp_search_backend_lock:
+        if _mcp_search_backend is None:
+            from tools.shared.search_backend import get_search_backend
+            _mcp_search_backend = get_search_backend()
+    return _mcp_search_backend
 RAW = REPO / "raw"
 META_FILES = {"index.md", "log.md", "lint-report.md", "health-report.md"}
 
@@ -178,8 +178,8 @@ def wiki_search(query: str, limit: int = 5) -> str:
         JSON list of matching pages with title, path, type, and excerpt.
     """
     try:
-        engine = _get_mcp_search_engine()
-        results = engine.search(query, limit)
+        backend = _get_mcp_search_backend()
+        results = backend.search(query, limit)
         return json.dumps(results, ensure_ascii=False)
     except Exception as e:
         logger.warning("FTS5 search failed in MCP, falling back to substring: %s", e)

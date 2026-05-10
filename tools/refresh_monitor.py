@@ -109,22 +109,13 @@ def _save_state(state: dict[str, Any]) -> None:
 
 
 def _load_monitor_cache() -> dict[str, Any]:
-    if MONITOR_CACHE.exists():
-        try:
-            return json.loads(MONITOR_CACHE.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            pass
-    return {
-        "last_checks": {}, "change_history": [],
-        "url_stats": {},  # per-URL change frequency tracking
-    }
+    from tools.shared.state_manager import RefreshMonitorState
+    return RefreshMonitorState(json_path=MONITOR_CACHE).load()
 
 
 def _save_monitor_cache(cache: dict[str, Any]) -> None:
-    MONITOR_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = MONITOR_CACHE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(MONITOR_CACHE)
+    from tools.shared.state_manager import RefreshMonitorState
+    RefreshMonitorState(json_path=MONITOR_CACHE).save(cache)
 
 
 # ── Source scanning ─────────────────────────────────────────────────────────
@@ -392,7 +383,8 @@ def run(
 
     checked_results: list[CheckResult] = []
 
-    # Phase 1: Check all URLs with adaptive cooldowns and retry
+    # Phase 1: Filter cooldown sources
+    check_tasks: list[tuple[Path, str, str]] = []
     for wiki_page, source_url, source_type in sources:
         stats.total += 1
 
@@ -412,29 +404,16 @@ def run(
             except ValueError:
                 pass
 
-        # Check with retry
+        check_tasks.append((wiki_page, source_url, source_type))
+
+    # Phase 2: Concurrent HEAD checks
+    def _do_check(task: tuple[Path, str, str]) -> CheckResult:
+        wiki_page, source_url, source_type = task
         url_meta_info = url_meta.get(source_url, {})
         changed_flag, new_headers, reason, retries = _check_url_sync(
             source_url, url_meta_info, force=force,
         )
-
-        stats.checked += 1
-        last_checks[source_url] = now.isoformat()
-
-        # Update per-URL stats
-        if source_url not in url_stats:
-            url_stats[source_url] = {
-                "first_seen": now.isoformat(),
-                "checks": 0,
-                "total_changes": 0,
-                "last_change": "",
-                "change_timestamps": [],
-                "avg_days_between_changes": "N/A",
-            }
-        us = url_stats[source_url]
-        us["checks"] = us.get("checks", 0) + 1
-
-        result = CheckResult(
+        return CheckResult(
             wiki_page=wiki_page,
             source_url=source_url,
             source_type=source_type,
@@ -443,9 +422,37 @@ def run(
             reason=f"{reason}{' (retry×' + str(retries) + ')' if retries > 0 else ''}",
             retry_count=retries,
         )
-        checked_results.append(result)
 
-        if changed_flag:
+    if concurrency > 1 and len(check_tasks) > 1:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            futures = {executor.submit(_do_check, t): t for t in check_tasks}
+            for future in as_completed(futures):
+                checked_results.append(future.result())
+    else:
+        for task in check_tasks:
+            checked_results.append(_do_check(task))
+
+    # Phase 3: Apply results (sort for deterministic output)
+    checked_results.sort(key=lambda r: r.source_url)
+    for result in checked_results:
+        stats.checked += 1
+        last_checks[result.source_url] = now.isoformat()
+
+        # Update per-URL stats
+        if result.source_url not in url_stats:
+            url_stats[result.source_url] = {
+                "first_seen": now.isoformat(),
+                "checks": 0,
+                "total_changes": 0,
+                "last_change": "",
+                "change_timestamps": [],
+                "avg_days_between_changes": "N/A",
+            }
+        us = url_stats[result.source_url]
+        us["checks"] = us.get("checks", 0) + 1
+
+        if result.changed:
             stats.changed += 1
             us["total_changes"] = us.get("total_changes", 0) + 1
             us["last_change"] = now.isoformat()
@@ -460,16 +467,16 @@ def run(
                 except (ValueError, TypeError):
                     pass
 
-            if new_headers:
-                url_meta[source_url] = {**url_meta_info, **new_headers}
+            if result.new_headers:
+                url_meta[result.source_url] = {**url_meta.get(result.source_url, {}), **result.new_headers}
 
-            print(f"  ✦ [CHANGED] {wiki_page.name}: {reason}")
+            print(f"  [CHANGED] {result.wiki_page.name}: {result.reason}")
         else:
             stats.unchanged += 1
-            prefix = "  ✓" if "304" in reason or "unchanged" in reason.lower() else "  ⚠"
-            print(f"{prefix} [{reason}] {wiki_page.name}")
+            prefix = "  [OK]" if "304" in result.reason or "unchanged" in result.reason.lower() else "  [WARN]"
+            print(f"{prefix} [{result.reason}] {result.wiki_page.name}")
 
-            if "error" in reason.lower() or "timeout" in reason.lower():
+            if "error" in result.reason.lower() or "timeout" in result.reason.lower():
                 stats.errors += 1
 
     # Save intermediate state
@@ -481,13 +488,13 @@ def run(
         _save_state(state)
 
     # Phase 2: Summary
-    print(f"\n{'─'*55}")
+    print(f"\n{'-'*55}")
     print(f"  Checked:   {stats.checked}/{stats.total}"
           f" (cooldown: {stats.cooldown_skipped}, errors: {stats.errors})")
     print(f"  Changed:   {stats.changed}")
     print(f"  Unchanged: {stats.unchanged}")
     print(f"  Adaptive cooldowns in effect for {len(url_stats)} tracked URLs")
-    print(f"{'─'*55}")
+    print(f"{'-'*55}")
 
     # Phase 3: Re-fetch and ingest changes
     if not stats.changed:
@@ -500,7 +507,7 @@ def run(
     if dry_run:
         print(f"\n[DRY RUN] Would re-fetch {len(changed_results)} changed source(s):")
         for r in changed_results:
-            print(f"  • {r.wiki_page.name} ← {r.source_url}")
+            print(f"  - {r.wiki_page.name} <- {r.source_url}")
         return 0
 
     # Re-fetch

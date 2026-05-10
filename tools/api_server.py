@@ -159,11 +159,11 @@ logger = logging.getLogger("wiki_api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
-    # Shutdown: close search engine connection
-    global _search_engine
-    if _search_engine:
-        _search_engine.close()
-        _search_engine = None
+    # Shutdown: close search backend connection
+    global _search_backend
+    if _search_backend:
+        _search_backend.close()
+        _search_backend = None
 
 app = FastAPI(title="LLM Wiki API", lifespan=lifespan)
 
@@ -386,22 +386,21 @@ def get_overview():
 
 # ── FTS5 Search ────────────────────────────────────────────────────
 
-# Lazy-initialized search engine singleton
-_search_engine = None
-_search_engine_lock = __import__('threading').Lock()
+# Lazy-initialized search backend singleton (SQLite or PostgreSQL)
+_search_backend = None
+_search_backend_lock = __import__('threading').Lock()
 
-def _get_search_engine():
-    global _search_engine
-    if _search_engine is None:
-        with _search_engine_lock:
-            if _search_engine is None:
-                # Ensure tools/ is on sys.path for the import to work
+def _get_search_backend():
+    global _search_backend
+    if _search_backend is None:
+        with _search_backend_lock:
+            if _search_backend is None:
                 tools_dir = str(Path(__file__).parent)
                 if tools_dir not in sys.path:
                     sys.path.insert(0, tools_dir)
-                from search_engine import WikiSearchEngine
-                _search_engine = WikiSearchEngine()
-    return _search_engine
+                from tools.shared.search_backend import get_search_backend
+                _search_backend = get_search_backend()
+    return _search_backend
 
 
 @app.get("/api/search/fts")
@@ -410,8 +409,8 @@ def search_fts(q: str = Query("", min_length=1), limit: int = Query(20, ge=1, le
     if not q or len(q.strip()) == 0:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
     try:
-        engine = _get_search_engine()
-        result = engine.search(q.strip(), limit, semantic=semantic)
+        backend = _get_search_backend()
+        result = backend.search(q.strip(), limit, semantic=semantic)
         return result
     except Exception as e:
         logging.warning("Search failed: %s", e)
@@ -422,8 +421,8 @@ def search_fts(q: str = Query("", min_length=1), limit: int = Query(20, ge=1, le
 async def reindex_embeddings():
     """Rebuild semantic embeddings for all wiki pages."""
     try:
-        engine = _get_search_engine()
-        await asyncio.to_thread(engine.rebuild_embeddings)
+        backend = _get_search_backend()
+        await asyncio.to_thread(backend.rebuild_embeddings)
         return {"success": True}
     except Exception as e:
         logging.warning("Embedding reindex failed: %s", e)
@@ -434,15 +433,13 @@ async def reindex_embeddings():
 async def reindex_fts():
     """Force full FTS5 index rebuild for all wiki pages."""
     try:
-        global _search_engine
-        if _search_engine is not None:
-            await asyncio.to_thread(_search_engine.rebuild_index)
+        global _search_backend
+        if _search_backend is not None:
+            await asyncio.to_thread(_search_backend.rebuild_index)
         else:
-            engine = _get_search_engine()
-            await asyncio.to_thread(engine.rebuild_index)
-        count = 0
-        if _search_engine:
-            count = _search_engine._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()[0]
+            backend = _get_search_backend()
+            await asyncio.to_thread(backend.rebuild_index)
+        count = _get_search_backend().count()
         return {"success": True, "pages": count}
     except Exception as e:
         logging.warning("FTS reindex failed: %s", e)
@@ -460,29 +457,26 @@ def pipeline_health():
     }
 
     # 1. State file health
-    state_path = REPO / "raw-inbox" / "state.json"
     try:
-        if state_path.exists():
-            state = _json.loads(state_path.read_text(encoding="utf-8"))
-            processed = len(state.get("processed_urls", {}))
-            auto_ingested = len(state.get("auto_ingested", []))
-            last_web = state.get("last_runs", {}).get("web", "never")
-            last_auto_ingest = state.get("last_runs", {}).get("auto_ingest", "never")
-            last_refresh = state.get("last_runs", {}).get("refresh_monitor", "never")
-            health["checks"]["state_file"] = {"ok": True, "processed_urls": processed,
-                                                "auto_ingested": auto_ingested}
-            health["stats"]["last_web_fetch"] = last_web
-            health["stats"]["last_auto_ingest"] = last_auto_ingest
-            health["stats"]["last_refresh_monitor"] = last_refresh
-        else:
-            health["checks"]["state_file"] = {"ok": False, "error": "state.json not found"}
+        from tools.shared.state_manager import get_pipeline_state
+        state = get_pipeline_state()
+        processed = len(state.get("processed_urls", {}))
+        auto_ingested = len(state.get("auto_ingested", []))
+        last_web = state.get("last_runs", {}).get("web", "never")
+        last_auto_ingest = state.get("last_runs", {}).get("auto_ingest", "never")
+        last_refresh = state.get("last_runs", {}).get("refresh_monitor", "never")
+        health["checks"]["state_file"] = {"ok": True, "processed_urls": processed,
+                                            "auto_ingested": auto_ingested}
+        health["stats"]["last_web_fetch"] = last_web
+        health["stats"]["last_auto_ingest"] = last_auto_ingest
+        health["stats"]["last_refresh_monitor"] = last_refresh
     except Exception as e:
         health["checks"]["state_file"] = {"ok": False, "error": str(e)}
 
-    # 2. FTS5 index health
+    # 2. Search index health
     try:
-        engine = _get_search_engine()
-        count = engine._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()[0]
+        backend = _get_search_backend()
+        count = backend.count()
         health["checks"]["fts_index"] = {"ok": True, "indexed_pages": count}
         health["stats"]["fts_pages"] = count
     except Exception as e:
@@ -1104,14 +1098,15 @@ async def api_ingest(payload: IngestPayload):
 
 
 def _invalidate_search_index() -> None:
-    """Force FTS index to recheck wiki files on next search.
+    """Force search index to recheck wiki files on next search.
     Called after any subprocess that modifies wiki/ (ingest, heal, refresh, etc.)."""
     _invalidate_page_cache()
-    global _search_engine
-    if _search_engine is not None:
+    global _search_backend
+    if _search_backend is not None:
         try:
-            _search_engine._last_check = 0.0
-            _search_engine._set_meta("wiki_fingerprint", "")
+            # SQLite backend: invalidate stale check caches
+            _search_backend._last_check = 0.0
+            _search_backend._set_meta("wiki_fingerprint", "")
         except Exception:
             pass
 
@@ -2019,8 +2014,8 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
     if not q_lower:
         return []
     try:
-        engine = _get_search_engine()
-        fts_results = engine.search(query, limit=max_results)
+        backend = _get_search_backend()
+        fts_results = backend.search(query, limit=max_results)
         results = []
         for r in fts_results:
             p = REPO / r["path"]
@@ -2757,8 +2752,8 @@ async def wiki_write(payload: WikiWritePayload):
         target.write_text(payload.content, encoding="utf-8")
         _invalidate_page_cache(payload.path)
         try:
-            engine = _get_search_engine()
-            engine.index_page(payload.path)
+            backend = _get_search_backend()
+            backend.index_page(payload.path)
         except Exception:
             pass
         return {"success": True, "path": payload.path, "bytes": len(payload.content.encode("utf-8"))}
@@ -3125,27 +3120,6 @@ async def collab_websocket(websocket: WebSocket, doc_id: str):
             await _broadcast_presence(doc_id)
 
 
-# Serve frontend static files if dist exists
-if FRONTEND_DIST.exists():
-    for _sub in ("assets", "fonts", "locales", "data"):
-        _dir = FRONTEND_DIST / _sub
-        if _dir.is_dir():
-            app.mount(f"/{_sub}", StaticFiles(directory=str(_dir)), name=f"static-{_sub}")
-
-    @app.get("/{full_path:path}")
-    async def spa_index(full_path: str):
-        """Serve SPA index.html for all non-API, non-asset routes."""
-        # Prevent path traversal: resolve and verify the path stays within dist/
-        file_path = (FRONTEND_DIST / full_path).resolve()
-        try:
-            file_path.relative_to(FRONTEND_DIST.resolve())
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Path traversal blocked")
-        if file_path.is_file():
-            return FileResponse(str(file_path), headers={"Cache-Control": "no-cache"})
-        return FileResponse(str(FRONTEND_DIST / "index.html"), headers={"Cache-Control": "no-cache"})
-
-
 def _check_port_available(host: str, port: int) -> bool:
     """Check if a TCP port is available for binding."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -3159,6 +3133,166 @@ def _check_port_available(host: str, port: int) -> bool:
 
 # Load LLM config on startup
 _load_llm_config()
+
+
+def _ensure_jarvis_tools():
+    try:
+        from tools.jarvis.tool_registry import get_registry
+        if get_registry().list_tools():
+            return
+        from tools.jarvis.tools.knowledge_tools import register_all as r1
+        from tools.jarvis.tools.system_tools import register_all as r2
+        from tools.jarvis.tools.web_tools import register_all as r3
+        from tools.jarvis.tools.dev_tools import register_all as r4
+        from tools.jarvis.tools.comm_tools import register_all as r5
+        from tools.jarvis.tools.mcp_client import register_all as r6
+        from tools.jarvis.tools.composite_tools import register_all as r7
+        for fn in [r1, r2, r3, r4, r5, r6, r7]:
+            fn()
+    except Exception:
+        pass
+
+
+@app.get("/api/jarvis/status")
+async def jarvis_status():
+    try:
+        from tools.jarvis.loop import get_agent_loop
+        return {"success": True, "data": get_agent_loop().get_status()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/tools")
+async def jarvis_tools(category: str = ""):
+    try:
+        _ensure_jarvis_tools()
+        from tools.jarvis.tool_registry import get_registry
+        registry = get_registry()
+        tools = registry.list_tools(category=category)
+        return {"success": True, "tools": [{"name": t.name, "description": t.description, "risk_level": t.risk_level.value, "category": t.category, "call_count": t.call_count, "success_count": t.success_count, "fail_count": t.fail_count, "avg_duration_ms": round(t.avg_duration_ms, 1)} for t in tools], "total": len(tools)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/events")
+async def jarvis_events(limit: int = 50, category: str = ""):
+    try:
+        from tools.jarvis.event_bus import get_event_bus
+        from tools.jarvis.types import EventCategory
+        bus = get_event_bus()
+        cat = EventCategory(category) if category else None
+        events = bus.get_recent(category=cat, limit=limit)
+        return {"success": True, "events": [{"id": e.id, "name": e.name, "category": e.category.value, "payload": e.payload, "timestamp": e.timestamp, "source": e.source} for e in events], "total": len(events)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/approvals")
+async def jarvis_approvals(status: str = "pending"):
+    try:
+        from tools.jarvis.approval import get_approval_manager
+        mgr = get_approval_manager()
+        items = mgr.get_pending() if status != "history" else mgr.get_history()
+        return {"success": True, "approvals": [{"id": r.id, "reason": r.reason, "status": r.status, "created_at": r.created_at, "resolved_at": r.resolved_at, "resolved_by": r.resolved_by, "step": {"tool_name": r.step.tool_name, "params": r.step.params, "risk_level": r.step.risk_level.value} if r.step else None} for r in items], "total": len(items)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/approvals/{req_id}/approve")
+async def jarvis_approve(req_id: str):
+    try:
+        from tools.jarvis.approval import get_approval_manager
+        return {"success": get_approval_manager().approve(req_id, approver="user")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/approvals/{req_id}/reject")
+async def jarvis_reject(req_id: str):
+    try:
+        from tools.jarvis.approval import get_approval_manager
+        return {"success": get_approval_manager().reject(req_id, approver="user")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/goals")
+async def jarvis_goals(status: str = "", priority: str = ""):
+    try:
+        from tools.jarvis.goals import get_goals_manager
+        goals = get_goals_manager().list_goals(status=status, priority=priority)
+        return {"success": True, "goals": goals, "total": len(goals)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/goals")
+async def jarvis_create_goal(request: Request):
+    try:
+        from tools.jarvis.goals import get_goals_manager
+        body = await request.json()
+        goal = get_goals_manager().create_goal(title=body.get("title", ""), description=body.get("description", ""), priority=body.get("priority", "medium"), deadline=body.get("deadline", ""))
+        return {"success": True, "goal": goal}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/audit")
+async def jarvis_audit(limit: int = 100):
+    try:
+        from tools.jarvis.audit import get_audit_store
+        rows = get_audit_store().query(limit=limit)
+        return {"success": True, "entries": rows, "total": len(rows)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/start")
+async def jarvis_start():
+    try:
+        _ensure_jarvis_tools()
+        from tools.jarvis.loop import get_agent_loop
+        from tools.jarvis.types import AgentStatus
+        loop = get_agent_loop()
+        loop.state.status = AgentStatus.RUNNING
+        return {"success": True, "status": loop.get_status()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/stop")
+async def jarvis_stop():
+    try:
+        from tools.jarvis.loop import get_agent_loop
+        get_agent_loop().stop()
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/learning")
+async def jarvis_learning():
+    try:
+        from tools.jarvis.learner import get_learner
+        return {"success": True, "data": get_learner().get_learning_summary()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/jarvis/strategies")
+async def jarvis_strategies():
+    try:
+        from tools.jarvis.strategies import get_strategies
+        return {"success": True, "strategies": get_strategies().list_strategies()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# Serve frontend static files if dist exists
+if FRONTEND_DIST.exists():
+    for _sub in ("assets", "fonts", "locales", "data"):
+        _dir = FRONTEND_DIST / _sub
+        if _dir.is_dir():
+            app.mount(f"/{_sub}", StaticFiles(directory=str(_dir)), name=f"static-{_sub}")
+
+    @app.get("/{full_path:path}")
+    async def spa_index(full_path: str):
+        file_path = (FRONTEND_DIST / full_path).resolve()
+        try:
+            file_path.relative_to(FRONTEND_DIST.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Path traversal blocked")
+        if file_path.is_file():
+            return FileResponse(str(file_path), headers={"Cache-Control": "no-cache"})
+        return FileResponse(str(FRONTEND_DIST / "index.html"), headers={"Cache-Control": "no-cache"})
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -3178,5 +3312,4 @@ if __name__ == "__main__":
 
     logger.info("Starting LLM Wiki API on http://%s:%d", cli_args.host, cli_args.port)
     uvicorn.run(app, host=cli_args.host, port=cli_args.port)
-
 # reload trigger 1778309458.9881206

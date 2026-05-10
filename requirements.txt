@@ -3,6 +3,10 @@
 litellm~=1.83.10
 networkx~=3.6.1
 
+# PostgreSQL + pgvector (optional — used when config/database.yaml sets backend: postgresql)
+psycopg2-binary>=2.9
+pgvector>=0.3
+
 # Agent Kit: auto-generate MCP Server & Kimi Skill from wiki
 mcp>=1.2.0
 jinja2>=3.1.0

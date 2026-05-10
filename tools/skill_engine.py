@@ -167,11 +167,11 @@ class SkillEngine:
 
     def _collect_context(self, query: str, config: dict) -> list[dict]:
         max_pages = config.get("parameters", {}).get("max_context_pages", 5)
-        # Try FTS5 search first for fast indexed retrieval
+        # Try search backend first for fast indexed retrieval
         try:
-            from tools.search_engine import WikiSearchEngine
-            engine = WikiSearchEngine()
-            search_results = engine.search(query, limit=max_pages)
+            from tools.shared.search_backend import get_search_backend
+            backend = get_search_backend()
+            search_results = backend.search(query, limit=max_pages)
             results = []
             for sr in search_results:
                 page_path = sr.get("path", "")

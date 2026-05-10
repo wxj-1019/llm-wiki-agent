@@ -16,7 +16,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -88,20 +90,38 @@ async def refresh(
     errors = 0
 
     print(f"Checking {len(urls_to_check)} URLs for changes...")
-    for url in urls_to_check:
+
+    def _check_one(url: str) -> tuple[str, dict | None, dict]:
         stored = url_meta.get(url, {})
         current = _head_check(url)
+        return url, stored, current
 
-        if not current["status"].startswith("2"):
-            print(f"  [WARN] {url} — HEAD failed ({current['status']})")
-            errors += 1
-            continue
-
-        if force or _has_changed(url, current, stored):
-            changed.append((url, stored, current))
-            print(f"  [CHANGED] {url}")
-        else:
-            unchanged += 1
+    if len(urls_to_check) > 1:
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = {executor.submit(_check_one, url): url for url in urls_to_check}
+            for future in as_completed(futures):
+                url, stored, current = future.result()
+                if not current["status"].startswith("2"):
+                    print(f"  [WARN] {url} — HEAD failed ({current['status']})")
+                    errors += 1
+                    continue
+                if force or _has_changed(url, current, stored):
+                    changed.append((url, stored, current))
+                    print(f"  [CHANGED] {url}")
+                else:
+                    unchanged += 1
+    else:
+        for url in urls_to_check:
+            url, stored, current = _check_one(url)
+            if not current["status"].startswith("2"):
+                print(f"  [WARN] {url} — HEAD failed ({current['status']})")
+                errors += 1
+                continue
+            if force or _has_changed(url, current, stored):
+                changed.append((url, stored, current))
+                print(f"  [CHANGED] {url}")
+            else:
+                unchanged += 1
 
     print(f"\nSummary: {len(changed)} changed, {unchanged} unchanged, {errors} errors")
 
@@ -119,6 +139,23 @@ async def refresh(
     print(f"\nRe-fetching {len(changed)} changed URLs...")
     from tools.fetchers.web_fetcher import run as web_run
 
+    def _trigger_auto_ingest(source_filter: str | None = None) -> tuple[bool, str]:
+        try:
+            cmd = [sys.executable, str(REPO_ROOT / "tools" / "auto_ingest.py")]
+            if source_filter:
+                cmd.extend(["--source", source_filter])
+            result = subprocess.run(
+                cmd, capture_output=True, text=True,
+                cwd=str(REPO_ROOT), timeout=300,
+            )
+            if result.returncode != 0:
+                return False, f"auto_ingest failed: {result.stderr[:200]}"
+            return True, "ok"
+        except subprocess.TimeoutExpired:
+            return False, "auto_ingest timed out"
+        except Exception as e:
+            return False, str(e)
+
     for url, _, _ in changed:
         print(f"\n--- Refreshing: {url} ---")
         ret = web_run(
@@ -129,10 +166,18 @@ async def refresh(
             write_report=False,
             use_browser=True,
             use_llm=use_llm,
-            write_wiki=write_wiki,
         )
         if ret != 0:
             print(f"  [WARN] Refresh failed for {url}")
+            continue
+
+        if write_wiki:
+            print(f"  [INFO] Auto-ingesting refreshed content for {url}...")
+            ok, msg = _trigger_auto_ingest(source_filter="web")
+            if ok:
+                print(f"    [OK] Auto-ingest successful")
+            else:
+                print(f"    [FAIL] {msg}")
 
     # Update state timestamps
     state["last_runs"]["refresh_web"] = datetime.now(timezone.utc).isoformat()

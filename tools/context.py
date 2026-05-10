@@ -92,13 +92,13 @@ def _graph_neighbors(target_path: str, depth: int = 2) -> list[str]:
 
 
 def _fts_search(query: str, limit: int = 20) -> list[dict]:
-    """FTS5 search via search_engine.py."""
+    """Search via configured backend (SQLite or PostgreSQL)."""
     try:
-        from tools.search_engine import WikiSearchEngine
+        from tools.shared.search_backend import get_search_backend
 
-        engine = WikiSearchEngine()
-        results = engine.search(query, limit)
-        engine.close()
+        backend = get_search_backend()
+        results = backend.search(query, limit)
+        backend.close()
         return results
     except Exception:
         return []

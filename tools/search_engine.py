@@ -7,11 +7,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import sys
 import threading
 import re
 import hashlib
 from pathlib import Path
 from typing import Iterator, Any
+
+# Ensure repo root is on path for sibling imports when run directly
+_repo_root = str(Path(__file__).parent.parent)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 from tools.shared.search_backend import SearchBackend
 
@@ -34,9 +40,10 @@ DB_PATH = STATE_DIR / "search.db"
 META_FILES = {"index.md", "log.md", "lint-report.md", "health-report.md"}
 
 
-def _ensure_db() -> sqlite3.Connection:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+def _ensure_db(db_path: Path | str | None = None) -> sqlite3.Connection:
+    path = Path(db_path) if db_path else DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL")
     # FTS5 virtual table with porter+unicode61 tokenization.
     # CJK text is pre-tokenized into character bigrams before insertion
@@ -106,7 +113,7 @@ class WikiSearchEngine(SearchBackend):
 
     def __init__(self, db_path: Path | str = DB_PATH) -> None:
         self.db_path = Path(db_path)
-        self._conn = _ensure_db()
+        self._conn = _ensure_db(self.db_path)
         self._lock = threading.RLock()
         self._last_check = 0.0
         self._ensure_indexed()
@@ -306,6 +313,7 @@ class WikiSearchEngine(SearchBackend):
 
         # Record analytics
         try:
+            from tools.shared.state_manager import SearchAnalytics
             _analytics = SearchAnalytics()
             _analytics.record(query=query, result_count=len(results), source="fts", latency_ms=0)
             _analytics.close()
@@ -584,111 +592,21 @@ class WikiSearchEngine(SearchBackend):
 
     @staticmethod
     def _tokenize_cjk_for_index(text: str) -> str:
-        """Convert CJK text to space-separated character bigrams for FTS5 indexing.
-
-        '量化交易系统' → '量化 化交 交易 易系 系统'
-        This ensures FTS5 unicode61 can tokenize CJK text properly.
-        Non-CJK text is preserved as-is.
-        """
-        result: list[str] = []
-        cjk_buf: list[str] = []
-        non_cjk_buf: list[str] = []
-
-        def _flush_cjk():
-            if not cjk_buf:
-                return
-            # Generate overlapping bigrams
-            chars = ''.join(cjk_buf)
-            if len(chars) == 1:
-                result.append(chars)
-            else:
-                for i in range(len(chars) - 1):
-                    result.append(chars[i:i+2])
-                # Also add first and last char for single-char matching
-                # (to handle edge cases where a query has just 1 char)
-            cjk_buf.clear()
-
-        def _flush_non_cjk():
-            if non_cjk_buf:
-                result.append(''.join(non_cjk_buf))
-                non_cjk_buf.clear()
-
-        for ch in text:
-            if '\u4e00' <= ch <= '\u9fff':
-                _flush_non_cjk()
-                cjk_buf.append(ch)
-            elif ch.isspace():
-                _flush_cjk()
-                _flush_non_cjk()
-            else:
-                if cjk_buf:
-                    _flush_cjk()
-                non_cjk_buf.append(ch)
-
-        _flush_cjk()
-        _flush_non_cjk()
-        return ' '.join(r for r in result if r.strip())
+        """Convert CJK text to space-separated character bigrams for FTS5 indexing."""
+        from tools.shared.cjk_utils import tokenize_cjk_for_index
+        return tokenize_cjk_for_index(text)
 
     @staticmethod
     def _tokenize_cjk_for_query(text: str) -> str:
-        """Convert CJK query text to bigram tokens for FTS5 search.
-
-        '量化交易' → '"量化" AND "交易"'
-        Single characters are kept as-is.
-        """
-        cjk_chars: list[str] = []
-        non_cjk_parts: list[str] = []
-        buf: list[str] = []
-        cur_is_cjk = False
-
-        def _flush():
-            nonlocal cur_is_cjk
-            if not buf:
-                return
-            part = ''.join(buf)
-            buf.clear()
-            if cur_is_cjk:
-                cjk_chars.append(part)
-            else:
-                non_cjk_parts.append(part)
-
-        for ch in text:
-            ch_is_cjk = '\u4e00' <= ch <= '\u9fff'
-            if buf and ch_is_cjk != cur_is_cjk:
-                _flush()
-            if not ch.isspace():
-                buf.append(ch)
-                cur_is_cjk = ch_is_cjk
-
-        _flush()
-
-        # Build FTS5 query parts
-        parts: list[str] = []
-
-        # Non-CJK: exact match
-        for t in non_cjk_parts:
-            parts.append(f'"{t}"')
-
-        # CJK: build bigrams
-        if cjk_chars:
-            cjk_text = ''.join(cjk_chars)
-            bigrams = []
-            if len(cjk_text) == 1:
-                bigrams.append(cjk_text)
-            else:
-                for i in range(len(cjk_text) - 1):
-                    bigrams.append(cjk_text[i:i+2])
-            if bigrams:
-                parts.append('(' + ' AND '.join(f'"{bg}"' for bg in bigrams) + ')')
-
-        if not parts:
-            return f'"{text}"'
-        return ' AND '.join(parts)
+        """Convert CJK query text to bigram tokens for FTS5 search."""
+        from tools.shared.cjk_utils import tokenize_cjk_for_query
+        return tokenize_cjk_for_query(text)
 
     @staticmethod
     def _build_fts_query(q: str) -> str:
         """Build an FTS5 query string. Uses CJK bigram tokenization."""
-        return WikiSearchEngine._tokenize_cjk_for_query(q.strip())
+        from tools.shared.cjk_utils import tokenize_cjk_for_query
+        return tokenize_cjk_for_query(q.strip())
 
     def count(self) -> int:
         row = self._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()
@@ -698,37 +616,6 @@ class WikiSearchEngine(SearchBackend):
         self._conn.close()
         self._conn = None
 
-
-class SearchAnalytics:
-    """Record search queries for zero-result analysis."""
-
-    def __init__(self, db_path: Path | None = None):
-        self._db_path = db_path or (REPO / "state" / "search_analytics.db")
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._db_path))
-        self._conn.execute("CREATE TABLE IF NOT EXISTS search_queries (id INTEGER PRIMARY KEY, timestamp TEXT, query TEXT, result_count INTEGER, source TEXT, latency_ms REAL, did_you_mean TEXT)")
-        self._conn.commit()
-
-    def record(self, query: str, result_count: int, source: str = "api", latency_ms: float = 0, did_you_mean: str | None = None):
-        from datetime import datetime
-        self._conn.execute("INSERT INTO search_queries (timestamp, query, result_count, source, latency_ms, did_you_mean) VALUES (?, ?, ?, ?, ?, ?)", (datetime.now().isoformat(), query, result_count, source, latency_ms, did_you_mean))
-        self._conn.commit()
-
-    def get_zero_result_queries(self, days: int = 7) -> list[dict]:
-        from datetime import datetime, timedelta
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-        rows = self._conn.execute("SELECT query, COUNT(*) as cnt FROM search_queries WHERE result_count = 0 AND timestamp > ? GROUP BY query ORDER BY cnt DESC LIMIT 20", (cutoff,)).fetchall()
-        return [{"query": r[0], "count": r[1]} for r in rows]
-
-    def get_stats(self, days: int = 7) -> dict:
-        from datetime import datetime, timedelta
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-        total = self._conn.execute("SELECT COUNT(*) FROM search_queries WHERE timestamp > ?", (cutoff,)).fetchone()[0]
-        zero = self._conn.execute("SELECT COUNT(*) FROM search_queries WHERE result_count = 0 AND timestamp > ?", (cutoff,)).fetchone()[0]
-        return {"total_queries": total, "zero_result_count": zero, "zero_result_rate": round(zero / total * 100, 1) if total > 0 else 0}
-
-    def close(self):
-        self._conn.close()
 
 
 class FuzzyMatcher:
@@ -789,11 +676,12 @@ def main():
     cli.add_argument("--semantic", action="store_true", help="Enable semantic search")
     args = cli.parse_args()
 
-    engine = WikiSearchEngine()
+    from tools.shared.search_backend import get_search_backend
+    backend = get_search_backend()
     if args.rebuild:
-        engine.rebuild_index()
+        backend.rebuild_index()
     if args.search:
-        result = engine.search(args.search, args.limit, semantic=args.semantic)
+        result = backend.search(args.search, args.limit, semantic=args.semantic)
         results = result["results"]
         if result.get("did_you_mean"):
             print(f"Did you mean: {result['did_you_mean']}?")
@@ -806,9 +694,12 @@ def main():
         if not results:
             print("No results found.")
     else:
-        print(f"Indexed pages: {engine.count()}")
-    engine.close()
+        print(f"Indexed pages: {backend.count()}")
+    backend.close()
 
 
 if __name__ == "__main__":
+    _repo = Path(__file__).parent.parent
+    if str(_repo) not in sys.path:
+        sys.path.insert(0, str(_repo))
     main()

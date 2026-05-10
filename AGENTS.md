@@ -149,7 +149,7 @@ python tools/mcp_server.py
 python tools/watcher.py
 
 # Test FTS5 search
-python -c "from tools.search_engine import WikiSearchEngine; e=WikiSearchEngine(); print(e.search('transformer')); e.close()"
+python -c "from tools.shared.search_backend import get_search_backend; e=get_search_backend(); print(e.search('transformer')); e.close()"
 ```
 
 ---

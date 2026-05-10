@@ -235,12 +235,27 @@ def query(question: str, save_path: str | None = None):
     if not index_content:
         raise RuntimeError("Wiki is empty. Ingest some sources first.")
 
-    # Step 2: Find relevant pages
+    # Step 2: Find relevant pages (index + search backend)
     relevant_pages = find_relevant_pages(question, index_content)
     logger.info("Relevant pages | count=%d pages=%s", len(relevant_pages),
                 [p.relative_to(WIKI_DIR).as_posix() for p in relevant_pages[:10]])
 
-    # If no keyword match, ask Claude to identify relevant pages from the index
+    # Fallback / enrichment: use search backend when index match is thin
+    if len(relevant_pages) < 5:
+        try:
+            from tools.shared.search_backend import get_search_backend
+            backend = get_search_backend()
+            search_results = backend.search(question, limit=10)
+            backend.close()
+            for r in search_results.get("results", []):
+                p = WIKI_DIR / r["path"]
+                if p.exists() and p not in relevant_pages:
+                    relevant_pages.append(p)
+            logger.info("Search backend enriched | total=%d", len(relevant_pages))
+        except Exception:
+            pass
+
+    # If still no keyword match, ask Claude to identify relevant pages from the index
     if not relevant_pages or len(relevant_pages) <= 1:
         print("  selecting relevant pages via API...")
         prompt = f"Given this wiki index:\n\n{index_content}\n\nWhich pages are most relevant to answering: \"{question}\"\n\nReturn ONLY a JSON array of relative file paths (as listed in the index), e.g. [\"sources/foo.md\", \"concepts/Bar.md\"]. Maximum 10 pages."

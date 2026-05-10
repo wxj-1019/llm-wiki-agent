@@ -779,17 +779,15 @@ def run(
     SOURCES_DIR.mkdir(parents=True, exist_ok=True)
     ENTITIES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Lazy-init search engine for FTS indexing
-    _search_engine = None
+    # Lazy-init search backend for indexing
+    _search_backend = None
 
-    def _get_search_engine():
-        nonlocal _search_engine
-        if _search_engine is None:
-            from tools.search_engine import WikiSearchEngine
-            _search_engine = WikiSearchEngine()
-            # Mark stale so it picks up new pages
-            _search_engine.check_stale()
-        return _search_engine
+    def _get_search_backend():
+        nonlocal _search_backend
+        if _search_backend is None:
+            from tools.shared.search_backend import get_search_backend
+            _search_backend = get_search_backend()
+        return _search_backend
 
     stats: dict[str, Any] = {
         "total": len(new_files),
@@ -797,7 +795,8 @@ def run(
         "duplicate_content": 0, "grades": Counter(),
         "entities_found": 0,
     }
-    content_fingerprints: set[str] = set()
+    from tools.fetchers._common import ContentFingerprint
+    fingerprint_mgr = ContentFingerprint()
     index_updated = False
     log_updated = 0
     entities_created = 0
@@ -885,11 +884,11 @@ def run(
 
         # Content fingerprint dedup
         fp = _content_fingerprint(body)
-        if fp in content_fingerprints:
-            print(f"  [SKIP] Near-duplicate content: {f.name}")
+        is_dup, seen_count = fingerprint_mgr.check_and_record(body, source_url or str(f))
+        if is_dup:
+            print(f"  [SKIP] Near-duplicate content (seen {seen_count}x): {f.name}")
             stats["duplicate_content"] += 1
             continue
-        content_fingerprints.add(fp)
 
         # Quality scoring
         q_score, q_grade, q_reasons = _score_quality(title, body)
@@ -951,7 +950,7 @@ def run(
 
         # ── FTS5 indexing: add new page to search index ──
         try:
-            se = _get_search_engine()
+            se = _get_search_backend()
             wiki_rel_path = str(out_path.relative_to(REPO_ROOT).as_posix())
             se.update_page(wiki_rel_path, source_page)
         except Exception as e:

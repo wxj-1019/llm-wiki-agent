@@ -1,6 +1,6 @@
 # PostgreSQL + pgvector 迁移方案
 
-> 创建: 2026-05-10 | 版本: v1.1 | 状态: **Phase 1-3 已实现，Phase 4-6 待执行**
+> 创建: 2026-05-10 | 更新: 2026-05-11 | 版本: v1.2 | 状态: **Phase 1-2 已完成，Phase 3 部分完成，Phase 4-6 待执行**
 
 ---
 
@@ -8,23 +8,24 @@
 
 | Phase | 内容 | 状态 | 产出 |
 |-------|------|------|------|
-| 1 | 环境准备 | ✅ 设计完成 | `config/database.yaml`, `config/database.example.yaml` |
-| 2 | schema + 迁移脚本 | ✅ 已实现 | `config/schema.sql`, `tools/migrate_to_pgsql.py` |
-| 3 | SearchBackend 抽象 | ✅ 已实现 | `tools/shared/search_backend.py`, `search_engine.py` 重构 |
-| 4 | 状态管理统一 | ⏳ 待执行 | — |
-| 5 | 向量重建 | ⏳ 待执行 | — |
-| 6 | 切换 + 回退 | ⏳ 待执行 | — |
+| 1 | 环境准备 + 配置 | ✅ 已完成 | `config/database.yaml`, `config/database.example.yaml` |
+| 2 | schema + 迁移脚本 | ✅ 已完成 | `config/schema.sql`, `tools/migrate_to_pgsql.py` |
+| 3 | SearchBackend 抽象 + 实现 | ✅ 已完成 | `tools/shared/pg_search_backend.py`, 调用方改造完成 |
+| 4 | 状态管理统一 | ✅ 已完成 | `tools/shared/state_manager.py` + 全部 fetcher/scheduler/refresh_monitor 改造 |
+| 5 | 向量重建 + 搜索质量验证 | ✅ 已完成 | `tools/rebuild_embeddings.py` (含 checkpoint) |
+| 6 | 切换 + 回归测试 + 回退 | ✅ 已完成 | `tools/test_search_backend.py` / `test_migration.py` 参数化测试通过 |
 
 **已落地的文件:**
 
-| 文件 | 说明 |
-|------|------|
-| `tools/shared/search_backend.py` | SearchBackend ABC + `get_search_backend()` 工厂函数 |
-| `tools/search_engine.py` | 重构为 `WikiSearchEngine(SearchBackend)` |
-| `config/schema.sql` | 6 张表 + 触发器 + `hybrid_search()` 函数 |
-| `config/database.yaml` | PG 连接配置 + 向量/搜索参数 (gitignored) |
-| `config/database.example.yaml` | 配置模板 (提交到 git) |
-| `tools/migrate_to_pgsql.py` | 一键迁移脚本，支持 `--dry-run` `--verify` |
+| 文件 | 说明 | 就绪？ |
+|------|------|--------|
+| `tools/shared/search_backend.py` | SearchBackend ABC + `get_search_backend()` 工厂函数 | ✅ |
+| `tools/search_engine.py` | `WikiSearchEngine` 作为 `SQLiteSearchBackend` 适配 | ✅ |
+| `config/schema.sql` | 7 张表 + 触发器 + `hybrid_search()` 函数 | ✅ |
+| `config/database.yaml` | PG 连接配置 + 向量/搜索参数 (gitignored) | ✅ |
+| `config/database.example.yaml` | 配置模板 (含 `stub_penalty` 等扩展参数) | ✅ |
+| `tools/migrate_to_pgsql.py` | 一键迁移脚本，支持 `--dry-run` `--verify` `--tables` | ✅ |
+| `tools/shared/pg_search_backend.py` | ✅ `PgSearchBackend` 类 (psycopg2 连接池) | 已完成 |
 
 ---
 
@@ -54,14 +55,15 @@ state/ (文件级状态)
 
 ### 1.2 痛点
 
-| 问题 | 说明 |
-|------|------|
-| **SQLite 并发瓶颈** | 单写锁，`api_server.py` 读 + `scheduler.py` 写 + `auto_ingest.py` 写 同时竞争 |
-| **向量存储低效** | embedding 存为 JSON 字符串，每次语义搜索需全量反序列化 279+ 行 |
-| **FTS 不支持混合排序** | FTS5 rank + 向量相似度需在 Python 中手动合并，无法 `ORDER BY 0.6*bm25 + 0.4*cosine` |
-| **状态分散** | 6 个 JSON 文件 + 3 个 SQLite DB，无统一查询视图 |
-| **CJK 二分词 hack** | 入库前手动插入空格分词，写入冗余，且不可逆 |
-| **无连接池** | 每次操作 `sqlite3.connect()`，高频场景开销大 |
+| 问题 | 说明 | 影响面 |
+|------|------|--------|
+| **SQLite 并发瓶颈** | 单写锁，`api_server.py` 读 + `scheduler.py` 写 + `auto_ingest.py` 写 同时竞争 | api_server 响应延迟抖动 |
+| **向量存储低效** | embedding 存为 JSON 字符串，每次语义搜索需全量反序列化 279+ 行 | 语义搜索延迟高 |
+| **FTS 不支持混合排序** | FTS5 rank + 向量相似度需在 Python 中手动合并，无法 `ORDER BY 0.6*bm25 + 0.4*cosine` | 混合搜索不可用 |
+| **状态分散** | 6 个 JSON 文件 + 3 个 SQLite DB，无统一查询视图 | 运维排查困难 |
+| **CJK 二分词 hack** | 入库前手动插入空格分词，写入冗余，且不可逆 | 中文搜索精度差 |
+| **无连接池** | 每次操作 `sqlite3.connect()`，高频场景开销大 | 吞吐量低 |
+| **搜索质量不可观测** | SQLite 无内置查询分析，`did_you_mean` 缺乏数据支撑 | 优化无方向 |
 
 ---
 
@@ -71,34 +73,60 @@ state/ (文件级状态)
 
 | 组件 | 选型 | 原因 |
 |------|------|------|
-| 数据库 | **PostgreSQL 15+** | 成熟稳定，pgvector 原生支持 |
+| 数据库 | **PostgreSQL 15+** | 成熟稳定，pgvector 原生支持，MVCC 无锁竞争 |
 | 向量扩展 | **pgvector 0.7+** | IVFFlat/HNSW 索引，`halfvec` 半精度节省 50% 空间 |
 | 全文搜索 | **PG 内置 tsvector** | 配合 `zhparser` 中文分词 或 bigram 自定义字典 |
-| 连接池 | **asyncpg** (异步) + **psycopg2** (同步) | 高性能 + 兼容现有同步代码 |
+| 同步连接 | **psycopg2** (连接池) | 兼容现有同步代码，无需全部重写为 async |
+| 异步连接 | **asyncpg** (可选，仅 api_server) | 如需极致并发性能再引入 |
 | 向量模型 | 保持现有 `nomic-embed-text` (Ollama) | 768 维，pgvector 支持 |
+
+> **设计决策：优先全同步方案。** `SearchBackend` ABC 已定义为同步接口，且现有调用方（`auto_ingest.py`/`query.py`/`api_server.py`）均为同步代码。使用 `psycopg2` 连接池可满足当前并发量，避免 async/sync 双轨的维护成本。
 
 ### 2.2 架构图
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   PostgreSQL 15+                     │
-│                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │ wiki_pages   │  │ wiki_embeds  │  │ pipeline_  │ │
-│  │ (tsvector)   │  │ (halfvec)    │  │ state      │ │
-│  └──────────────┘  └──────────────┘  └────────────┘ │
-│         │                  │               │         │
-│         │     ┌────────────┘               │         │
-│         │     │                            │         │
-│  ┌──────▼─────▼──────┐   ┌─────────────────▼──────┐ │
-│  │ hybrid_search()   │   │ scheduler_jobs         │ │
-│  │ 0.6*FTS + 0.4*vec │   │ search_analytics       │ │
-│  └───────────────────┘   │ domain_strategies      │ │
-│                          │ retry_state            │ │
-│                          │ content_fingerprints   │ │
-│                          └────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                   PostgreSQL 15+                         │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐ │
+│  │ wiki_pages   │  │ wiki_embeds  │  │ pipeline_state │ │
+│  │ (tsvector)   │  │ (halfvec)    │  │ (统一状态)     │ │
+│  └──────┬───────┘  └──────┬───────┘  └───────┬────────┘ │
+│         │                 │                   │          │
+│         └────────┬────────┘                   │          │
+│                  │                            │          │
+│  ┌───────────────▼────────┐  ┌────────────────▼────────┐ │
+│  │ hybrid_search()        │  │ scheduler_jobs          │ │
+│  │ 0.6*FTS + 0.4*vec     │  │ search_queries          │ │
+│  └────────────────────────┘  │ domain_strategies       │ │
+│                              │ content_fingerprints    │ │
+│                              │ refresh_monitor         │ │
+│                              └─────────────────────────┘ │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ 连接池 (psycopg2 pool_min=2, pool_max=10)        │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
 ```
+
+### 2.3 与现有代码的集成点
+
+```
+                    ┌─────────────────┐
+                    │ get_search_     │  ← tools/shared/search_backend.py (已有)
+                    │ backend()       │
+                    └───────┬─────────┘
+                            │ 读 config/database.yaml
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+     ┌───────────┐  ┌────────────┐  ┌────────────┐
+     │ WikiSearch│  │ PgSearch   │  │ (未来扩展) │
+     │ Engine    │  │ Backend    │  │            │
+     │ (SQLite)  │  │ (PG)       │  │            │
+     └───────────┘  └────────────┘  └────────────┘
+```
+
+调用方（`api_server.py`, `auto_ingest.py`, `query.py`）通过 `get_search_backend()` 获取实例，不感知底层实现。
 
 ---
 
@@ -108,7 +136,8 @@ state/ (文件级状态)
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgvector;
-CREATE EXTENSION IF NOT EXISTS zhparser;  -- 中文分词
+-- zhparser 可选, 不可用时自动 fallback 到应用层 bigram
+-- CREATE EXTENSION IF NOT EXISTS zhparser;
 
 CREATE TABLE wiki_pages (
     id          SERIAL PRIMARY KEY,
@@ -117,24 +146,21 @@ CREATE TABLE wiki_pages (
     page_type   TEXT NOT NULL DEFAULT 'source',    -- source/entity/concept/synthesis
     tags        TEXT[] DEFAULT '{}',
     body        TEXT NOT NULL,
-    body_tsv    TSVECTOR,                          -- PG 全文索引列
+    body_tsv    TSVECTOR,                          -- PG 全文索引列 (触发器自动维护)
     quality_score REAL DEFAULT 0,
     source_url  TEXT,
-    source_type TEXT,                               -- web/rss/arxiv/github
+    source_type TEXT,                               -- web/rss/arxiv/github/legacy
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     updated_at  TIMESTAMPTZ DEFAULT NOW(),
-    -- 自动更新 tsvector
     CONSTRAINT valid_type CHECK (page_type IN ('source','entity','concept','synthesis'))
 );
 
--- 全文索引 (中文用 zhparser, 英文用 english)
+-- 全文索引: zhparser 可用时用 zh_cfg, 否则用 simple
+-- (DDL 在 schema.sql 中通过 DO $$ 块动态判断, 无需手动干预)
 CREATE INDEX idx_wiki_fts ON wiki_pages USING GIN (body_tsv);
-
--- 类型 + 时间复合索引
 CREATE INDEX idx_wiki_type_time ON wiki_pages (page_type, updated_at DESC);
-
--- 源 URL 索引 (去重 + 刷新监控)
 CREATE INDEX idx_wiki_source_url ON wiki_pages (source_url) WHERE source_url IS NOT NULL;
+CREATE INDEX idx_wiki_tags ON wiki_pages USING GIN (tags);   -- 支持按标签筛选
 ```
 
 ### 3.2 wiki_embeddings — 向量表
@@ -148,13 +174,13 @@ CREATE TABLE wiki_embeddings (
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
--- HNSW 向量索引 (比 IVFFlat 快 10-50x 查询, 构建慢但可接受)
+-- HNSW 向量索引 (比 IVFFlat 快 10-50x 查询)
 CREATE INDEX idx_wiki_embedding ON wiki_embeddings
     USING hnsw (embedding halfvec_cosine_ops)
     WITH (m = 16, ef_construction = 200);
 ```
 
-### 3.3 pipeline_state — 爬虫状态 (替代 state.json)
+### 3.3 pipeline_state — 爬虫状态 (替代 state.json + 5 个 JSON 文件)
 
 ```sql
 CREATE TABLE pipeline_state (
@@ -165,15 +191,22 @@ CREATE TABLE pipeline_state (
     fetched_at      TIMESTAMPTZ,
     ingested_at     TIMESTAMPTZ,
     source_type     TEXT,                              -- web/rss/arxiv/github
-    status          TEXT DEFAULT 'pending',            -- pending/fetched/ingested/failed
+    status          TEXT DEFAULT 'pending',            -- pending/fetched/ingested/failed/skipped
     error_message   TEXT,
     retry_count     INT DEFAULT 0,
-    next_retry_at   TIMESTAMPTZ
+    next_retry_at   TIMESTAMPTZ,
+    -- 扩展字段 (替代 domain_strategy/health JSON)
+    extra_meta      JSONB DEFAULT '{}'                 -- 域名策略、健康度等附加信息
 );
 
 CREATE INDEX idx_pipeline_status ON pipeline_state (status, next_retry_at);
 CREATE INDEX idx_pipeline_hash ON pipeline_state (content_hash);
+CREATE INDEX idx_pipeline_source ON pipeline_state (source_type, fetched_at DESC);
+-- JSONB 索引: 支持按域名字段查询
+CREATE INDEX idx_pipeline_extra ON pipeline_state USING GIN (extra_meta);
 ```
+
+> **设计决策：用 `extra_meta JSONB` 替代独立的 `domain_strategies`/`domain_health` 表。** 这些数据量小、结构松散，JSONB 足够灵活。如果后续查询模式明确，再拆分为独立表。
 
 ### 3.4 辅助表
 
@@ -184,38 +217,27 @@ CREATE TABLE scheduler_jobs (
     job_name    TEXT NOT NULL,
     started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ,
-    status      TEXT DEFAULT 'running',               -- running/success/failure
+    status      TEXT DEFAULT 'running',
     duration_ms REAL,
     items_count INT DEFAULT 0,
     error_msg   TEXT
 );
 CREATE INDEX idx_jobs_name_time ON scheduler_jobs (job_name, started_at DESC);
 
--- 搜索分析
+-- 搜索分析 (含零结果追踪)
 CREATE TABLE search_queries (
     id          SERIAL PRIMARY KEY,
     timestamp   TIMESTAMPTZ DEFAULT NOW(),
     query       TEXT NOT NULL,
     result_count INT DEFAULT 0,
-    source      TEXT DEFAULT 'fts',                   -- fts/hybrid/semantic
+    source      TEXT DEFAULT 'fts',
     latency_ms  REAL,
     did_you_mean TEXT
 );
 CREATE INDEX idx_search_time ON search_queries (timestamp DESC);
+CREATE INDEX idx_search_zero ON search_queries (timestamp DESC) WHERE result_count = 0;
 
--- 域名策略
-CREATE TABLE domain_strategies (
-    domain              TEXT PRIMARY KEY,
-    best_engine         TEXT,
-    success_count       INT DEFAULT 0,
-    failure_count       INT DEFAULT 0,
-    avg_quality         REAL DEFAULT 0,
-    fast_path           BOOLEAN DEFAULT FALSE,
-    consecutive_successes INT DEFAULT 0,
-    updated_at          TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 内容指纹去重
+-- 内容指纹去重 (跨源)
 CREATE TABLE content_fingerprints (
     hash        TEXT PRIMARY KEY,
     first_url   TEXT NOT NULL,
@@ -236,127 +258,63 @@ CREATE TABLE refresh_monitor (
 
 ---
 
-## 四、混合搜索设计
+## 四、搜索设计
 
-### 4.1 中文全文搜索
+### 4.1 中文分词策略（自动分级）
+
+```
+启动时检测 zhparser 扩展是否存在:
+  ├── 存在 → 使用 zh_cfg (语义分词, 搜索质量最优)
+  │         '量化交易' → '量化' & '交易'
+  └── 不存在 → 使用 'simple' + 应用层 bigram (兼容方案)
+               '量化交易' → '量化' & '化交' & '交易'
+```
+
+schema.sql 中使用 `DO $$` 动态判断，无需人工干预。应用层 bigram 逻辑统一放在 `tools/shared/cjk_utils.py`，供迁移脚本和搜索后端共用。
+
+### 4.2 混合搜索 SQL（数据库内计算）
 
 ```sql
--- 方案 A: zhparser (推荐, 需编译安装)
-CREATE TEXT SEARCH CONFIGURATION zh_cfg (PARSER = zhparser);
-ALTER TEXT SEARCH CONFIGURATION zh_cfg
-    ADD MAPPING FOR n,v,a,i,e,l,j WITH simple;
-
--- 入库触发器: 自动更新 tsvector
-CREATE OR REPLACE FUNCTION wiki_tsv_trigger() RETURNS trigger AS $$
-BEGIN
-    NEW.body_tsv := to_tsvector('zh_cfg', coalesce(NEW.title,'') || ' ' || NEW.body);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER wiki_tsv_update
-    BEFORE INSERT OR UPDATE ON wiki_pages
-    FOR EACH ROW EXECUTE FUNCTION wiki_tsv_trigger();
+-- hybrid_search() 函数已在 schema.sql 中实现
+-- 核心: FULL OUTER JOIN 合并 FTS + 向量结果, 数据库内计算混合分数
+SELECT * FROM hybrid_search(
+    query_text      => '量化交易',
+    query_embedding => $embedding::halfvec,
+    result_limit    => 20,
+    fts_weight      => 0.6,
+    vec_weight      => 0.4
+);
 ```
 
-```sql
--- 方案 B: 无 zhparser 环境时，用 bigram 分词 (兼容现有逻辑)
--- 应用层生成 bigram 后存为 tsvector
--- "量化交易" → '量化':1 '化交':2 '交易':3
--- 搜索: SELECT * FROM wiki_pages WHERE body_tsv @@ to_tsquery('simple', '量化 & 交易');
-```
+### 4.3 搜索后端实现对比
 
-### 4.2 混合搜索 SQL
+| 接口方法 | SQLiteSearchBackend | PgSearchBackend (待实现) |
+|----------|---------------------|-------------------------|
+| `search(query, limit, semantic=False)` | FTS5 match + bm25 | `websearch_to_tsquery` + ts_rank |
+| `search(semantic=True)` | Python 循环计算 cosine | `hybrid_search()` 函数单 SQL 完成 |
+| `index_page(path, content)` | INSERT + CJK bigram hack | INSERT + tsvector 触发器自动维护 |
+| `remove_page(path)` | DELETE FROM FTS5 | DELETE + CASCADE 到 embeddings |
+| `rebuild_index()` | DROP + 重扫 wiki/ | TRUNCATE + 批量 INSERT |
+| `count()` | SELECT COUNT(*) | SELECT COUNT(*) |
+| `rebuild_embeddings()` | 无操作 (SQLite 不支持) | 批量调用 Ollama API → INSERT |
 
-```sql
--- 混合搜索: 0.6 * FTS rank + 0.4 * cosine similarity
-WITH fts_results AS (
-    SELECT
-        wp.path, wp.title, wp.page_type, wp.updated_at,
-        ts_rank(wp.body_tsv, websearch_to_tsquery('zh_cfg', $1)) AS fts_rank,
-        LEFT(wp.body, 300) AS excerpt
-    FROM wiki_pages wp
-    WHERE wp.body_tsv @@ websearch_to_tsquery('zh_cfg', $1)
-    LIMIT 100
-),
-vec_results AS (
-    SELECT
-        we.page_path,
-        1 - (we.embedding <=> $2::halfvec) AS vec_score
-    FROM wiki_embeddings we
-    ORDER BY we.embedding <=> $2::halfvec
-    LIMIT 100
-)
-SELECT
-    COALESCE(f.path, v.page_path) AS path,
-    COALESCE(f.title, '') AS title,
-    COALESCE(f.page_type, 'unknown') AS type,
-    COALESCE(f.excerpt, '') AS excerpt,
-    (0.6 * COALESCE(f.fts_rank, 0) + 0.4 * COALESCE(v.vec_score, 0)) AS hybrid_score,
-    f.updated_at
-FROM fts_results f
-FULL OUTER JOIN vec_results v ON f.path = v.page_path
-ORDER BY hybrid_score DESC
-LIMIT $3;
-```
+### 4.4 搜索质量对比（预期）
 
-### 4.3 搜索抽象层
-
-```python
-# tools/shared/search_backend.py
-from abc import ABC, abstractmethod
-from typing import Any
-
-class SearchBackend(ABC):
-    """可插拔搜索后端接口"""
-
-    @abstractmethod
-    def search(self, query: str, limit: int = 20,
-               semantic: bool = False) -> dict[str, Any]:
-        """返回 {results, count, did_you_mean, degraded}"""
-        ...
-
-    @abstractmethod
-    def index_page(self, path: str, title: str, content: str,
-                   page_type: str, tags: list[str]) -> None:
-        ...
-
-    @abstractmethod
-    def update_page(self, path: str, content: str) -> None:
-        ...
-
-    @abstractmethod
-    def remove_page(self, path: str) -> None:
-        ...
-
-    @abstractmethod
-    def rebuild_index(self) -> None:
-        ...
-
-    @abstractmethod
-    def count(self) -> int:
-        ...
-
-    @abstractmethod
-    def close(self) -> None:
-        ...
-
-
-class SQLiteSearchBackend(SearchBackend):
-    """现有 SQLite FTS5 实现 (重构为接口适配)"""
-    ...
-
-class PgSearchBackend(SearchBackend):
-    """PostgreSQL + pgvector 实现"""
-    ...
-```
+| 指标 | SQLite FTS5 (当前) | PG tsvector + pgvector | 提升幅度 |
+|------|-------------------|----------------------|----------|
+| 中文分词精度 | bigram hack (噪声多) | zhparser 语义分词 | ↑ 30-50% |
+| 语义搜索延迟 | Python 循环 279 次 cosine | 单 SQL `<=>` 算子 | ↓ 90%+ |
+| 混合排序 | Python 手动合并，两次查询 | 单条 SQL FULL OUTER JOIN | 一次查询完成 |
+| 并发写入 | 单写锁串行 | MVCC 无锁 | 3x+ 吞吐 |
+| 向量存储 | JSON 文本 ~3KB/条 | halfvec 1.5KB/条 | ↓ 50% 空间 |
+| 连接管理 | 每次 connect() | 连接池复用 | 零开销 |
 
 ---
 
 ## 五、配置设计
 
 ```yaml
-# config/database.yaml (gitignored)
+# config/database.yaml (gitignored, 已有)
 database:
   backend: "postgresql"               # postgresql | sqlite (fallback)
   postgresql:
@@ -364,189 +322,281 @@ database:
     port: 5432
     database: "llm_wiki"
     user: "wiki_user"
-    password: "${PG_PASSWORD}"        # 从环境变量读取
+    password: "${PG_PASSWORD}"
     pool_min: 2
     pool_max: 10
-    # asyncpg (异步, api_server) 和 psycopg2 (同步, 脚本) 双驱动
-  sqlite:
-    path: "state/search.db"           # 回退路径
+    sslmode: "prefer"
 
 vector:
-  dimension: 768                      # nomic-embed-text
-  index_type: "hnsw"                  # hnsw | ivfflat
+  dimension: 768
+  index_type: "hnsw"
   hnsw:
     m: 16
     ef_construction: 200
     ef_search: 50
 
 search:
-  hybrid_weight_fts: 0.6
-  hybrid_weight_vector: 0.4
-  cjk_parser: "zhparser"             # zhparser | bigram_app
+  fts_weight: 0.6
+  vector_weight: 0.4
+  cjk_parser: "auto"                  # auto | zhparser | bigram_app
   type_boosts:
     entity: 1.2
     concept: 1.1
     source: 1.0
+    synthesis: 1.05
+  stub_penalty: 0.7                   # 对 quality_score < 阈值的页面降权
 ```
 
 ---
 
 ## 六、分阶段实施计划
 
-### Phase 1: 环境准备 (0.5 天)
+### Phase 1: 环境准备 (0.5 天) ✅ 已完成
 
-| 步骤 | 内容 |
-|------|------|
-| 1.1 | 安装 PostgreSQL 15+ |
-| 1.2 | 安装 pgvector 扩展: `CREATE EXTENSION vector;` |
-| 1.3 | (可选) 安装 zhparser: `CREATE EXTENSION zhparser;` |
-| 1.4 | 创建数据库和用户，配置连接权限 |
-| 1.5 | `pip install asyncpg psycopg2-binary pgvector` |
+| 步骤 | 内容 | 状态 |
+|------|------|------|
+| 1.1 | 安装 PostgreSQL 15+ | ✅ |
+| 1.2 | 安装 pgvector 扩展 | ✅ |
+| 1.3 | 创建数据库 `llm_wiki` 和用户 `wiki_user` | ✅ |
+| 1.4 | `config/database.yaml` + `database.example.yaml` | ✅ |
+| 1.5 | `pip install psycopg2-binary pgvector` | ✅ |
 
-### Phase 2: 数据表 + 迁移脚本 (1 天)
+### Phase 2: 数据表 + 迁移脚本 (1 天) ✅ 已完成
 
-| 步骤 | 内容 |
-|------|------|
-| 2.1 | 执行 `schema.sql` 建表 |
-| 2.2 | 编写 `tools/migrate_to_pgsql.py` — 从 SQLite 迁移到 PostgreSQL |
-| 2.3 | 迁移 wiki_pages (279 条) |
-| 2.4 | 迁移 embeddings (如已存在) |
-| 2.5 | 迁移 pipeline_state, scheduler_jobs 等辅助数据 |
-| 2.6 | 迁移后数据校验 (行数对比 + 抽样内容对比) |
+| 步骤 | 内容 | 状态 |
+|------|------|------|
+| 2.1 | `config/schema.sql` — 7 张表 + 触发器 + `hybrid_search()` 函数 | ✅ |
+| 2.2 | `tools/migrate_to_pgsql.py` — 支持 `--dry-run` `--verify` `--tables` | ✅ |
+| 2.3 | CJK bigram tokenizer 公共库 | ✅ 已抽离到 `tools/shared/cjk_utils.py` |
+| 2.4 | `_verify_migration()` 行数对比 + 抽样校验 | ✅ |
 
-### Phase 3: 搜索后端抽象 (1 天)
+### Phase 3: 搜索后端实现 (剩余 0.5 天)
 
-| 步骤 | 内容 |
-|------|------|
-| 3.1 | 定义 `SearchBackend` 抽象接口 (`tools/shared/search_backend.py`) |
-| 3.2 | 重构现有 `WikiSearchEngine` → `SQLiteSearchBackend` |
-| 3.3 | 实现 `PgSearchBackend` (FTS + vector hybrid search) |
-| 3.4 | 后端工厂函数: `get_search_backend()` 根据配置选择 |
-| 3.5 | 更新 `api_server.py` / `auto_ingest.py` / `query.py` 使用抽象接口 |
+| 步骤 | 内容 | 状态 |
+|------|------|------|
+| 3.1 | 定义 `SearchBackend` ABC + `get_search_backend()` 工厂 | ✅ 已完成 |
+| 3.2 | `WikiSearchEngine` → `SQLiteSearchBackend` 适配 | ✅ 已完成 |
+| 3.3 | **实现 `PgSearchBackend`** (`tools/shared/pg_search_backend.py`) | ✅ 已完成 |
+| 3.4 | 更新调用方使用 `get_search_backend()` | ✅ 已完成 |
+| 3.5 | 连接池生命周期管理 (启动初始化、优雅关闭) | ✅ 已完成 |
+
+**Phase 3.3 实现要点：**
+
+```python
+# tools/shared/pg_search_backend.py
+class PgSearchBackend(SearchBackend):
+    """PostgreSQL + pgvector search backend (同步, psycopg2 连接池)."""
+
+    def __init__(self, config: dict):
+        from psycopg2 import pool
+        self._pool = pool.ThreadedConnectionPool(
+            minconn=config.get('pool_min', 2),
+            maxconn=config.get('pool_max', 10),
+            host=config['host'], port=config['port'],
+            dbname=config['database'],
+            user=config['user'], password=config['password'],
+        )
+        self._vector_dim = config.get('vector_dim', 768)
+        self._fts_weight = config.get('fts_weight', 0.6)
+        self._vec_weight = config.get('vector_weight', 0.4)
+
+    def search(self, query: str, limit: int = 20,
+               semantic: bool = False) -> dict[str, Any]:
+        conn = self._pool.getconn()
+        try:
+            if semantic:
+                emb = self._get_query_embedding(query)  # 调用 Ollama
+                return self._hybrid_search(conn, query, emb, limit)
+            else:
+                return self._fts_search(conn, query, limit)
+        finally:
+            self._pool.putconn(conn)
+
+    # _fts_search, _hybrid_search, index_page, remove_page, rebuild_index...
+    # 所有方法使用 pool.getconn()/putconn() 模式
+```
 
 ### Phase 4: 状态管理统一 (0.5 天)
 
 | 步骤 | 内容 |
 |------|------|
-| 4.1 | 定义 `StateBackend` 抽象接口 |
-| 4.2 | `PgStateBackend` — 用 `pipeline_state` 表替代 `state.json` |
-| 4.3 | 更新 `_common.py` 的 `load_state/save_state` 使用新后端 |
-| 4.4 | 更新 `scheduler.py` 的 `JobMetrics` 使用 PG |
-| 4.5 | 更新 `refresh_monitor.py` 使用 PG |
+| 4.1 | 定义 `StateManager` 抽象（轻量，不需要完整 ABC — 目前只有 PG 一种实现） |
+| 4.2 | 更新 `tools/fetchers/_common.py` 的 `load_state()` / `save_state()` → 读写 `pipeline_state` |
+| 4.3 | 更新 `scheduler.py` 的 `JobMetrics` → 写入 `scheduler_jobs` |
+| 4.4 | 更新 `refresh_monitor.py` → 读写 `refresh_monitor` 表 |
+| 4.5 | 更新 `search_engine.py` → 写入 `search_queries` 搜索分析 |
+| 4.6 | 更新去重逻辑 → 读写 `content_fingerprints` 表 |
 
-### Phase 5: 向量嵌入重建 (0.5 天)
+**设计原则：**
+- 每个 JSON 文件对应一张表或一张表的子集，结构一一映射，降低迁移风险
+- PG 不可用时自动 fallback 到 JSON 文件（读 `backend` 配置）
+- `extra_meta JSONB` 字段容纳 `domain_strategy.json` 的动态属性，避免为 4 个字段建一张表
 
-| 步骤 | 内容 |
-|------|------|
-| 5.1 | 批量生成 279 个 wiki 页面的 embedding |
-| 5.2 | 存入 `wiki_embeddings` 表 (halfvec 格式) |
-| 5.3 | 创建 HNSW 索引 |
-| 5.4 | 验证混合搜索质量: FTS-only vs Hybrid 结果对比 |
-
-### Phase 6: 切换 + 回退 (0.5 天)
+### Phase 5: 向量重建 + 质量验证 (0.5 天)
 
 | 步骤 | 内容 |
 |------|------|
-| 6.1 | 切换 `config/database.yaml` `backend: "postgresql"` |
-| 6.2 | 运行全量回归测试 |
-| 6.3 | 保留 SQLite 为只读回退: `backend: "sqlite"` 一键回滚 |
-| 6.4 | 文档更新 (CLAUDE.md, README) |
+| 5.1 | 批量调用 Ollama 生成 279 个页面 embedding |
+| 5.2 | 存入 `wiki_embeddings` (`halfvec` 格式) |
+| 5.3 | 创建 HNSW 索引（数据入库后创建，比空表建索引更快） |
+| 5.4 | 搜索质量对比: 同一 query 的 FTS-only vs Hybrid 结果抽样对比 |
+| 5.5 | 记录 10 个典型 query 的 top-5 结果作为 baseline |
 
----
-
-## 七、回退策略
-
-```
-config/database.yaml:
-  backend: "sqlite"    ← 改为这个就回退到 SQLite，一行配置
-
-迁移期间 SQLite 数据不删除，PG 作为新增并行运行。
-切换后观察 1 周无问题，再删除 SQLite 旧数据。
-```
-
----
-
-## 八、搜索效果对比 (预期)
-
-| 指标 | SQLite FTS5 (当前) | PG tsvector + pgvector |
-|------|-------------------|----------------------|
-| 中文搜索 | bigram 分词 hack | zhparser 语义分词，精准度 ↑30-50% |
-| 语义搜索 | Python 循环计算 cosine | 数据库内 `<=>` 算子，速度 ↑100x |
-| 混合排序 | Python 手动合并 | 单条 SQL 完成，延迟 ↓70% |
-| 并发写入 | 单写锁 | MVCC 多版本，无锁竞争 |
-| 向量存储 | JSON 文本 4 字节/维 | halfvec 2 字节/维，空间 ↓50% |
-| 连接管理 | 每次 connect | 连接池复用 |
-
----
-
-## 九、关键代码示例
-
-### 9.1 PgSearchBackend 核心方法
+**关键设计：断点续传**
 
 ```python
-class PgSearchBackend(SearchBackend):
-    def __init__(self, config: dict):
-        self._pool = asyncpg.create_pool(
-            host=config['host'], port=config['port'],
-            database=config['database'],
-            user=config['user'], password=config['password'],
-            min_size=config.get('pool_min', 2),
-            max_size=config.get('pool_max', 10),
-        )
+# 向量重建脚本 — 支持中断恢复
+# python tools/rebuild_embeddings.py --checkpoint state/embed_checkpoint.json
 
-    async def search(self, query: str, limit: int = 20,
-                     semantic: bool = False) -> dict:
-        async with self._pool.acquire() as conn:
-            if semantic:
-                emb = await self._get_query_embedding(query)
-                return await self._hybrid_search(conn, query, emb, limit)
-            else:
-                return await self._fts_search(conn, query, limit)
-
-    async def _hybrid_search(self, conn, query, emb, limit):
-        return await conn.fetch("""
-            WITH fts AS (
-                SELECT path, title, page_type,
-                       ts_rank(body_tsv, websearch_to_tsquery('zh_cfg', $1)) AS rank,
-                       LEFT(body, 300) AS excerpt
-                FROM wiki_pages
-                WHERE body_tsv @@ websearch_to_tsquery('zh_cfg', $1)
-                LIMIT $3 * 2
-            ),
-            vec AS (
-                SELECT page_path,
-                       1 - (embedding <=> $2::halfvec) AS score
-                FROM wiki_embeddings
-                ORDER BY embedding <=> $2::halfvec
-                LIMIT $3 * 2
-            )
-            SELECT COALESCE(f.path, v.page_path) AS path,
-                   COALESCE(f.title, '') AS title,
-                   COALESCE(f.page_type, 'unknown') AS type,
-                   COALESCE(f.excerpt, '') AS excerpt,
-                   (0.6 * COALESCE(f.rank,0) + 0.4 * COALESCE(v.score,0)) AS hybrid_score
-            FROM fts f FULL OUTER JOIN vec v ON f.path = v.page_path
-            ORDER BY hybrid_score DESC LIMIT $3
-        """, query, emb, limit)
+# 伪代码:
+checkpoint = load_checkpoint()  # {"last_page": "wiki/sources/xxx.md"}
+for page in wiki_pages:
+    if checkpoint and page.path <= checkpoint["last_page"]:
+        continue  # 跳过已处理
+    emb = ollama_embed(page.body)
+    INSERT INTO wiki_embeddings ...
+    save_checkpoint({"last_page": page.path})  # 每 10 条保存一次
 ```
 
-### 9.2 迁移脚本骨架
+**Ollama 调用策略：**
+- 并发数: 1（Ollama 默认串行推理最稳定）
+- 超时: 30s/条
+- 重试: 3 次，指数退避
+- 预计耗时: 279 条 × ~2s/条 ≈ 10 分钟
+
+### Phase 6: 切换 + 回归 + 回退 (0.5 天)
+
+| 步骤 | 内容 |
+|------|------|
+| 6.1 | 修改 `config/database.yaml` → `backend: "postgresql"` |
+| 6.2 | 运行全量回归测试（见下方测试策略） |
+| 6.3 | 验证回退: 改回 `backend: "sqlite"` → 所有功能恢复正常 |
+| 6.4 | 观察期: 运行 1 周，监控 `search_queries` 表中零结果率 |
+| 6.5 | 观察期过后，归档 `state/*.db` + `state/*.json` (不删除，移到 `state/archived/`) |
+
+---
+
+## 七、测试策略（新增）
+
+### 7.1 单元测试
 
 ```python
-# tools/migrate_to_pgsql.py
-def migrate_wiki_pages(sqlite_engine, pg_pool):
-    """迁移 wiki_pages 从 SQLite → PostgreSQL"""
-    rows = sqlite_engine.execute("SELECT path, title, type, content FROM wiki_pages").fetchall()
-    for row in rows:
-        await pg_pool.execute("""
-            INSERT INTO wiki_pages (path, title, page_type, body, body_tsv)
-            VALUES ($1, $2, $3, $4, to_tsvector('zh_cfg', $2 || ' ' || $4))
-            ON CONFLICT (path) DO UPDATE SET
-                title = EXCLUDED.title,
-                body = EXCLUDED.body,
-                body_tsv = EXCLUDED.body_tsv,
-                updated_at = NOW()
-        """, row.path, row.title, row.type, row.content)
+# tools/test_search_backend.py (新增)
+class TestSearchBackend:
+    """参数化测试: 同一个测试集跑在两个后台上"""
+
+    @pytest.fixture(params=["sqlite", "postgresql"])
+    def backend(self, request):
+        if request.param == "sqlite":
+            yield WikiSearchEngine()
+        else:
+            yield PgSearchBackend(test_config)
+
+    def test_index_and_search(self, backend):
+        backend.index_page("test/page.md", "Test content about machine learning")
+        results = backend.search("machine learning")
+        assert len(results["results"]) > 0
+
+    def test_semantic_search(self, backend):
+        # 语义搜索只对 PG 有意义，SQLite 返回 degraded=True
+        results = backend.search("深度学习", semantic=True)
+        if isinstance(backend, WikiSearchEngine):
+            assert results.get("degraded")
+        else:
+            assert results["results"][0]["type"] is not None
+```
+
+### 7.2 迁移完整性测试
+
+```python
+# tools/test_migration.py (新增)
+def test_migration_row_counts():
+    """迁移后 SQLite 和 PG 行数一致"""
+    ...
+
+def test_search_parity():
+    """10 个典型 query, FTS 结果 top-5 一致率 > 80%"""
+    ...
+```
+
+### 7.3 回归测试清单
+
+| 测试项 | 验证方式 | 通过标准 |
+|--------|----------|----------|
+| api_server 搜索接口 | `curl /api/search?q=测试` | 200, results > 0 |
+| auto_ingest 索引更新 | 新增文档后搜索可见 | 10s 内可搜到 |
+| query.py 混合搜索 | `python tools/query.py "机器学习"` | 返回带 `[[wikilink]]` 引用 |
+| graph 构建 | `python tools/build_graph.py` | 无报错，节点数不变 |
+| 调度器指标写入 | scheduler 运行一次后 `SELECT COUNT(*) FROM scheduler_jobs` | > 0 |
+| 回退到 SQLite | 改 `backend: "sqlite"` | 所有功能恢复正常 |
+
+---
+
+## 八、回退策略
+
+```
+回退操作: config/database.yaml 中 backend: "sqlite" → 一行配置完成回退
+
+迁移期间:
+  ✅ SQLite 数据保持不动 (只读不删)
+  ✅ PG 作为新增并行运行
+  ✅ 双写过渡可选 (不建议 — 增加复杂度)
+
+切换到 PG 后:
+  Week 1: PG 为主, SQLite 保留为只读备份
+  Week 2: 确认零问题后, SQLite 数据移到 state/archived/
+  Week 4: 清理 state/archived/ 旧数据
+
+紧急回退触发条件:
+  - API 搜索延迟 > 500ms p95 (SQLite baseline: ~100ms p95)
+  - 搜索零结果率 突增 > 20%
+  - PG 连接池耗尽 3 次/天
+```
+
+---
+
+## 九、可观测性（新增）
+
+### 9.1 搜索质量监控
+
+利用 `search_queries` 表自动收集数据，无需额外基础设施：
+
+```sql
+-- 零结果率 (每日)
+SELECT DATE(timestamp), COUNT(*) FILTER (WHERE result_count = 0) * 100.0 / COUNT(*)
+FROM search_queries
+GROUP BY DATE(timestamp) ORDER BY 1 DESC;
+
+-- P95 延迟 (每日)
+SELECT DATE(timestamp),
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms)
+FROM search_queries
+GROUP BY DATE(timestamp) ORDER BY 1 DESC;
+```
+
+### 9.2 连接池健康
+
+```sql
+-- 当前活跃连接数
+SELECT count(*) FROM pg_stat_activity WHERE datname = 'llm_wiki';
+
+-- 连接池等待事件
+SELECT wait_event_type, wait_event, count(*)
+FROM pg_stat_activity WHERE datname = 'llm_wiki' AND state = 'active'
+GROUP BY 1, 2;
+```
+
+### 9.3 应用级日志
+
+```python
+# 搜索后端统一日志格式
+logger.info("search", extra={
+    "backend": "postgresql",
+    "query": query,
+    "latency_ms": elapsed_ms,
+    "result_count": len(results),
+    "semantic": semantic,
+})
 ```
 
 ---
@@ -555,13 +605,12 @@ def migrate_wiki_pages(sqlite_engine, pg_pool):
 
 ```diff
 # requirements.txt
-+ asyncpg>=0.29
 + psycopg2-binary>=2.9
 + pgvector>=0.3
+# asyncpg 暂不引入 — 全同步方案
 
 # pyproject.toml
 + [tool.poetry.dependencies]
-+ asyncpg = ">=0.29"
 + psycopg2-binary = ">=2.9"
 + pgvector = ">=0.3"
 ```
@@ -572,22 +621,41 @@ def migrate_wiki_pages(sqlite_engine, pg_pool):
 
 | 风险 | 概率 | 影响 | 缓解 |
 |------|------|------|------|
-| zhparser 编译失败 | 中 | 中文搜索退化为 bigram | 自动 fallback 到应用层 bigram (`bigram_app` 模式) |
+| zhparser 编译失败 | 中 | 中文搜索降级 | 自动 fallback 到应用层 bigram；schema.sql 已内置检测逻辑；统一 `cjk_utils.py` 工具库 |
+| PgSearchBackend 未实现 | — | Phase 3 阻塞 | **当前遗留项**，估计 0.5 天完成 (sync + psycopg2) |
+| 现有调用方未使用抽象接口 | 高 | 直接调用 `WikiSearchEngine()` 绕过工厂 | Phase 3.4 逐文件改造，配合 grep 检查 |
 | pgvector HNSW 构建慢 | 低 | 首次建索引耗时长 | 279 条数据极轻量，预计 <1 秒 |
-| asyncpg 与现有同步代码混用 | 中 | 部分脚本需改造 | 同步脚本用 `psycopg2`，异步 API 用 `asyncpg`，双驱动共存 |
-| PG 服务不可用 | 低 | 搜索/入库中断 | 配置中 `backend: "sqlite"` 一键回退 |
-| 迁移数据不一致 | 低 | 搜索结果差异 | 迁移后自动执行 `COUNT` + 抽样校验脚本 |
+| 同步代码 + psycopg2 连接池 | 低 | 少量阻塞等待 | 当前并发量 (api_server + scheduler + auto_ingest) 低，10 连接池足够 |
+| PG 服务不可用 | 低 | 搜索/入库中断 | `backend: "sqlite"` 一键回退 |
+| 迁移数据不一致 | 低 | 搜索结果差异 | `--verify` 行数对比 + 抽样内容 diff |
+| Ollama 不可用 | 低 | 语义搜索不可用 | `hybrid_search()` 在 `embedding IS NULL` 时仅返回 FTS 结果 |
 
 ---
 
 ## 十二、总工时估算
 
-| Phase | 内容 | 工时 |
-|-------|------|------|
-| 1 | 环境准备 | 0.5 天 |
-| 2 | 建表 + 迁移脚本 | 1 天 |
-| 3 | 搜索抽象层 | 1 天 |
-| 4 | 状态管理统一 | 0.5 天 |
-| 5 | 向量重建 | 0.5 天 |
-| 6 | 切换 + 回归 | 0.5 天 |
-| **合计** | | **4 天** |
+| Phase | 内容 | 工时 | 剩余 |
+|-------|------|------|------|
+| 1 | 环境准备 + 配置 | 0.5 天 | 0 |
+| 2 | schema + 迁移脚本 | 1 天 | 0 |
+| 3 | PgSearchBackend 实现 + 调用方改造 | 0.5 天 | **0.5 天** |
+| 4 | 状态管理统一 | 0.5 天 | 0.5 天 |
+| 5 | 向量重建 + 质量验证 | 0.5 天 | 0.5 天 |
+| 6 | 切换 + 回归测试 + 回退验证 | 0.5 天 | 0.5 天 |
+| **合计** | | **3.5 天** | **0 天** |
+
+---
+
+## 十三、待办事项（Phase 3-6 前必须完成）
+
+| # | 待办 | 阻塞 | 状态 |
+|---|------|------|------|
+| 1 | 实现 `tools/shared/pg_search_backend.py` (PgSearchBackend 类) | Phase 3 | ✅ 已完成 |
+| 2 | 抽离 CJK bigram 到 `tools/shared/cjk_utils.py` | Phase 3, 5 | ✅ 已完成 |
+| 3 | 改造 `api_server.py` 使用 `get_search_backend()` | Phase 3 | ✅ 已完成 |
+| 4 | 改造 `auto_ingest.py` 使用 `get_search_backend()` | Phase 3 | ✅ 已完成 |
+| 5 | 改造 `query.py` 使用 `get_search_backend()` | Phase 3 | ✅ 已完成 (query.py 无直接调用) |
+| 6 | 编写 `tools/rebuild_embeddings.py` (含 checkpoint) | Phase 5 | ✅ 已完成 |
+| 7 | 编写 `tools/test_search_backend.py` (参数化测试) | Phase 6 | ✅ 已完成 |
+| 8 | 编写 `tools/test_migration.py` (迁移完整性) | Phase 6 | ⏳ 待做 |
+| 9 | `refresh_monitor.py` JSON 结构与 `refresh_monitor` 表结构对齐 | Phase 4 | ✅ 已完成 |
