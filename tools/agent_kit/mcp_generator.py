@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,8 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def _escape_py_string(s: str) -> str:
-    """Escape a string for safe embedding in Python triple-quoted source."""
-    return s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+    """Escape a string for safe embedding in Python source code strings."""
+    return (
+        s.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+        .replace("\x00", "\\x00")
+    )
 
 
 def generate_mcp_server(
@@ -280,7 +288,7 @@ def _generate_mcp_main(pages: dict[str, WikiPage], output_dir: Path) -> None:
             continue
         type_plural = _PLURAL.get(page["type"], page["type"] + "s")
         uri = f"wiki://{type_plural}/{slug}"
-        func_name = f"resource_{slug.replace('-', '_')}"
+        func_name = f"resource_{re.sub(r'[^a-zA-Z0-9_]', '_', slug)}"
         # page['path'] is 'wiki/concepts/X.md' relative to repo_root;
         # read_wiki_page expects path relative to wiki/ directory
         wiki_rel_path = page["path"].removeprefix("wiki/")

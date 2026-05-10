@@ -8,7 +8,7 @@ source_file: raw/uploads/11_用户画像系统.md
 
 ## Summary
 
-用户画像系统是[[MainFundSelection|主力选股系统]]平台的用户行为分析与个性化服务引擎，通过5个并行收集器采集用户在股票分析、持仓、选股、板块分析和龙虎榜分析等维度的行为数据，利用[[LLM]]（如[[DeepSeek]]、[[Qwen]]、[[Kimi]]、[[GLM]]）生成用户的投资风格画像、能力评估和个性化标签，并支持关注股票的自动同步管理。
+用户画像系统是[[MainFundSelection|主力选股系统]]平台的用户行为分析与个性化服务引擎，通过5个并行收集器采集用户在股票分析、持仓、选股、板块分析和龙虎榜分析等维度的行为数据，利用LLM（如[[DeepSeek]]、[[Qwen]]、[[Kimi]]、[[GLM]]）生成用户的投资风格画像、能力评估和个性化标签，并支持关注股票的自动同步管理。
 
 ## Key Claims
 
@@ -27,7 +27,7 @@ source_file: raw/uploads/11_用户画像系统.md
 ## Connections
 
 - [[MainFundSelection]] — 主力选股系统为该画像系统的重要数据源之一
-- [[LLM]] — 使用[[DeepSeek]]、[[Qwen]]、[[Kimi]]、[[GLM]]等大模型进行用户行为分析和画像生成
+- LLM — 使用[[DeepSeek]]、[[Qwen]]、[[Kimi]]、[[GLM]]等大模型进行用户行为分析和画像生成
 - [[StockSelectionStrategy]] — 画像系统可用于推荐匹配用户风险偏好的选股策略
 - [[RiskManagement]] — 能力评估包含风控评分（risk_control_score）
 - [[MoneyFlowStrategy]] — 龙虎榜分析收集器关注游资类型，与资金流策略相关

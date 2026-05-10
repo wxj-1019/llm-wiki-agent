@@ -29,7 +29,7 @@ last_updated: 2026-05-08
 ## 支持的模型提供商
 
 - [[Anthropic]]（默认）
-- [[OpenAI]] 兼容（[[DeepSeek]]、Kimi、GLM、[[Qwen]]、[[Ollama]] 等）
+- [[OpenAI]] 兼容（[[DeepSeek]]、Kimi、GLM、[[Qwen]]、Ollama 等）
 - AWS Bedrock
 - Google Vertex
 - Anthropic Foundry

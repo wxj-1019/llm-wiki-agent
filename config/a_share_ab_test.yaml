@@ -1,0 +1,57 @@
+# Large-scale A-Share A/B Test Sources
+# Tests: trafilatura vs Scrapling vs Playwright+Scrapling
+urls:
+  # 新闻门户
+  - url: "https://finance.eastmoney.com/a/202605093731914918.html"
+    name: "东财-个股新闻"
+    tags: [news, eastmoney]
+  - url: "https://finance.sina.com.cn/stock/"
+    name: "新浪-股票频道"
+    tags: [portal, sina]
+  - url: "https://www.cls.cn/depth"
+    name: "财联社-深度"
+    tags: [news, cls]
+  - url: "https://www.cls.cn/detail/2367067"
+    name: "财联社-文章详情"
+    tags: [news, cls]
+
+  # 交易所/监管
+  - url: "http://www.sse.com.cn/"
+    name: "上交所"
+    tags: [exchange, official]
+  - url: "http://www.szse.cn/"
+    name: "深交所"
+    tags: [exchange, official]
+
+  # 数据平台
+  - url: "https://data.eastmoney.com/stock/"
+    name: "东财-数据中心"
+    tags: [data, eastmoney]
+  - url: "https://quote.eastmoney.com/concept/"
+    name: "东财-概念板块"
+    tags: [data, eastmoney]
+
+  # 社区/研究
+  - url: "https://www.stcn.com/article/detail/3900141.html"
+    name: "证券时报-文章详情"
+    tags: [news, official]
+  - url: "https://www.gelonghui.com/"
+    name: "格隆汇"
+    tags: [community, research]
+
+  # 券商研报
+  - url: "https://data.eastmoney.com/report/stock.jshtml"
+    name: "东财-研报中心"
+    tags: [research, report]
+
+  # 宏观经济
+  - url: "http://www.stats.gov.cn/"
+    name: "国家统计局"
+    tags: [macro, official]
+
+settings:
+  timeout: 30
+  request_delay: 2
+  max_retries: 3
+  content_min_length: 200
+  use_browser: true

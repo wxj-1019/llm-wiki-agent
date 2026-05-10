@@ -51,8 +51,10 @@ try:
     from tools.shared.wiki import (
         read_file,
         all_wiki_pages,
+        all_wiki_page_stems,
         strip_frontmatter,
         extract_frontmatter_title,
+        extract_wikilinks,
     )
 except ImportError:
     def read_file(path: Path) -> str:
@@ -64,6 +66,9 @@ except ImportError:
             if p.name not in exclude and ".agent" not in p.parts:
                 yield p
 
+    def all_wiki_page_stems() -> set[str]:
+        return {p.stem.lower() for p in all_wiki_pages()}
+
     def strip_frontmatter(content: str) -> str:
         if content.startswith("---"):
             match = re.search(r"^---\s*$", content[3:], re.MULTILINE)
@@ -74,6 +79,9 @@ except ImportError:
     def extract_frontmatter_title(content: str) -> str:
         match = re.search(r'^title:\s*["\']?(.+?)["\']?\s*$', content, re.MULTILINE)
         return match.group(1).strip() if match else ""
+
+    def extract_wikilinks(content: str) -> list[str]:
+        return re.findall(r'\[\[([^\]]+)\]\]', content)
 
 
 try:
@@ -101,24 +109,6 @@ except ImportError:
         else:
             new_content = entry_text + "\n\n" + existing
         LOG_FILE.write_text(new_content, encoding="utf-8")
-
-
-# ── Wikilink helpers ────────────────────────────────────────────────
-
-def extract_wikilinks(content: str) -> list[str]:
-    """Extract all [[WikiLink]] targets from page content.
-
-    Handles both [[PageName]] and [[PageName|display alias]] formats.
-    """
-    return re.findall(r'\[\[([^\]]+)\]\]', content)
-
-
-def all_wiki_page_stems() -> set[str]:
-    """Return set of all wiki page stems (case-insensitive)."""
-    pages = set()
-    for p in all_wiki_pages():
-        pages.add(p.stem.lower())
-    return pages
 
 
 # Section mapping for auto-indexing

@@ -39,15 +39,15 @@ source_file: raw/uploads/02_股票数据服务.md
 - [[大盘指数服务]] — A股8只主要指数的实时数据服务
 - [[大盘云图]] — Treemap 涨跌云图可视化
 - [[板块策略数据服务]] — 行业/概念行情、资金流向、北向资金等
-- [[市场识别]] — 智能区分A股/港股/美股市场
+- 市场识别 — 智能区分A股/港股/美股市场
 - [[价格监控与预警系统]] — 实时行情数据源供预警系统使用
 - [[Redis]] — 缓存层核心组件
 - [[PostgreSQL]] — 持久化存储
 - [[AKShare]] — 备用源
 - [[TusharePro]] — 付费数据源
 - [[统一数据源管理器]] — 数据获取门面
-- [[AutoTitleConvert]] — 自动代码转换功能
-- [[TradeCalendar]] — 交易日历集成
+- AutoTitleConvert — 自动代码转换功能
+- TradeCalendar — 交易日历集成
 
 ## Contradictions
 

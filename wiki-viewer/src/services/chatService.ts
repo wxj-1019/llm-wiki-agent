@@ -1,3 +1,15 @@
+async function safeJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) {
+    throw new Error(`Backend returned empty response (status ${res.status}). Is the API server running?`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Backend returned non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
 export interface WikiChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -149,8 +161,8 @@ export async function searchWiki(
     const err = await res.text();
     throw new Error(err || `Search failed: ${res.status}`);
   }
-  const data = await res.json();
-  const results: WikiSearchResult[] = (data.results || []).map((r: { id?: string; path?: string; preview?: string }) => ({
+  const data = await safeJson<{ results?: Array<{ id?: string; path?: string; preview?: string }> }>(res);
+  const results: WikiSearchResult[] = (data.results || []).map((r) => ({
     title: r.id || r.path || 'Untitled',
     excerpt: r.preview || '',
     path: r.path || r.id || '',
@@ -176,5 +188,5 @@ export async function generateFromKnowledge(
     const err = await res.text();
     throw new Error(err || `Generate failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }

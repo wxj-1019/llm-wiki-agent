@@ -1,6 +1,18 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { isValidFilePath } from '@/lib/validation';
 
+async function safeJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) {
+    throw new Error(`Backend returned empty response (status ${res.status}). Is the API server running?`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Backend returned non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -102,7 +114,7 @@ export async function readAgentKitFile(path: string): Promise<AgentKitFileConten
   if (!isValidFilePath(path)) throw new Error('Invalid file path');
   const res = await fetchWithTimeout(`/api/agent-kit/read-file?path=${encodeURIComponent(path)}`, { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to read file: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export async function saveAgentKitFile(
@@ -116,7 +128,7 @@ export async function saveAgentKitFile(
     body: JSON.stringify({ path, content }),
   });
   if (!res.ok) throw new Error(`Failed to save file: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export interface KnowledgeSource {
@@ -150,5 +162,5 @@ export async function generateFromKnowledge(
     const err = await res.text();
     throw new Error(err || `Generation failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }

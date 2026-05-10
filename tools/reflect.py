@@ -352,6 +352,58 @@ created: {date.today().isoformat()}
     return reflection
 
 
+def suggest_templates(dry_run: bool = False) -> list[dict]:
+    """Analyze successful ingestions and suggest templates for common patterns.
+
+    Returns list of suggested templates with domain, confidence, and template content.
+    """
+    templates = []
+
+    sources_dir = WIKI_DIR / "sources"
+    if not sources_dir.exists():
+        return templates
+
+    tag_counts: dict[str, int] = {}
+    tag_patterns: dict[str, list[str]] = {}
+
+    for md_file in sources_dir.glob("*.md"):
+        try:
+            content = md_file.read_text(encoding="utf-8")[:2000]
+            if content.startswith("---"):
+                end_idx = content.find("\n---", 3)
+                if end_idx > 0:
+                    block = content[3:end_idx]
+                    for line in block.split("\n"):
+                        line_s = line.strip()
+                        if line_s.startswith("tags:"):
+                            tag_str = line_s[5:].strip().strip("[]")
+                            for tag in tag_str.split(","):
+                                tag = tag.strip().strip('"').strip("'")
+                                if tag:
+                                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                                    tag_patterns.setdefault(tag, []).append(md_file.stem)
+        except (OSError, UnicodeDecodeError):
+            continue
+
+    for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1]):
+        if count >= 3:
+            confidence = min(0.95, 0.5 + count * 0.05)
+            templates.append({
+                "domain": tag,
+                "confidence": round(confidence, 2),
+                "sample_count": count,
+                "samples": tag_patterns[tag][:5],
+                "suggestion": f"Consider creating a template for '{tag}' domain ({count} similar sources found)",
+            })
+
+    if not dry_run and templates:
+        print(f"\nSuggested {len(templates)} templates:")
+        for t in templates:
+            print(f"  [{t['confidence']:.0%}] {t['domain']}: {t['suggestion']}")
+
+    return templates
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Post-ingest reflection and learning extraction"

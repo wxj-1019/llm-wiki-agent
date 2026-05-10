@@ -1,6 +1,18 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { isValidFilePath } from '@/lib/validation';
 
+async function safeJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) {
+    throw new Error(`Backend returned empty response (status ${res.status}). Is the API server running?`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Backend returned non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
 export interface AgentKitStatus {
   generated: boolean;
   last_run: string | null;
@@ -37,7 +49,7 @@ export interface GenerateResult {
 export async function fetchAgentKitStatus(): Promise<AgentKitStatus> {
   const res = await fetchWithTimeout('/api/agent-kit/status', { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export async function generateAgentKit(options: GenerateOptions): Promise<GenerateResult> {
@@ -47,7 +59,7 @@ export async function generateAgentKit(options: GenerateOptions): Promise<Genera
     body: JSON.stringify(options),
   });
   if (!res.ok) throw new Error(`Generation request failed: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export async function fetchAgentKitFiles(path: string = '', recursive: boolean = false): Promise<AgentKitFilesResponse> {
@@ -58,7 +70,7 @@ export async function fetchAgentKitFiles(path: string = '', recursive: boolean =
   const query = params.toString() ? `?${params.toString()}` : '';
   const res = await fetchWithTimeout(`/api/agent-kit/files${query}`, { timeoutMs: 10000 });
   if (!res.ok) throw new Error(`Failed to fetch files: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export function downloadAgentKitFile(path: string): void {

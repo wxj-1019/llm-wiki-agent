@@ -2,300 +2,283 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A coding agent skill.** Drop source documents into `raw/` and tell the agent to ingest them — it reads them, extracts knowledge, and builds a persistent interlinked wiki. Every new source makes the wiki richer. You never write it.
-
-> Most knowledge tools make you search your own notes. This one reads everything you've collected and writes a structured wiki that compounds over time — cross-references already built, contradictions already flagged, synthesis already done.
+**Agent-driven knowledge management.** Drop sources into `raw/`, tell the agent to ingest them — it extracts entities, concepts, and cross-references, building a structured interlinked wiki that compounds with every new source. Comes with a React frontend, full-text search, knowledge graph visualization, automation pipeline, and MCP/Skill export.
 
 ```
 ingest raw/papers/attention-is-all-you-need.md
+query: what are the main approaches to reducing hallucination?
+health
+build the knowledge graph
 ```
 
+## What's Inside
+
 ```
-wiki/
-├── index.md          catalog of all pages — updated on every ingest
-├── log.md            append-only record of every operation
-├── overview.md       living synthesis across all sources
-├── sources/          one summary page per source document
-├── entities/         people, companies, projects — auto-created
-├── concepts/         ideas, frameworks, methods — auto-created
-└── syntheses/        query answers filed back as wiki pages
-graph/
-├── graph.json        persistent node/edge data (SHA256-cached)
-└── graph.html        interactive vis.js visualization — open in any browser
+wiki/               # Agent-maintained knowledge base (plain markdown)
+  index.md           # Catalog of all pages
+  overview.md        # Living synthesis across all sources
+  log.md             # Append-only operation record
+  sources/           # One summary page per ingested document
+  entities/          # People, companies, projects — auto-created
+  concepts/          # Ideas, frameworks, methods — auto-created
+  syntheses/         # Saved query answers
+  memory/            # Agent memory ledger (persistent task sessions)
+graph/              # Knowledge graph (auto-generated)
+  graph.json         # Node/edge data with community detection
+  graph.html         # Self-contained interactive visualization
+wiki-viewer/        # React + TypeScript frontend (Vite, Tailwind CSS 4)
+tools/              # Standalone Python scripts
+  agent_kit/         # MCP/Skill generators from wiki knowledge
+  shared/            # Shared utilities (wiki ops, LLM config, graph HTML)
+  fetchers/          # External content fetchers (RSS, arXiv, GitHub, web)
+config/             # YAML configuration (LLM, scrapers, sources)
+skills/             # Generated skill packages
+mcp-servers/        # Generated MCP server packages
 ```
 
-## Install
-
-**Requires:** [Claude Code](https://claude.ai/code), [Codex](https://openai.com/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), or any agent that reads a config file.
+## Quick Start
 
 ```bash
 git clone https://github.com/SamurAIGPT/llm-wiki-agent.git
 cd llm-wiki-agent
 ```
 
-Open in your agent — no API key or Python setup needed:
+### Using Claude Code (recommended)
+
+Open the repo in Claude Code — it reads `CLAUDE.md` automatically:
 
 ```bash
-claude      # reads CLAUDE.md + .claude/commands/ (slash commands available)
-codex       # reads AGENTS.md
-opencode    # reads AGENTS.md
-gemini      # reads GEMINI.md
+claude
 ```
 
-## Usage
+Slash commands available: `/wiki-ingest`, `/wiki-query`, `/wiki-health`, `/wiki-lint`, `/wiki-graph`, `/wiki-export`, `/wiki-reflect`, `/wiki-watch`
 
-All agents understand natural language and shorthand triggers:
+Or just use plain English — the agent understands natural language triggers.
 
-```
-ingest raw/papers/my-paper.md              # ingest a markdown source
-ingest report.pdf                          # auto-converts to .md, then ingests
-ingest slides.pptx notes.docx              # batch, mixed formats
-query: what are the main themes?           # synthesize answer from wiki pages
-lint                                       # find orphans, contradictions, gaps
-build graph                                # build graph.html from all wikilinks
-```
+### Using the Python Tools Directly
 
-Plain English works too:
-```
-"Ingest this paper: raw/papers/llama2.md"
-"What does the wiki say about attention mechanisms?"
-"Check for contradictions across sources"
-"Build the knowledge graph and tell me the most connected nodes"
-```
+```bash
+pip install litellm markitdown networkx
 
-**Claude Code** also provides `/wiki-ingest`, `/wiki-query`, `/wiki-lint`, `/wiki-graph` as slash commands (via `.claude/commands/`). These are Claude Code-specific — other agents use the natural language triggers above, which work identically.
+# Core wiki operations
+python tools/ingest.py raw/my-article.md
+python tools/query.py "what are the main themes?"
+python tools/health.py --json
+python tools/lint.py
+python tools/build_graph.py --open
 
-Works with markdown, PDF, DOCX, PPTX, XLSX, HTML, TXT, CSV, JSON, XML, RST, EPUB, and more. Non-markdown files are auto-converted via [markitdown](https://github.com/microsoft/markitdown) at ingest time — no separate step needed.
-
-## What You Get
-
-**Persistent wiki** — structured markdown pages that accumulate across sessions. Unlike chat, nothing is lost.
-
-**Entity pages** — auto-created for every person, company, or project mentioned across sources. Updated each time a new source references them.
-
-**Concept pages** — auto-created for every key idea or framework. Cross-referenced to every source that discusses them.
-
-**Living overview** — `wiki/overview.md` is revised on every ingest to reflect the current synthesis across everything you've read.
-
-**Contradiction flags** — when a new source contradicts an existing claim, it's flagged at ingest time, not buried until query time.
-
-**Knowledge graph** — `graph.html` shows every wiki page as a node, every `[[wikilink]]` as an edge, and Claude-inferred implicit relationships as dotted edges. Community detection clusters related topics.
-
-**Lint reports** — orphan pages, broken links, missing entity pages, data gaps with suggested sources to fill them.
-
-## Use Cases
-
-### Research
-
-Going deep on a topic over weeks — reading papers, articles, reports.
-
-```
-/wiki-ingest raw/papers/attention-is-all-you-need.md
-/wiki-ingest raw/papers/llama2.md
-/wiki-ingest raw/papers/rag-survey.md
-
-# Wiki builds entity pages (Meta AI, Google Brain) and
-# concept pages (Attention, RLHF, Context Window) automatically.
-
-/wiki-query "What are the main approaches to reducing hallucination?"
-/wiki-query "How has context window size evolved across models?"
-
-/wiki-lint
-# → "No sources on mixture-of-experts — consider the Mixtral paper"
+# Or use the unified CLI
+python tools/cli.py ingest raw/my-article.md
+python tools/cli.py search "transformer models"
+python tools/cli.py server --port 8000
 ```
 
-By the end you have a structured, interlinked reference — not a folder of PDFs you'll never reopen.
+### Using the Web Frontend
 
----
+```bash
+# Start both servers (API + frontend)
+python start_servers.py
+# API → http://127.0.0.1:8000
+# Frontend → http://localhost:3000
 
-### Reading a Book
-
-File each chapter as you go. Build out pages for characters, themes, arguments.
-
-```
-/wiki-ingest raw/book/chapter-01.md
-/wiki-ingest raw/book/chapter-02.md
-
-# Wiki creates entity and theme pages automatically.
-
-/wiki-query "How has the protagonist's motivation evolved?"
-/wiki-query "What contradictions exist in the author's argument so far?"
-
-/wiki-graph   # → graph.html shows every character/theme and how they connect
+# Or start them separately
+python tools/api_server.py &          # API on port 8000
+cd wiki-viewer && npm run dev         # Dev server with HMR on port 3000
 ```
 
-Think fan wikis like Tolkien Gateway — built as you read, with the agent doing all the cross-referencing.
+The frontend provides: wiki browsing with `[[wikilink]]` navigation, full-text search, interactive knowledge graph, Shiki syntax-highlighted markdown, i18n (en/zh-CN), and PWA offline support.
 
----
+## Core Capabilities
 
-### Personal Knowledge Base
+### Ingest Pipeline
 
-Track goals, health, habits, self-improvement — file journal entries, articles, podcast notes.
+Drop files into `raw/` — the agent converts, extracts, and cross-references automatically:
 
-```
-/wiki-ingest raw/journal/2026-01-week1.md
-/wiki-ingest raw/articles/huberman-sleep-protocol.md
-/wiki-ingest raw/articles/atomic-habits-summary.md
+- **Multi-format**: Markdown, PDF, DOCX, PPTX, XLSX, HTML, CSV, JSON, XML, RST, EPUB, IPYNB, and more — auto-converted via [markitdown](https://github.com/microsoft/markitdown)
+- **Entity extraction**: Auto-creates pages for people, companies, projects mentioned across sources
+- **Concept extraction**: Auto-creates pages for ideas, frameworks, methods
+- **Contradiction flags**: New sources that conflict with existing claims are flagged at ingest time
+- **Living synthesis**: `wiki/overview.md` is revised on every ingest
 
-/wiki-query "What patterns show up in my journal entries about energy?"
-/wiki-query "What habits have I tried and what was the outcome?"
-```
+### Query & Synthesis
 
-The wiki builds a structured picture over time. Concepts like "Sleep", "Exercise", "Deep Work" accumulate evidence from every source filed.
+Ask natural language questions — the agent reads relevant wiki pages and synthesizes answers with inline citations as `[[wikilinks]]`. Answers can be saved as synthesis pages that compound like any other wiki content.
 
----
+### Knowledge Graph
 
-### Business / Team Intelligence
+Two-pass build via `tools/build_graph.py`:
 
-Feed in meeting transcripts, project docs, customer calls.
+1. **Deterministic** — parses all `[[wikilinks]]` → `EXTRACTED` edges
+2. **Semantic** — LLM infers implicit relationships → `INFERRED` edges with confidence scores
 
-```
-/wiki-ingest raw/meetings/q1-planning-transcript.md
-/wiki-ingest raw/docs/product-roadmap-2026.md
-/wiki-ingest raw/calls/customer-interview-acme.md
+Includes Louvain community detection, SHA256 caching (only changed pages reprocess), and a self-contained `graph.html` visualization. Use `--report` for graph health analysis (orphan detection, god nodes, fragile bridges, phantom hubs).
 
-/wiki-query "What feature requests have come up most across customer calls?"
-/wiki-query "What decisions were made in Q1 and what was the rationale?"
+### Full-Text Search
 
-/wiki-lint
-# → "Project X mentioned in 5 pages but no dedicated page"
-# → "Roadmap contradicts customer interview on priority of feature Y"
-```
+SQLite FTS5 engine with porter stemming and unicode61 tokenization (`tools/search_engine.py`). Powers the frontend search and MCP server. Optional semantic search via Ollama embeddings.
 
-The wiki stays current because the agent does the maintenance no one wants to do.
+### Health & Lint
 
----
+| Tool | Scope | LLM Cost | Frequency |
+|---|---|---|---|
+| `health.py` | Structural integrity (empty files, index sync, log coverage) | Zero | Every session |
+| `lint.py` | Content quality (orphans, broken links, contradictions, gaps) | Tokens | Every 10-15 ingests |
 
-### Competitive Analysis
+### Automation Pipeline
 
-Track a company, market, or technology over time.
+```bash
+# One-shot: run each step
+python tools/fetchers/rss_fetcher.py      # RSS/Atom → raw-inbox
+python tools/fetchers/arxiv_fetcher.py    # arXiv API → raw-inbox
+python tools/fetchers/github_fetcher.py   # GitHub releases → raw-inbox
+python tools/fetchers/web_fetcher.py      # Web scraping → raw-inbox
+python tools/batch_compiler.py            # Group into weekly batches
+python tools/batch_ingest.py              # Ingest batches into wiki
+python tools/archive_stale.py             # Archive expired source pages
 
-```
-/wiki-ingest raw/competitors/openai-announcements.md
-/wiki-ingest raw/market/ai-funding-report-q1.md
-
-/wiki-query "How do OpenAI and Anthropic differ on safety approach?"
-/wiki-query "Which companies announced multimodal models in the last 6 months?"
-/wiki-query "Competitive landscape summary as of today"
-# → agent shows the answer, then asks if you want to save it as a synthesis page
+# Or run the scheduler daemon (cross-platform)
+python tools/scheduler.py
 ```
 
-## The Graph
+Configure sources in `config/rss_sources.yaml`, `config/arxiv_sources.yaml`, `config/github_sources.yaml`, and `config/web_sources.yaml`.
 
-Two-pass build:
+### Web Scraping
 
-1. **Deterministic** — parses all `[[wikilinks]]` across wiki pages → edges tagged `EXTRACTED`
-2. **Semantic** — agent infers implicit relationships not captured by wikilinks → edges tagged `INFERRED` (with confidence score) or `AMBIGUOUS`
+LLM-powered content extraction from web pages (`tools/fetchers/web_fetcher.py` + `tools/fetchers/llm_extractor.py`). Uses trafilatura for fast extraction, falls back to LLM extraction with configurable prompts, quality thresholds, and rate limiting (`config/scraper_config.yaml`).
 
-Louvain community detection clusters nodes by topic. SHA256 cache means only changed pages are reprocessed. Output is a self-contained `graph.html` — no server, opens in any browser.
+### File Watcher
 
-## CLAUDE.md / AGENTS.md
+```bash
+python tools/watcher.py           # foreground — watch raw/ and auto-ingest
+python tools/watcher.py --daemon  # background (detached)
+python tools/watcher.py --once    # process existing files then exit
+```
 
-The schema file tells the agent how to maintain the wiki — page formats, ingest/query/lint/graph workflows, naming conventions. This is the key config file. Edit it to customize behavior for your domain.
+Debounces rapid file events and tracks file hashes to avoid re-ingesting unchanged files.
 
-| Agent | Schema file |
+### Agent Memory
+
+Persistent task memory across sessions (`tools/memory.py`):
+
+```bash
+python tools/memory.py start "Refactor auth module" --target wiki/concepts/Auth.md
+python tools/memory.py update S-20260509-001 --notes "Added OAuth2 flow diagram"
+python tools/memory.py finish S-20260509-001 --summary "Completed auth refactor"
+python tools/memory.py list
+```
+
+### Post-Ingest Reflection
+
+```bash
+python tools/reflect.py                   # analyze last ingest pattern
+python tools/reflect.py --last 3          # analyze last 3 ingests
+python tools/reflect.py --suggest-skills  # suggest new skill extraction
+```
+
+### MCP & Skill Export
+
+Export wiki knowledge as self-contained agent capability packages:
+
+```bash
+python tools/export_agent_kit.py          # → agent-kit/ (MCP server + Kimi Skill)
+```
+
+The generated MCP server exposes wiki pages as Resources, search as Tools, and common queries as Prompts — compatible with Claude Desktop, Cursor, and VS Code.
+
+### Unified CLI
+
+```bash
+python tools/cli.py ingest <path>
+python tools/cli.py search <query>
+python tools/cli.py health --save
+python tools/cli.py lint --save
+python tools/cli.py build-graph --open
+python tools/cli.py memory start "<goal>"
+python tools/cli.py context build "<goal>"
+python tools/cli.py server --port 8000
+python tools/cli.py watch --daemon
+```
+
+## Testing
+
+```bash
+# Python backend
+python tools/test_api.py                  # API smoke tests
+python -m pytest tools/test_api_pytest.py -v
+python -m pytest tools/test_p1_acceptance.py -v
+
+# Frontend
+cd wiki-viewer
+npx vitest run                            # run once
+npx vitest                                # watch mode
+```
+
+## Configuration
+
+### LLM (`config/llm.yaml`, gitignored)
+
+```yaml
+model: deepseek/deepseek-chat
+model_fast: deepseek/deepseek-chat
+provider: deepseek
+api_key: sk-xxx
+```
+
+All tools read from this file via `tools/shared/llm.py`. Environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`) override the config file.
+
+### Web Scraper (`config/scraper_config.yaml`)
+
+Controls LLM extraction prompts, quality thresholds (`min_content_length`, `llm_min_quality_score`), rate limiting (`max_concurrent`, `requests_per_minute`), and browser settings for JavaScript-heavy pages.
+
+## Tech Stack
+
+| Layer | Technology |
 |---|---|
-| Claude Code | `CLAUDE.md` |
-| Codex / OpenCode | `AGENTS.md` |
-| Gemini CLI | `GEMINI.md` |
+| **Language** | Python 3.10–3.13 |
+| **LLM Gateway** | litellm (~1.83.10) — Claude, OpenAI, Gemini, DeepSeek |
+| **Graph Analysis** | NetworkX (~3.6.1) — Louvain community detection |
+| **Search** | SQLite FTS5 (full-text) + optional Ollama embeddings (semantic) |
+| **MCP/Skills** | FastMCP + Jinja2 sandbox |
+| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS 4 |
+| **Frontend Libraries** | vis-network, Zustand, fuse.js, Shiki, react-markdown, i18next, PWA |
+| **Automation** | schedule + feedparser + requests + trafilatura |
+| **Conversion** | markitdown[all] (20+ formats) |
 
-## What Makes This Different from RAG
+## Obsidian Integration
+
+The wiki uses `[[wikilinks]]` throughout — open `wiki/` as an Obsidian vault for a naturally growing knowledge graph.
+
+```bash
+# Symlink wiki/ into your Obsidian vault
+ln -sfn ~/llm-wiki-agent/wiki ~/your-obsidian-vault/wiki
+```
+
+**Recommended Obsidian settings:**
+- **Graph View:** Filter out `index.md` and `log.md` (`-file:index.md -file:log.md`)
+- **Dataview:** Query the YAML frontmatter the agent injects (`type: source`, `tags: [diary]`)
+
+## Why Not RAG?
 
 | RAG | LLM Wiki Agent |
 |---|---|
 | Re-derives knowledge every query | Compiles once, keeps current |
-| Raw chunks as retrieval unit | Structured wiki pages |
-| No cross-references | Cross-references pre-built |
+| Raw chunks as retrieval unit | Structured wiki pages with frontmatter |
+| No cross-references | Cross-references pre-built via `[[wikilinks]]` |
 | Contradictions surface at query time (maybe) | Flagged at ingest time |
-| No accumulation | Every source makes the wiki richer |
+| No accumulation between sessions | Every source compounds |
 
-## Obsidian Integration
+## Optional Dependencies
 
-The wiki is designed to be browsed seamlessly in [Obsidian](https://obsidian.md). Since the agent maintains consistent `[[wikilinks]]`, you get a naturally growing knowledge graph in your vault.
-
-### Vault Symlink Pattern
-If you want to keep the LLM Wiki Agent repository separate from your main personal vault, use symlinks:
-1. Keep your working agent repository at e.g., `~/llm-wiki-agent`
-2. Create a symlink from your main Obsidian vault:
-   ```bash
-   ln -sfn ~/llm-wiki-agent/wiki ~/your-obsidian-vault/wiki
-   ```
-3. Use the [Obsidian Web Clipper](https://obsidian.md/clipper) or write directly to `raw/` in the agent repo to queue items for ingestion.
-
-> **Note:** If you ever move your local repo directory, remember to update the symlink, otherwise the `wiki/` directory will appear missing in Obsidian.
-
-### Recommended .obsidian Config
-- **Graph View:** Filter out `index.md` and `log.md` (e.g. `-file:index.md -file:log.md`) to avoid them becoming gravity wells in your Obsidian graph.
-- **Dataview:** Use the community plugin [Dataview](https://blacksmithgu.github.io/obsidian-dataview/) to query the YAML frontmatter the agent automatically injects (e.g., `type: source`, `tags: [diary]`).
-
-## Multi-Format Ingest
-
-Drop any supported file directly into `ingest` — no separate conversion step needed:
-
-```bash
-# These all work — auto-converted at ingest time
-ingest report.pdf
-ingest meeting-notes.docx
-ingest slides.pptx
-ingest data.xlsx
-ingest page.html
-ingest raw/mixed-folder/          # recursively finds all supported files
-```
-
-**Supported formats:**
-`.md` `.pdf` `.docx` `.pptx` `.xlsx` `.xls` `.html` `.htm` `.txt` `.csv` `.json` `.xml` `.rst` `.rtf` `.epub` `.ipynb` `.yaml` `.yml` `.tsv` `.wav` `.mp3`
-
-Non-markdown files are auto-converted via [markitdown](https://github.com/microsoft/markitdown). Use `--no-convert` to skip auto-conversion and process only `.md` files.
-
-### arXiv Papers (Advanced)
-
-For arXiv papers, use `tools/pdf2md.py` for higher-fidelity conversion:
-
-```bash
-python tools/pdf2md.py 2401.12345                      # by arXiv ID
-python tools/pdf2md.py https://arxiv.org/abs/2401.12345 # by URL
-python tools/pdf2md.py paper.pdf --backend marker       # complex multi-column PDFs
-```
-
-Then ingest the resulting `.md`:
-```
-ingest raw/papers/my-paper.md
-```
-
-### Batch Directory Conversion (Advanced)
-
-To pre-convert an entire directory (useful for bulk imports):
-```bash
-python tools/file_to_md.py --input_dir raw/imports/
-python tools/file_to_md.py --input_dir raw/imports/ --delete_source  # remove originals
-```
-
-### Optional Dependencies
-
-| Package | Install | Used for |
-|---|---|---|
-| [markitdown](https://github.com/microsoft/markitdown) | `pip install markitdown` | Auto-conversion of non-.md files (required for multi-format ingest) |
-| [arxiv2md](https://github.com/ryansingman/arxiv2md) | `pip install arxiv2markdown` | arXiv papers via structured source |
-| [Marker](https://github.com/VikParuchuri/marker) | `pip install marker-pdf` | Complex academic PDFs with multi-column layouts |
-| [PyMuPDF4LLM](https://github.com/pymupdf/RAG) | `pip install pymupdf4llm` | Fast PDF extraction (no GPU needed) |
-| [tqdm](https://github.com/tqdm/tqdm) | `pip install tqdm` | Progress bar for batch directory conversion |
-
-## Tips
-
-- Just drop files (PDF, DOCX, etc.) into `raw/` and `ingest` them — conversion is automatic
-- For arXiv papers, `tools/pdf2md.py` gives higher-fidelity output than generic markitdown conversion
-- Query answers are shown first — the agent then asks if you want to file them as synthesis pages. Your explorations compound just like ingested sources
-- The wiki is a git repo — version history for free
-- Standalone Python scripts in `tools/` work without a coding agent (require `ANTHROPIC_API_KEY`)
-
-## Tech Stack
-
-NetworkX + Louvain + Claude + vis.js. No server, no database, runs entirely locally. Everything is plain markdown files.
-
-## Related
-
-- [graphify](https://github.com/safishamsi/graphify) — graph-based knowledge extraction skill (inspiration for the graph layer)
-- [Vannevar Bush's Memex (1945)](https://en.wikipedia.org/wiki/Memex) — the original vision this resembles
+| Package | Used for |
+|---|---|
+| `markitdown[all]` | Auto-conversion of non-.md files |
+| `networkx` | Louvain community detection in graph |
+| `feedparser` | RSS/Atom feed fetching |
+| `trafilatura` | Web page content extraction |
+| `mcp` | MCP server (FastMCP) |
+| `jinja2` | Skill template rendering |
+| `pytest` | Python test runner |
+| `Pillow` | Image description (`multimodal_ingest.py`) |
 
 ## License
 

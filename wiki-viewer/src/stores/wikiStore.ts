@@ -3,6 +3,11 @@ import { fetchGraphData, fetchIndexEtag } from '@/services/dataService';
 import { initSearch } from '@/lib/search';
 import type { GraphData, GraphNode } from '@/types/graph';
 
+interface PageCacheEntry {
+  content: string;
+  fetchedAt: number;
+}
+
 interface WikiState {
   graphData: GraphData | null;
   theme: 'light' | 'dark' | 'system';
@@ -14,6 +19,9 @@ interface WikiState {
   favorites: string[];
   commandPaletteOpen: boolean;
   apiConnected: boolean;
+  pageCache: Map<string, PageCacheEntry>;
+  isOffline: boolean;
+  heartbeatFailures: number;
   initialize: () => Promise<void>;
   refreshGraphData: () => Promise<void>;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -29,6 +37,10 @@ interface WikiState {
   setReadingProgress: (pageId: string, progress: number) => void;
   stopPolling: () => void;
   checkApiHealth: () => Promise<boolean>;
+  getCachedPage: (slug: string) => string | null;
+  setCachedPage: (slug: string, content: string) => void;
+  preloadLinkedPages: (content: string) => void;
+  startHeartbeat: () => void;
 }
 
 function getSystemTheme(): 'light' | 'dark' {
@@ -97,12 +109,16 @@ function persistState(state: WikiState) {
   _persistTimer = setTimeout(() => writePersist(state), 500);
 }
 
+const PAGE_CACHE_MAX = 100;
+const PAGE_CACHE_TTL = 5 * 60 * 1000;
+
 const MAX_READING_PROGRESS = 100;
 const _readingTimestamps: Record<string, number> = {};
 
 let _initPromise: Promise<void> | null = null;
 let _pollTimer: ReturnType<typeof setTimeout> | null = null;
 let _persistTimer: ReturnType<typeof setTimeout> | null = null;
+let _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let _lastEtag = '0';
 let _pollFetching = false;
 let _consecutiveFailures = 0;
@@ -134,6 +150,7 @@ function _schedulePoll() {
       if (newEtag !== _lastEtag && _lastEtag !== '0') {
         const data = await fetchGraphData();
         initSearch(data.nodes);
+        _hydratePageCache(data);
         useWikiStore.setState({ graphData: data });
         saveGraphCache(data);
       }
@@ -162,6 +179,22 @@ function _startPolling() {
   _schedulePoll();
 }
 
+function _hydratePageCache(data: GraphData) {
+  const store = useWikiStore.getState();
+  const cache = new Map(store.pageCache);
+  const now = Date.now();
+  for (const node of data.nodes) {
+    if (node.markdown && !cache.has(node.label)) {
+      if (cache.size >= PAGE_CACHE_MAX) {
+        const oldest = [...cache.entries()].sort((a, b) => a[1].fetchedAt - b[1].fetchedAt)[0];
+        if (oldest) cache.delete(oldest[0]);
+      }
+      cache.set(node.label, { content: node.markdown, fetchedAt: now });
+    }
+  }
+  useWikiStore.setState({ pageCache: cache });
+}
+
 export const useWikiStore = create<WikiState>((set, get) => ({
   graphData: null,
   theme: (persisted.theme as WikiState['theme']) || 'system',
@@ -173,24 +206,27 @@ export const useWikiStore = create<WikiState>((set, get) => ({
   favorites: (persisted.favorites as string[]) || [],
   commandPaletteOpen: false,
   apiConnected: true,
+  pageCache: new Map(),
+  isOffline: false,
+  heartbeatFailures: 0,
 
   initialize: async () => {
-    stopPolling(); // Clean up any existing interval before re-initializing
+    stopPolling();
     const { graphData } = get();
     if (graphData) return;
     if (_initPromise) return _initPromise;
 
     _initPromise = (async () => {
       try {
-        // Try loading from cache first for instant render
         const cached = loadGraphCache();
         if (cached) {
           initSearch(cached.nodes);
+          _hydratePageCache(cached);
           set({ graphData: cached, loading: false });
-          // Silently refresh in background
           try {
             const data = await fetchGraphData();
             initSearch(data.nodes);
+            _hydratePageCache(data);
             set({ graphData: data, loading: false });
             saveGraphCache(data);
             const etag = await fetchIndexEtag();
@@ -206,6 +242,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
         try {
           const data = await fetchGraphData();
           initSearch(data.nodes);
+          _hydratePageCache(data);
           set({ graphData: data, loading: false });
           saveGraphCache(data);
           _startPolling();
@@ -244,10 +281,20 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     if (_initPromise) {
       try { await _initPromise; } catch { /* init failed, proceed with refresh */ }
     }
+    if (get().isOffline) {
+      const cached = loadGraphCache();
+      if (cached) {
+        initSearch(cached.nodes);
+        _hydratePageCache(cached);
+        set({ graphData: cached, loading: false });
+        return;
+      }
+    }
     set({ loading: true, error: null });
     try {
       const data = await fetchGraphData();
       initSearch(data.nodes);
+      _hydratePageCache(data);
       set({ graphData: data, loading: false });
       saveGraphCache(data);
     } catch (err) {
@@ -322,6 +369,62 @@ export const useWikiStore = create<WikiState>((set, get) => ({
       }
       return { readingProgress };
     });
+  },
+
+  getCachedPage: (slug: string) => {
+    const cache = get().pageCache;
+    const entry = cache.get(slug);
+    if (entry && Date.now() - entry.fetchedAt < PAGE_CACHE_TTL) {
+      return entry.content;
+    }
+    return null;
+  },
+
+  setCachedPage: (slug: string, content: string) => {
+    const cache = new Map(get().pageCache);
+    if (cache.size >= PAGE_CACHE_MAX) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].fetchedAt - b[1].fetchedAt)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    cache.set(slug, { content, fetchedAt: Date.now() });
+    set({ pageCache: cache });
+  },
+
+  preloadLinkedPages: (content: string) => {
+    const wikilinks = content.match(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g) || [];
+    const targets = [...new Set(wikilinks.slice(0, 5).map(l => l.slice(2, -2).split('|')[0].trim()))];
+    const cache = get().pageCache;
+    const graphData = get().graphData;
+    for (const target of targets) {
+      if (!cache.has(target)) {
+        const node = graphData?.nodes.find(n => n.label === target);
+        if (node?.markdown) {
+          setTimeout(() => {
+            get().setCachedPage(target, node.markdown);
+          }, 0);
+        }
+      }
+    }
+  },
+
+  startHeartbeat: () => {
+    if (_heartbeatTimer) return;
+    _heartbeatTimer = setInterval(async () => {
+      try {
+        const resp = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) {
+          if (get().heartbeatFailures > 0 || get().isOffline) {
+            set({ heartbeatFailures: 0, isOffline: false });
+          }
+        } else {
+          const failures = get().heartbeatFailures + 1;
+          set({ heartbeatFailures: failures, isOffline: failures >= 3 });
+        }
+      } catch {
+        const failures = get().heartbeatFailures + 1;
+        set({ heartbeatFailures: failures, isOffline: failures >= 3 });
+      }
+    }, 30000);
   },
 }));
 

@@ -8,7 +8,7 @@ source_file: raw/iteration-test.md
 
 ## Summary
 
-A minimal test document for verifying iteration behavior. It mentions [[ArtificialIntelligence]] and [[MachineLearning]] as key concepts.
+A minimal test document for verifying iteration behavior. It mentions ArtificialIntelligence and MachineLearning as key concepts.
 
 ## Key Claims
 
@@ -20,8 +20,8 @@ A minimal test document for verifying iteration behavior. It mentions [[Artifici
 
 ## Connections
 
-- [[ArtificialIntelligence]] — mentioned as a key concept
-- [[MachineLearning]] — mentioned as a key concept
+- ArtificialIntelligence — mentioned as a key concept
+- MachineLearning — mentioned as a key concept
 
 ## Contradictions
 

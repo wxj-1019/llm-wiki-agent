@@ -30,7 +30,7 @@ source_file: raw/uploads/16_数据模型总览.md
 - [[MainFundSelection]] — 数据模型为主力选股系统的完整后端架构
 - [[Backtesting]] — 回测模块提供了胜率、平均收益等量化验证能力
 - [[RiskManagement]] — 监控模块的止盈止损和 AI 分析支持风险控制
-- [[UserProfiles|用户画像]] — 用户画像模块实现个性化推荐
+- 用户画像 — 用户画像模块实现个性化推荐
 - [[A股市场]] — 整体面向 A 股量化交易场景
 - [[PostgreSQL]] — 底层数据库，使用 Schema 隔离策略
 - [[SQLAlchemy]] —— ORM 框架，模型目录为 `app/models/`

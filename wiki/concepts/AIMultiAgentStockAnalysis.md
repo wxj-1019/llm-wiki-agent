@@ -24,4 +24,4 @@ last_updated: 2026-05-08
 
 - [[main-fund-selection-system]] — 主力选股系统的核心智能层
 - [[QuantPreScoring]] — 量化预评分前置过滤
-- [[LLM|大语言模型]] — 分析师的基础模型
+- 大语言模型 — 分析师的基础模型

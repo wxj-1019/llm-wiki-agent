@@ -21,5 +21,5 @@ last_updated: 2026-05-08
 
 ## Connections
 
-- [[TypeScript]] — Bun 原生支持
+- TypeScript — Bun 原生支持
 - [[ClaudeCode]] — Latte 上游项目也依赖 Bun

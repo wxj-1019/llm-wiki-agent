@@ -153,13 +153,13 @@ export const ChatMessage = memo(function ChatMessage({
         )}
 
         {/* Content column */}
-        <div className="flex flex-col min-w-0">
+        <div className={`flex flex-col max-w-full ${isUser ? 'items-end' : 'items-start'}`}>
           {/* Bubble */}
           <div
-            className={`relative px-4 py-3 rounded-2xl shadow-sm ${
+            className={`relative px-4 py-3 rounded-2xl shadow-sm w-fit ${
               isUser
-                ? 'bg-apple-blue text-white rounded-br-sm'
-                : 'bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] rounded-bl-sm'
+                ? 'bg-apple-blue text-white rounded-br-sm max-w-[320px] sm:max-w-[480px]'
+                : 'bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] rounded-bl-sm max-w-[85vw] sm:max-w-[640px]'
             }`}
           >
             {/* Message tail */}

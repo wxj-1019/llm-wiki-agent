@@ -6,6 +6,14 @@
 
 ---
 
+## [2026-05-10] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
+## [2026-05-10] ingest | Claude Code CLAUDE.md — 项目指南与构建系统
+
+Added source. Key claims: Bun 构建系统，功能标志打包器，Ink/React 终端 UI，LLM 查询管道架构，OAuth 登录支持。新实体：[[Ink]]；新概念：[[BuildSystemWithFeatureFlags]]。
+
 ## [2026-05-08] graph | Knowledge graph rebuilt
 
 163 nodes, 629 edges (629 extracted, 0 inferred).
@@ -466,3 +474,33 @@ Added source. Key claims: 六层流水线架构（数据获取→量化预评分
 ## [2026-05-09] heal | Auto-healed missing entities
 
 Created entity pages for: 板块策略与大盘分析, 新闻订阅系统, 用户与权限系统, 股票数据服务, 价格监控与预警系统, 持仓管理与组合分析.
+## [2026-05-09] graph | Knowledge graph rebuilt
+
+291 nodes, 1292 edges (1292 extracted, 0 inferred).
+## [2026-05-10] graph | Knowledge graph rebuilt
+
+276 nodes, 1235 edges (1235 extracted, 0 inferred).
+
+## [2026-05-09] ingest | ETF专区
+
+Auto-ingested from https://finance.sina.com.cn/stock/
+
+## [2026-05-09 21:33] refresh-dry | Checked 1, changed 1, re-ingested 0
+
+## [2026-05-09 21:34] refresh-dry | Checked 1, changed 1, re-ingested 0
+
+## [2026-05-09 21:35] refresh-dry | Checked 1, changed 1, re-ingested 0
+
+## [2026-05-09] ingest | ETF专区
+
+Auto-ingested from https://finance.sina.com.cn/stock/
+
+## [2026-05-09 21:37] refresh-dry | Checked 1, changed 0, re-ingested 0
+
+## [2026-05-09] ingest | ETF专区
+
+Auto-ingested from https://finance.sina.com.cn/stock/
+
+## [2026-05-09 21:40] refresh-dry | Checked 1, changed 1, re-ingested 0
+
+## [2026-05-09 21:40] refresh | Checked 1, changed 1, re-ingested 0

@@ -23,6 +23,6 @@ last_updated: 2026-05-09
 - 启动初始化：启动时立即触发
 
 ## Connections
-- [[DataVisualization]] — Treemap可视化是金融数据展示的常用形式
+- DataVisualization — Treemap可视化是金融数据展示的常用形式
 - [[DataPipeline]] — 双表版本管理体现了数据管道的设计模式
 - [[A股市场]] — 面向A股全市场个股的云图展示

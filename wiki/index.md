@@ -6,6 +6,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Claude Code CLAUDE.md — 项目指南与构建系统](sources/claude-code-claude-md-guide.md) — Claude Code 项目的 CLAUDE.md 文件，包含常见命令、高层架构、构建系统和入口点/UI 循环，使用 Bun/Ink/React
 - [Main Fund Selection System — 主力选股系统](sources/main-fund-selection-system.md) — 六层流水线旗舰选股系统，7种策略×5位AI分析师×量化评分×回测验证
 - [AI智能分析系统](sources/ai-intelligent-analysis-system.md) — 核心智能引擎，多智能体协同架构，9维度深度分析，支持DeepSeek/Qwen/Kimi/GLM四大AI提供商
 - [股票数据服务](sources/stock-data-service.md) — 统一数据源管理、多级降级、大盘指数云图与板块策略数据
@@ -30,12 +31,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Graph Rebuild Verify](sources/graph-rebuild-verify.md) — minimal test for automatic graph rebuild verification
 - [Auto Graph Test](sources/auto-graph-test.md) — minimal test for automatic graph rebuilding after ingestion
 - [Iteration Test](sources/iteration-test.md) — minimal test document for iteration verification
-- [Test Document 4](sources/test-document-4.md) — final validation test for SSE streaming endpoint
-- [Test Document 3](sources/test-document-3.md) — minimal test document about AI, machine learning, and neural networks
-- [Test Document 2](sources/test-document-2.md) — minimal test document for ingestion analysis
-- [Test Document](sources/test-document.md) — minimal test document for ingestion analysis
 - [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理14种A股常见量化交易策略，分析其核心逻辑、A股适用性和实战落地要点
-- [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte 项目的操作指引，Anthropic Claude Code CLI 的可构建分支，移除遥测、解锁 54 个实验性功能、中文界面与多模型支持
 - [王信杰 — 后端开发工程师简历](sources/wangxinjie-backend-developer-resume.md) — 王信杰个人简历，包含海康威视实习经历、能源大数据平台和慧公寓管理系统项目，以及Spring Boot/区块链/AI混合技术栈
 - [A股常见量化交易策略指南](sources/a-share-quantitative-trading-strategies-guide.md) — 全面梳理 14 种 A 股常见量化交易策略，分析其核心逻辑、A 股适用性和实战落地要点
 - [主力选股系统整体分析文档](sources/main-fund-selection-system-analysis.md) — AI驱动的旗舰智能选股系统六层架构详解，包含7种策略、量化评分、5位AI分析师、回测验证等
@@ -43,7 +39,9 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Introduction to Large Language Models](sources/intro-to-llms.md) — comprehensive overview of LLMs from tokenization to autoregressive generation
 - [GitHub Hermes 生态系统综述](sources/github-hermes-ecosystem.md) — GitHub 上 Hermes 相关项目的全面调研，涵盖 AI Agent、JS 引擎、WebUI 等生态
 - [Things We Learned About LLMs in 2024](sources/things-we-learned-about-llms-in-2024.md) — year-in-review covering capabilities, multimodality, reasoning, synthetic data, and agents
+- [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte-claude-code 分支的 AGENTS.md 构建能力分析
 
+- [ETF专区](sources/etf-c6f436.md) — 该文章主要汇集了财经新闻、股市行情、公司动态及市场分析等内容，涵盖A股、港股、美股等市场表现，以及行业趋势、机构观点和个
 ## Entities
 - [持仓管理与组合分析](entities/持仓管理与组合分析.md) — auto-healed entity
 - [价格监控与预警系统](entities/价格监控与预警系统.md) — auto-healed entity
@@ -102,26 +100,15 @@ This file is maintained by the LLM. Updated on every ingest.
 - [MonteCarloSimulation](entities/MonteCarloSimulation.md) — auto-created entity
 - [WalkForwardAnalysis](entities/WalkForwardAnalysis.md) — auto-created entity
 - [BackTrader](entities/BackTrader.md) — auto-created entity
-- [交易时间](entities/交易时间.md) — auto-created entity
 - [风险预警](entities/风险预警.md) — auto-created entity
 - [AI智能盯盘](entities/AI智能盯盘.md) — auto-created entity
 - [分时线服务](entities/分时线服务.md) — auto-created entity
 - [监控引擎](entities/监控引擎.md) — auto-created entity
 - [STRONG_SELL](entities/STRONG_SELL.md) — auto-created entity
-- [SELL](entities/SELL.md) — auto-created entity
 - [HOLD](entities/HOLD.md) — auto-created entity
-- [BUY](entities/BUY.md) — auto-created entity
 - [STRONG_BUY](entities/STRONG_BUY.md) — auto-created entity
 - [RiskIdentificationAgent](entities/RiskIdentificationAgent.md) — auto-created entity
-- [StressTestingAgent](entities/StressTestingAgent.md) — auto-created entity
-- [HealthAssessmentAgent](entities/HealthAssessmentAgent.md) — auto-created entity
-- [DynamicWeightAdjuster](entities/DynamicWeightAdjuster.md) — auto-created entity
 - [PortfolioStrategyAgent](entities/PortfolioStrategyAgent.md) — auto-created entity
-- [第一财经](entities/第一财经.md) — auto-created entity
-- [同花顺](entities/同花顺.md) — auto-created entity
-- [财联社](entities/财联社.md) — auto-created entity
-- [新浪财经](entities/新浪财经.md) — auto-created entity
-- [东方财富](entities/东方财富.md) — auto-created entity
 - [DistributedTracing](entities/DistributedTracing.md) — auto-created entity
 - [RateLimiting](entities/RateLimiting.md) — auto-created entity
 - [Prometheus](entities/Prometheus.md) — auto-created entity
@@ -178,21 +165,17 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Gemini 2.0 Flash](entities/Gemini2.0Flash.md) — auto-healed entity
 - [Gemini 2.0 Flash Thinking](entities/Gemini2.0FlashThinking.md) — auto-healed entity
 - [GrowthPotential](entities/GrowthPotential.md) — auto-healed entity
-- [LLM](entities/LLM.md) — auto-healed entity
 - [LowRiskIncome](entities/LowRiskIncome.md) — auto-healed entity
-- [MLX](entities/MLX.md) — auto-healed entity
 - [MLX-vlm](entities/MLXvlm.md) — auto-healed entity
 - [MainForceAccumulation](entities/MainForceAccumulation.md) — auto-healed entity
 - [Microsoft](entities/Microsoft.md) — auto-healed entity
 - [ModelCollapse](entities/ModelCollapse.md) — auto-healed entity
 - [NotebookLM](entities/NotebookLM.md) — auto-healed entity
 - [Phi4](entities/Phi4.md) — auto-healed entity
-- [QvQ](entities/QvQ.md) — auto-healed entity
 - [ScalingLaws](entities/ScalingLaws.md) — auto-healed entity
 - [ShortTermBreakout](entities/ShortTermBreakout.md) — auto-healed entity
 - [TrendMomentum](entities/TrendMomentum.md) — auto-healed entity
 - [ValueStable](entities/ValueStable.md) — auto-healed entity
-- [o3](entities/o3.md) — auto-healed entity
 - [主力资金流入策略](entities/主力资金流入策略.md) — auto-healed entity
 - [多因子评分策略](entities/多因子评分策略.md) — auto-healed entity
 - [板块轮动策略](entities/板块轮动策略.md) — auto-healed entity
@@ -244,14 +227,13 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Tushare](entities/Tushare.md) — Tushare是[[MainFundSelection|主力选股系统]]的备选数据源和技术指标提供者。
 - [WencaiAPI](entities/WencaiAPI.md) — 问财API（pywencai）是[[MainFundSelection|主力选股系统]]的主要数据源，提供A股市场的主力资金流向数据。
 - [ZKP](entities/ZKP.md) — [[慧公寓管理系统]] — 实际应用
-- [中国计算机设计大赛](entities/中国计算机设计大赛.md) — 全国性计算机设计竞赛，王信杰于2022年8月获得国家级三等奖。
 - [慧公寓管理系统](entities/慧公寓管理系统.md) — [[王信杰]] — 项目负责人
-- [服务外包竞赛](entities/服务外包竞赛.md) — 中国服务外包领域的学生竞赛，王信杰于2023年5月获得地区三等奖。
 - [海康威视](entities/海康威视.md) — 王信杰曾在此公司担任后端开发实习生（2024.09-2025.03），参与Python组件平台开发和Java敏捷项目
 - [王信杰](entities/王信杰.md) — [[能源大数据平台]] — 微服务架构+Redis集群，支持5000 QPS
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [BuildSystemWithFeatureFlags](concepts/BuildSystemWithFeatureFlags.md) — auto-created concept
 - [QuantPreScoring — 量化预评分](concepts/QuantPreScoring.md) — auto-created concept
 - [AI Provider Factory Pattern](concepts/AIProviderFactoryPattern.md) — auto-created concept
 - [Streaming Analysis](concepts/StreamingAnalysis.md) — auto-created concept

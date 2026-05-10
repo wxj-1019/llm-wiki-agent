@@ -12,6 +12,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchLog, type LogEntry } from '@/services/dataService';
+import { safeJson } from '@/lib/apiUtils';
 import { useNotificationStore } from '@/stores/notificationStore';
 import type { GraphEdge } from '@/types/graph';
 
@@ -58,7 +59,7 @@ function useWikiStats(): { stats: WikiStats; loading: boolean; error: string | n
     try {
       const res = await fetch('/api/status');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await safeJson<SystemStatus>(res);
       setStatus(data);
     } catch (e) {
       setError((e as Error).message);

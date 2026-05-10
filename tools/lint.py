@@ -23,7 +23,7 @@ import argparse
 import statistics
 from pathlib import Path
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 
 REPO_ROOT = Path(__file__).parent.parent
 WIKI_DIR = REPO_ROOT / "wiki"
@@ -41,6 +41,9 @@ try:
     from tools.shared.wiki import (
         read_file,
         all_wiki_pages,
+        extract_wikilinks,
+        resolve_wikilink_target,
+        page_name_to_path,
     )
 except ImportError:
     def read_file(path: Path) -> str:
@@ -52,20 +55,18 @@ except ImportError:
             if p.name not in exclude:
                 yield p
 
+    def extract_wikilinks(content: str) -> list[str]:
+        return re.findall(r'\[\[([^\]]+)\]\]', content)
 
-def extract_wikilinks(content: str) -> list[str]:
-    """Extract wikilink targets, stripping display aliases."""
-    links = re.findall(r'\[\[([^\]]+)\]\]', content)
-    return [link.split('|')[0].strip() for link in links]
+    def resolve_wikilink_target(link: str) -> str:
+        return link.split("|")[0].strip()
 
-
-def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:
-    """Find page(s) whose stem matches *name* (case-insensitive)."""
-    candidates = []
-    for p in pages:
-        if p.stem.lower() == name.lower() or p.stem == name:
-            candidates.append(p)
-    return candidates
+    def page_name_to_path(name: str, pages: list[Path]) -> list[Path]:
+        candidates = []
+        for p in pages:
+            if p.stem.lower() == name.lower() or p.stem == name:
+                candidates.append(p)
+        return candidates
 
 
 # ── Shared LLM utilities (with inline fallback) ─────────────────────
@@ -155,7 +156,7 @@ def find_orphans(pages: list[Path]) -> list[Path]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            target = link.split("|")[0].strip()
+            target = resolve_wikilink_target(link)
             resolved = page_name_to_path(target, pages)
             for r in resolved:
                 inbound[r] += 1
@@ -167,7 +168,7 @@ def find_broken_links(pages: list[Path]) -> list[tuple[Path, str]]:
     for p in pages:
         content = read_file(p)
         for link in extract_wikilinks(content):
-            target = link.split("|")[0].strip()
+            target = resolve_wikilink_target(link)
             if not page_name_to_path(target, pages):
                 broken.append((p, link))
     return broken
@@ -179,10 +180,9 @@ def find_missing_entities(pages: list[Path]) -> list[str]:
     existing_pages = {p.stem.lower() for p in pages}
     for p in pages:
         content = read_file(p)
-        # Deduplicate links per-page before counting
         links = set(extract_wikilinks(content))
         for link in links:
-            target = link.split("|")[0].strip()
+            target = resolve_wikilink_target(link)
             if target.lower() not in existing_pages:
                 mention_counts[target] += 1
     return [name for name, count in mention_counts.items() if count >= 3]
@@ -200,7 +200,7 @@ def check_link_density(pages: list[Path], min_outbound: int = 2) -> list[dict]:
             continue
         content = read_file(p)
         links = extract_wikilinks(content)
-        unique_links = set(link.lower() for link in links)
+        unique_links = set(resolve_wikilink_target(link).lower() for link in links)
         if len(unique_links) < min_outbound:
             results.append({
                 "path": str(p.relative_to(REPO_ROOT)),
@@ -340,26 +340,28 @@ def check_isolated_communities(graph_data: dict) -> list[dict]:
     return results
 
 
-def run_lint():
+def run_lint(quiet: bool = False) -> tuple[str, dict]:
+    _log = (lambda *a, **kw: None) if quiet else print
+
     pages = list(all_wiki_pages())
     today = date.today().isoformat()
 
     if not pages:
-        print("Wiki is empty. Nothing to lint.")
-        return ""
+        _log("Wiki is empty. Nothing to lint.")
+        return "", {}
 
-    print(f"Linting {len(pages)} wiki pages...")
+    _log(f"Linting {len(pages)} wiki pages...")
 
     orphans = find_orphans(pages)
     broken = find_broken_links(pages)
     missing_entities = find_missing_entities(pages)
 
-    print(f"  orphans: {len(orphans)}")
-    print(f"  broken links: {len(broken)}")
-    print(f"  missing entity pages: {len(missing_entities)}")
+    _log(f"  orphans: {len(orphans)}")
+    _log(f"  broken links: {len(broken)}")
+    _log(f"  missing entity pages: {len(missing_entities)}")
 
     sparse_pages = check_link_density(pages)
-    print(f"  sparse pages (< 2 outbound links): {len(sparse_pages)}")
+    _log(f"  sparse pages (< 2 outbound links): {len(sparse_pages)}")
 
     # ── Graph-aware checks ──
     graph_data = load_graph_data()
@@ -368,17 +370,30 @@ def run_lint():
     isolated_comms: list[dict] = []
 
     if graph_data and graph_data.get("nodes") and graph_data.get("edges"):
-        print("  running graph-aware checks...")
+        _log("  running graph-aware checks...")
         hub_stubs = check_hub_stubs(graph_data, pages)
         fragile_bridges = check_fragile_bridges(graph_data)
         isolated_comms = check_isolated_communities(graph_data)
-        print(f"    hub stubs: {len(hub_stubs)}")
-        print(f"    fragile bridges: {len(fragile_bridges)}")
-        print(f"    isolated communities: {len(isolated_comms)}")
+        _log(f"    hub stubs: {len(hub_stubs)}")
+        _log(f"    fragile bridges: {len(fragile_bridges)}")
+        _log(f"    isolated communities: {len(isolated_comms)}")
     elif graph_data:
-        print("  [skip] graph.json has no data — skipping graph-aware checks")
+        _log("  [skip] graph.json has no data — skipping graph-aware checks")
     else:
-        print("  [skip] no graph.json — run build_graph.py first for graph-aware checks")
+        _log("  [skip] no graph.json — run build_graph.py first for graph-aware checks")
+
+    all_issues: dict = {
+        "orphan_pages": [str(p.relative_to(REPO_ROOT)) for p in orphans],
+        "broken_links": [
+            {"page": str(page.relative_to(REPO_ROOT)), "link": link}
+            for page, link in broken
+        ],
+        "missing_entities": missing_entities,
+        "sparse_pages": sparse_pages,
+        "hub_stubs": hub_stubs,
+        "fragile_bridges": fragile_bridges,
+        "isolated_communities": isolated_comms,
+    }
 
     # Build context for semantic checks
     # Sample up to 50 pages for semantic lint (increased from 20 for better coverage)
@@ -390,7 +405,7 @@ def run_lint():
 
     semantic_report = ""
     try:
-        print("  running semantic lint via API...")
+        _log("  running semantic lint via API...")
         prompt = f"""You are linting an LLM Wiki. Review the pages below and identify:
 1. Contradictions between pages (claims that conflict)
 2. Stale content (summaries that newer sources have superseded)
@@ -410,7 +425,7 @@ Be specific — name the exact pages and claims involved.
 """
         semantic_report = call_llm(prompt, "LLM_MODEL", "claude-3-5-sonnet-latest", max_tokens=3000)
     except LLMUnavailableError:
-        print("  [skip] semantic lint requires litellm. Install with: pip install litellm")
+        _log("  [skip] semantic lint requires litellm. Install with: pip install litellm")
         semantic_report = (
             "## Semantic Checks (skipped)\n\n"
             "> [!note]\n"
@@ -419,7 +434,7 @@ Be specific — name the exact pages and claims involved.
             "> Install with: `pip install litellm` to enable semantic analysis."
         )
     except Exception as exc:
-        print(f"  ⚠  Semantic lint failed: {exc}")
+        _log(f"  ⚠  Semantic lint failed: {exc}")
         semantic_report = (
             f"## Semantic Checks (error)\n\n"
             f"> [!warning]\n"
@@ -528,16 +543,27 @@ Be specific — name the exact pages and claims involved.
     report_lines.append(semantic_report)
 
     report = "\n".join(report_lines)
-    print("\n" + report)
-    return report
+    _log("\n" + report)
+    return report, all_issues
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Lint the LLM Wiki")
     parser.add_argument("--save", action="store_true", help="Save lint report to wiki/lint-report.md")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args()
 
-    report = run_lint()
+    report, all_issues = run_lint(quiet=args.json)
+
+    if args.json:
+        json_output = {
+            "timestamp": datetime.now().isoformat(),
+            "total_issues": sum(len(v) for v in all_issues.values() if isinstance(v, list)),
+            "issues": {k: v for k, v in all_issues.items() if isinstance(v, list) and v},
+            "summary": {}
+        }
+        print(json.dumps(json_output, ensure_ascii=False, indent=2))
+        sys.exit(0)
 
     if args.save and report:
         report_path = WIKI_DIR / "lint-report.md"

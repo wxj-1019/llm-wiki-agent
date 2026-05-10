@@ -167,9 +167,32 @@ class SkillEngine:
 
     def _collect_context(self, query: str, config: dict) -> list[dict]:
         max_pages = config.get("parameters", {}).get("max_context_pages", 5)
-        max_file_size = 500_000  # 500KB limit per file
-        max_scanned = 500  # Limit total files scanned to avoid excessive I/O
-        results = []
+        # Try FTS5 search first for fast indexed retrieval
+        try:
+            from tools.search_engine import WikiSearchEngine
+            engine = WikiSearchEngine()
+            search_results = engine.search(query, limit=max_pages)
+            results = []
+            for sr in search_results:
+                page_path = sr.get("path", "")
+                # Resolve from repo-relative or wiki-relative path
+                if page_path.startswith("wiki/"):
+                    page_path = page_path[5:]
+                target = self.wiki_dir / page_path
+                if target.exists():
+                    try:
+                        content = target.read_text(encoding="utf-8")
+                        results.append({"path": page_path, "content": content})
+                    except (OSError, UnicodeDecodeError):
+                        continue
+            if results:
+                return results
+        except Exception:
+            pass  # Fall back to file scan below
+
+        # Fallback: file system scan with relevance scoring
+        max_file_size = 500_000
+        max_scanned = 500
         q = query.lower()
         keywords = q.split()
         scored = []
@@ -187,7 +210,6 @@ class SkillEngine:
             except (OSError, UnicodeDecodeError):
                 continue
             content_lower = content.lower()
-            # Simple relevance scoring: title match + keyword frequency
             score = 0
             rel_path = str(p.relative_to(self.wiki_dir)).lower()
             for kw in keywords:
@@ -196,7 +218,6 @@ class SkillEngine:
                 score += content_lower.count(kw)
             if score > 0:
                 scored.append((score, {"path": str(p.relative_to(self.wiki_dir)), "content": content}))
-        # Sort by relevance descending and take top results
         scored.sort(key=lambda x: x[0], reverse=True)
         return [item[1] for item in scored[:max_pages]]
 
@@ -257,54 +278,31 @@ class SkillEngine:
 
 
     def _register_builtins(self):
-        """Register built-in skills from the templates directory."""
-        builtins = [
-            {
-                "name": "wiki-query",
+        """Register built-in skills, merging with existing (never overwrite)."""
+        builtin_names = {"wiki-query", "document-ingest", "knowledge-graph", "content-lint"}
+        existing_names = {s["name"] for s in self.registry.get("skills", [])}
+        missing = builtin_names - existing_names
+        if not missing:
+            return
+        now = time.strftime("%Y-%m-%dT%H:%M:%S")
+        builtins_map = {
+            "wiki-query": "基于 wiki 知识库回答用户问题",
+            "document-ingest": "将文档摄入到 wiki 知识库",
+            "knowledge-graph": "构建或重建知识图谱",
+            "content-lint": "对 wiki 内容进行质量检查",
+        }
+        for name in missing:
+            self.registry["skills"].append({
+                "name": name,
                 "version": "1.0.0",
-                "description": "基于 wiki 知识库回答用户问题",
+                "description": builtins_map[name],
                 "source": "builtin",
                 "enabled": True,
-                "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "installed_at": now,
+                "updated_at": now,
                 "usage_count": 0,
                 "last_used": None,
-            },
-            {
-                "name": "document-ingest",
-                "version": "1.0.0",
-                "description": "将文档摄入到 wiki 知识库",
-                "source": "builtin",
-                "enabled": True,
-                "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "usage_count": 0,
-                "last_used": None,
-            },
-            {
-                "name": "knowledge-graph",
-                "version": "1.0.0",
-                "description": "构建或重建知识图谱",
-                "source": "builtin",
-                "enabled": True,
-                "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "usage_count": 0,
-                "last_used": None,
-            },
-            {
-                "name": "content-lint",
-                "version": "1.0.0",
-                "description": "对 wiki 内容进行质量检查",
-                "source": "builtin",
-                "enabled": True,
-                "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "usage_count": 0,
-                "last_used": None,
-            },
-        ]
-        self.registry["skills"] = builtins
+            })
         self._save_registry()
 
 

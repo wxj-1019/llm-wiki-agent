@@ -42,7 +42,7 @@ source_file: raw/uploads/15_任务调度与基础设施.md
 
 - 文档提到 Redis 连接失败时"只警告，不阻止启动"，这与通常的生产要求（强依赖系统启动前需确认连接正常）存在矛盾。设计文档将其列为"优雅降级"，但实际操作中 Redis 不可用可能导致缓存雪崩。
 - 文档提出"APScheduler 替换为 Celery + RabbitMQ/Redis"作为优化方向，但在同一文档中 Redis 已被用于限流和缓存。若 Redis 是瓶颈，引入 Celery 可能会增加系统复杂度而非解决根本问题。
-- 文档未明确提及[[MainFundSelection|主力选股系统]]的[[MLX]]、[[DeepSeekV3]]等 AI 模型调用是否归入 `ai_requests_total` 指标，导致监控范围边界模糊。
+- 文档未明确提及[[MainFundSelection|主力选股系统]]的MLX、[[DeepSeekV3]]等 AI 模型调用是否归入 `ai_requests_total` 指标，导致监控范围边界模糊。
 
 ## Optimization Points Noted
 

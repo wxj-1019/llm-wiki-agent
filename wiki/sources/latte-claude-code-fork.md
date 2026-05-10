@@ -8,13 +8,13 @@ source_file: raw/uploads/AGENTS.md
 
 ## Summary
 
-AGENTS.md 是 **latte** 项目的操作指引文件。latte 是 [[Anthropic]] [[Claude]] Code CLI（版本 2.1.90）的一个可构建分支（fork），由用户 wxj-1019 维护。核心差异包括：移除遥测、移除安全硬编码守卫、解锁 54 个实验性功能、内置中文界面与多模型支持（通过 [[OpenAI]] 兼容适配器接入 [[DeepSeek]]、Kimi、GLM、[[Qwen]]、[[Ollama]] 等第三方模型）。项目使用 [[Bun]] 运行时（>=1.3.11）和 TypeScript 开发，基于 React 19 + [[Ink]] 构建终端 UI，采用 Feature Flag 编译时死代码消除（DCE）机制。
+AGENTS.md 是 **latte** 项目的操作指引文件。latte 是 [[Anthropic]] [[Claude]] Code CLI（版本 2.1.90）的一个可构建分支（fork），由用户 wxj-1019 维护。核心差异包括：移除遥测、移除安全硬编码守卫、解锁 54 个实验性功能、内置中文界面与多模型支持（通过 [[OpenAI]] 兼容适配器接入 [[DeepSeek]]、Kimi、GLM、[[Qwen]]、Ollama 等第三方模型）。项目使用 [[Bun]] 运行时（>=1.3.11）和 TypeScript 开发，基于 React 19 + [[Ink]] 构建终端 UI，采用 Feature Flag 编译时死代码消除（DCE）机制。
 
 ## Key Claims
 
 - Latte 移除了所有外部分析、崩溃报告和会话指纹采集，并提供更开放的控制权
 - 通过编译时特性开关解锁 54 个上游默认禁用的实验性功能
-- 内置中文交互支持，可通过 OpenAI 兼容适配器接入 [[DeepSeek]]、Kimi、GLM、[[Qwen]]、[[Ollama]] 等第三方模型
+- 内置中文交互支持，可通过 OpenAI 兼容适配器接入 [[DeepSeek]]、Kimi、GLM、[[Qwen]]、Ollama 等第三方模型
 - 使用 Bun 作为运行时和构建工具，采用 `bun build --compile` 打包为单个可执行文件
 - 构建时 Feature Flag 通过 `feature()` 函数实现死代码消除（DCE），未启用功能在编译时被移除
 - 查询流水线核心：`QueryEngine.submitMessage()` → 构建 System Prompt → 处理用户输入 → `query()` 循环（流式调用 API、解析 tool_use、权限检查、执行 Tool、循环直至 stop_reason）→ Auto Compact → 输出
@@ -39,11 +39,11 @@ AGENTS.md 是 **latte** 项目的操作指引文件。latte 是 [[Anthropic]] [[
 - [[OpenAI]] — 兼容适配层，支持接入外部模型
 - [[DeepSeek]] — 通过 OpenAI 兼容适配支持的第三方模型提供商
 - [[Qwen]] — 通过 OpenAI 兼容适配支持的第三方模型提供商
-- [[Ollama]] — 本地模型运行平台，通过 OpenAI 兼容适配支持
+- Ollama — 本地模型运行平台，通过 OpenAI 兼容适配支持
 - [[Ink]] — 终端 UI 框架（React for CLI）
-- [[MCP]] — Model Context Protocol，通过 `@modelcontextprotocol/sdk` 支持
-- [[TypeScript]] — 项目语言
-- [[React]] — 终端 UI 层使用的框架
+- MCP — Model Context Protocol，通过 `@modelcontextprotocol/sdk` 支持
+- TypeScript — 项目语言
+- React — 终端 UI 层使用的框架
 - [[HermesAgent]] — 同为 AI Agent 类工具，但 latte 更偏向 CLI 编程助手而非自主 Agent
 - [[ClaudeCode]] — 上游基础项目
 

@@ -781,9 +781,76 @@ COMMUNITY_COLORS = [
 ]
 
 
+def diff_graph(old_graph: dict, new_graph: dict) -> dict:
+    """Compare old and new graph, return changes.
+
+    Returns:
+        {
+            "added_nodes": [...],
+            "removed_nodes": [...],
+            "added_edges": [...],
+            "removed_edges": [...],
+            "stats": {"nodes_delta": int, "edges_delta": int}
+        }
+    """
+    old_nodes = {n["id"] for n in old_graph.get("nodes", [])}
+    new_nodes = {n["id"] for n in new_graph.get("nodes", [])}
+    old_edges = {(e["from"], e["to"]) for e in old_graph.get("edges", [])}
+    new_edges = {(e["from"], e["to"]) for e in new_graph.get("edges", [])}
+
+    added_nodes = sorted(new_nodes - old_nodes)
+    removed_nodes = sorted(old_nodes - new_nodes)
+    added_edges = [{"source": s, "target": t} for s, t in sorted(new_edges - old_edges)]
+    removed_edges = [{"source": s, "target": t} for s, t in sorted(old_edges - new_edges)]
+
+    return {
+        "added_nodes": added_nodes,
+        "removed_nodes": removed_nodes,
+        "added_edges": added_edges,
+        "removed_edges": removed_edges,
+        "stats": {
+            "nodes_delta": len(new_nodes) - len(old_nodes),
+            "edges_delta": len(new_edges) - len(old_edges),
+            "added_count": len(added_nodes) + len(added_edges),
+            "removed_count": len(removed_nodes) + len(removed_edges),
+        }
+    }
+
+
+def prioritize_inference(pages: list[str], graph: dict, max_infer: int = 20) -> list[str]:
+    """Rank pages for inference priority and return top max_infer.
+
+    Priority: hub nodes > bridge nodes > new pages > others.
+    """
+    degree = {}
+    for e in graph.get("edges", []):
+        degree[e["from"]] = degree.get(e["from"], 0) + 1
+        degree[e["to"]] = degree.get(e["to"], 0) + 1
+
+    if not degree:
+        return pages[:max_infer]
+
+    avg_degree = sum(degree.values()) / len(degree)
+    hub_threshold = avg_degree + 2 * (max(1, avg_degree * 0.5))
+
+    scored = []
+    for p in pages:
+        d = degree.get(p, 0)
+        if d > hub_threshold:
+            priority = 0
+        elif d > avg_degree:
+            priority = 1
+        else:
+            priority = 2
+        scored.append((priority, -d, p))
+
+    scored.sort()
+    return [p for _, _, p in scored[:max_infer]]
+
 
 def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = False,
-                report: bool = False, save: bool = False):
+                report: bool = False, save: bool = False,
+                show_diff: bool = False, max_infer: int = 0):
     pages = list(all_wiki_pages())
     today = date.today().isoformat()
 
@@ -809,8 +876,16 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
 
     # Pass 2: inferred edges
     if infer:
-        print("  Pass 2: inferring semantic relationships...")
-        inferred = build_inferred_edges(pages, edges, cache, resume=not clean)
+        infer_pages = pages
+        if max_infer > 0:
+            page_ids = [page_id(p) for p in pages]
+            temp_graph = {"nodes": [{"id": pid} for pid in page_ids], "edges": edges}
+            prioritized = prioritize_inference(page_ids, temp_graph, max_infer)
+            infer_pages = [p for p in pages if page_id(p) in set(prioritized)]
+            print(f"  Pass 2: inferring for {len(infer_pages)}/{len(pages)} pages (budget={max_infer})...")
+        else:
+            print("  Pass 2: inferring semantic relationships...")
+        inferred = build_inferred_edges(infer_pages, edges, cache, resume=not clean)
         edges.extend(inferred)
         print(f"  → {len(inferred)} inferred edges")
         save_cache(cache)
@@ -840,8 +915,28 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
 
     # Save graph.json
     graph_data = {"nodes": nodes, "edges": edges, "built": today}
+
+    if show_diff and GRAPH_JSON.exists():
+        old_graph = json.loads(GRAPH_JSON.read_text(encoding="utf-8"))
+    else:
+        old_graph = None
+
     GRAPH_JSON.write_text(json.dumps(graph_data, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"  saved: graph/graph.json  ({len(nodes)} nodes, {len(edges)} edges)")
+
+    if show_diff and old_graph is not None:
+        changes = diff_graph(old_graph, graph_data)
+        print(f"\nGraph Diff:")
+        print(f"  Nodes: {changes['stats']['nodes_delta']:+d}")
+        print(f"  Edges: {changes['stats']['edges_delta']:+d}")
+        if changes["added_nodes"]:
+            print(f"  Added nodes: {changes['added_nodes'][:10]}")
+        if changes["removed_nodes"]:
+            print(f"  Removed nodes: {changes['removed_nodes'][:10]}")
+        if changes["added_edges"]:
+            print(f"  Added edges: {len(changes['added_edges'])}")
+        if changes["removed_edges"]:
+            print(f"  Removed edges: {len(changes['removed_edges'])}")
 
     # Save graph.html
     html = render_html(nodes, edges)
@@ -876,6 +971,9 @@ if __name__ == "__main__":
     parser.add_argument("--clean", action="store_true", help="Delete checkpoint and force full re-inference")
     parser.add_argument("--report", action="store_true", help="Generate graph health report")
     parser.add_argument("--save", action="store_true", help="Save report to graph/graph-report.md")
+    parser.add_argument("--diff", action="store_true", help="Show incremental changes from last build")
+    parser.add_argument("--max-infer", type=int, default=0, help="Limit inference to N pages (0=no limit)")
     args = parser.parse_args()
     build_graph(infer=not args.no_infer, open_browser=args.open, clean=args.clean,
-                report=args.report, save=args.save)
+                report=args.report, save=args.save,
+                show_diff=args.diff, max_infer=args.max_infer)

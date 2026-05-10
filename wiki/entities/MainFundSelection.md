@@ -8,7 +8,7 @@ last_updated: 2026-05-09
 
 # MainFundSelection
 
-[[MainFundSelectionDataModel|数据模型]]中的主力选股系统对应 `stock_analysis` Schema 下的 `main_fund_selections` 和 `main_fund_selected_stocks` 两张核心表。
+数据模型中的主力选股系统对应 `stock_analysis` Schema 下的 `main_fund_selections` 和 `main_fund_selected_stocks` 两张核心表。
 
 ## 关键数据结构
 

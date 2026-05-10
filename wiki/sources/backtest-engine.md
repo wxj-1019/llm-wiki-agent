@@ -39,8 +39,8 @@ source_file: raw/uploads/07_回测引擎.md
 - [[TechnicalAnalysis]] — 全部6种策略均基于技术分析指标
 - [[GeneticAlgorithm]] — 参数优化可采用更高级的遗传算法替代网格搜索（优化点）
 - [[AIMultiAgentStockAnalysis|AI多智能体股票分析]] — 机器学习策略扩展是潜在方向
-- [[RL|强化学习]] — 潜在优化方向之一
-- [[LSTM]] — 潜在优化方向之一
+- 强化学习 — 潜在优化方向之一
+- LSTM — 潜在优化方向之一
 - [[Tushare]] — 回测数据源之一
 - [[AKShare]] — 回测数据源之一
 

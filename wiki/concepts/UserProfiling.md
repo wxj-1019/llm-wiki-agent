@@ -8,7 +8,7 @@ last_updated: 2026-05-09
 
 # UserProfiling
 
-**用户画像**是一种通过收集用户多维度行为数据，利用[[LLM]]或算法生成用户特征描述的方法。在[[user-profile-system]]中，画像分为4大维度：投资风格、投资偏好、行为特征、能力评估。
+**用户画像**是一种通过收集用户多维度行为数据，利用LLM或算法生成用户特征描述的方法。在[[user-profile-system]]中，画像分为4大维度：投资风格、投资偏好、行为特征、能力评估。
 
 ## Key Principles
 
@@ -20,7 +20,7 @@ last_updated: 2026-05-09
 ## Connections
 
 - [[MainFundSelection]] — 画像系统的应用平台
-- [[LLM]] — 画像生成的技术基础
+- LLM — 画像生成的技术基础
 - [[StockSelectionStrategy]] — 画像可驱动策略推荐
 - [[QuantitativeAnalysis]] — 画像中的评分系统是量化分析的延伸
 - [[AIMultiAgentStockAnalysis]] — AI多智能体分析的补充维度

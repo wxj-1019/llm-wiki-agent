@@ -13,10 +13,10 @@ Inference-scaling reasoning (also called "test-time compute scaling") is a new p
 ## Key Models
 
 - [[o1]] — OpenAI's first reasoning model (September 2024)
-- [[o3]] — OpenAI's advanced reasoning model (announced December 2024, achieved ARC-AGI benchmark results with >$1M compute)
+- o3 — OpenAI's advanced reasoning model (announced December 2024, achieved ARC-AGI benchmark results with >$1M compute)
 - [[DeepSeekR1]] — DeepSeek's reasoning model (November 2024)
 - [[QwQ]] — Alibaba Qwen's reasoning model, Apache 2.0 licensed (November 2024)
-- [[QvQ]] — vision reasoning model from Qwen (December 2024)
+- QvQ — vision reasoning model from Qwen (December 2024)
 - [[Gemini2.0FlashThinking]] — Google's reasoning entrant (December 2024)
 
 ## Relationship to Chain-of-Thought

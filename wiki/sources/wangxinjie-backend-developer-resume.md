@@ -8,7 +8,7 @@ source_file: raw/3_后端开发工程师.md
 
 ## Summary
 
-王信杰的求职简历，浙江科技大学毕业生，曾在[[海康威视]]担任后端开发实习生。参与过[[能源大数据平台]]和[[慧公寓管理系统]]两个主要项目，具备Spring Boot微服务架构、Redis集群、区块链（[[HyperledgerFabric]]）和AI混合模型（[[DeepLearning|深度学习]]+[[GeneticAlgorithm|遗传算法]]）的实战经验。有论文被EI检索。竞赛方面获得过[[中国计算机设计大赛]]国家级三等奖和[[服务外包竞赛]]地区三等奖。
+王信杰的求职简历，浙江科技大学毕业生，曾在[[海康威视]]担任后端开发实习生。参与过[[能源大数据平台]]和[[慧公寓管理系统]]两个主要项目，具备Spring Boot微服务架构、Redis集群、区块链（[[HyperledgerFabric]]）和AI混合模型（[[DeepLearning|深度学习]]+[[GeneticAlgorithm|遗传算法]]）的实战经验。有论文被EI检索。竞赛方面获得过中国计算机设计大赛国家级三等奖和服务外包竞赛地区三等奖。
 
 ## Key Claims
 
@@ -37,8 +37,8 @@ source_file: raw/3_后端开发工程师.md
 - [[SpringCloudAlibaba|Spring Cloud Alibaba]] — 微服务治理框架
 - [[DeepLearning|深度学习]] — 用于动态需求分析的AI技术
 - [[GeneticAlgorithm|遗传算法]] — 与深度学习结合的优化算法
-- [[中国计算机设计大赛]] — 获奖竞赛
-- [[服务外包竞赛]] — 获奖竞赛
+- 中国计算机设计大赛 — 获奖竞赛
+- 服务外包竞赛 — 获奖竞赛
 
 ## Contradictions
 

@@ -1,0 +1,36 @@
+# A-Share Test Sources for Crawler Evaluation
+# Tests: Chinese extraction quality, Scrapling fallback, dedup, change detection
+urls:
+  # 东方财富 - A股新闻
+  - url: "https://finance.eastmoney.com/a/202605093731914918.html"
+    name: "东财-A股新闻示例"
+    tags: [a-share, news, eastmoney]
+
+  # 新浪财经 - 股票频道
+  - url: "https://finance.sina.com.cn/stock/"
+    name: "新浪-股票频道首页"
+    tags: [a-share, sina, portal]
+
+  # 财联社 - 深度
+  - url: "https://www.cls.cn/depth"
+    name: "财联社-深度"
+    tags: [a-share, news, cls]
+
+  # 雪球 - 热门文章
+  - url: "https://xueqiu.com/"
+    name: "雪球-首页"
+    tags: [a-share, community, xueqiu]
+
+  # 上交所 - 公告（纯文本/表格测试）
+  - url: "http://www.sse.com.cn/"
+    name: "上交所官网"
+    tags: [a-share, exchange, official]
+
+settings:
+  timeout: 30
+  user_agent: "llm-wiki-agent/1.0"
+  respect_robots_txt: true
+  request_delay: 2
+  max_retries: 3
+  content_min_length: 200
+  use_browser: true

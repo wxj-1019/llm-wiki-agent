@@ -36,6 +36,7 @@ class MCPManager:
         self.log_buffers: dict[str, collections.deque] = {}
         self.max_servers = int(os.getenv("MCP_MAX_SERVERS", str(DEFAULT_MAX_SERVERS)))
         self._load_registry()
+        self._register_builtins()
         atexit.register(self.stop_all)
 
     def _load_registry(self):
@@ -156,6 +157,12 @@ class MCPManager:
         )
         if result.returncode != 0:
             return {"error": f"pip install failed: {result.stderr[:500]}"}
+        # Inject packages dir into sys.path so the server can import from it
+        bootstrap = server_dir / "_bootstrap.py"
+        bootstrap.write_text(
+            f'import sys; sys.path.insert(0, {str(target_dir)!r})\n',
+            encoding="utf-8",
+        )
         return {}
 
     def _install_url(self, name: str, server_dir: Path, kwargs: dict) -> dict:
@@ -199,11 +206,8 @@ class MCPManager:
             server_dir.resolve().relative_to(self.base_dir.resolve())
         except ValueError:
             return {"error": "Invalid server name"}
-        if sys.platform == "win32":
-            import shutil
-            shutil.copytree(str(src), str(server_dir), dirs_exist_ok=True)
-        else:
-            subprocess.run(["cp", "-r", str(src) + "/.", str(server_dir)], capture_output=True)
+        import shutil
+        shutil.copytree(str(src), str(server_dir), dirs_exist_ok=True)
         return {}
 
     def uninstall(self, name: str) -> dict:
@@ -327,11 +331,15 @@ class MCPManager:
         return {"ok": True, "message": "Server process is alive"}
 
     def call_tool(self, name: str, tool: str, arguments: dict) -> dict:
+        """Call a tool on a running MCP server via stdio MCP protocol.
+
+        TODO: Implement full MCP JSON-RPC client protocol over stdio.
+        This requires reading/writing JSON-RPC messages over the subprocess
+        stdin/stdout pipes, matching request IDs to responses.
+        """
         st = self.status(name)
         if st.get("status") != "running":
             return {"error": "Server not running"}
-        # For stdio-based MCP, tool calling requires MCP client protocol
-        # This is a simplified placeholder for direct execution
         return {"error": "Direct tool calling not yet implemented for stdio transport"}
 
     def stop_all(self):
@@ -406,7 +414,7 @@ class MCPManager:
                 "port": None,
                 "pid": None,
                 "transport": "stdio",
-                "tools": ["run_command", "get_status", "search_web"],
+                "tools": ["ingest_document", "build_graph", "run_health_check"],
                 "installed_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "health": {"last_check": None, "status": "unknown", "error_count": 0},

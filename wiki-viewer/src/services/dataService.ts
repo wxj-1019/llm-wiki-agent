@@ -13,6 +13,23 @@ import { isValidFilePath } from '@/lib/validation';
 
 const inFlight = new Map<string, Promise<unknown>>();
 
+/**
+ * Safe JSON parse — checks for empty body first to avoid the cryptic
+ * "Unexpected end of JSON input" error when the backend is down or
+ * returns an empty response.
+ */
+async function safeJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text || text.trim().length === 0) {
+    throw new Error(`Backend returned empty response (status ${res.status}). Is the API server running?`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Backend returned non-JSON response (status ${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
 function dedupe<T>(key: string, factory: () => Promise<T>): Promise<T> {
   const existing = inFlight.get(key) as Promise<T> | undefined;
   if (existing) return existing;
@@ -28,7 +45,7 @@ export async function fetchGraphData(): Promise<GraphData> {
     // Try API server first
     try {
       const res = await fetchWithTimeout('/api/graph', { timeoutMs: 10000 });
-      if (res.ok) return res.json();
+      if (res.ok) return safeJson(res);
     } catch {
       // API server not available, fall through to static file
     }
@@ -36,7 +53,7 @@ export async function fetchGraphData(): Promise<GraphData> {
     // Fallback: static graph.json for production build without API server
     const res = await fetchWithTimeout(`${import.meta.env.BASE_URL}data/graph.json`, { timeoutMs: 10000 });
     if (!res.ok) throw new Error(`Failed to load graph data: ${res.status}`);
-    return res.json();
+    return safeJson(res);
   });
 }
 
@@ -66,7 +83,7 @@ export async function fetchRawFiles(): Promise<RawFile[]> {
   return dedupe('raw-files', async () => {
     const res = await fetchWithTimeout('/api/raw-files', { timeoutMs: 10000 });
     if (!res.ok) throw new Error(`Failed to fetch raw files: ${res.status}`);
-    const data = await res.json();
+    const data = await safeJson<{ files?: RawFile[] }>(res);
     return data.files || [];
   });
 }
@@ -82,7 +99,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     const err = await res.text();
     throw new Error(err || `Upload failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function uploadText(title: string, content: string): Promise<UploadResult> {
@@ -95,7 +112,7 @@ export async function uploadText(title: string, content: string): Promise<Upload
     const err = await res.text();
     throw new Error(err || `Upload failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function triggerIngest(path: string): Promise<IngestResult> {
@@ -109,7 +126,7 @@ export async function triggerIngest(path: string): Promise<IngestResult> {
     const err = await res.text();
     throw new Error(err || `Ingest failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function fetchRawFileContent(path: string): Promise<string> {
@@ -117,7 +134,7 @@ export async function fetchRawFileContent(path: string): Promise<string> {
   return dedupe(`raw-file:${path}`, async () => {
     const res = await fetchWithTimeout(`/api/raw-file-content?path=${encodeURIComponent(path)}`, { timeoutMs: 10000 });
     if (!res.ok) throw new Error(`Failed to load file: ${res.status}`);
-    const data = await res.json();
+    const data = await safeJson<{ content?: string }>(res);
     return data.content || '';
   });
 }
@@ -131,7 +148,7 @@ export async function deleteRawFile(path: string): Promise<{ success: boolean }>
     const err = await res.text();
     throw new Error(err || `Delete failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export interface FtsResult {
@@ -183,7 +200,7 @@ export async function reindexEmbeddings(): Promise<{ success: boolean; message: 
     timeoutMs: 300000,
   });
   if (!res.ok) throw new Error(`Reindex failed: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export async function fetchIndexEtag(): Promise<string> {
@@ -208,21 +225,26 @@ export async function ingestImageFile(file: File): Promise<{ success: boolean; d
     const err = await res.text();
     throw new Error(err || `Image ingest failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
-export async function fetchUrlArticle(url: string, name = '', tags: string[] = []): Promise<{ success: boolean; saved_file: string | null; quality: string | null; stdout: string; stderr: string }> {
+export async function fetchUrlArticle(
+  url: string,
+  name = '',
+  tags: string[] = [],
+  options: { use_llm?: boolean; use_browser?: boolean } = {},
+): Promise<{ success: boolean; saved_file: string | null; quality: string | null; engine: string | null; stdout: string; stderr: string }> {
   const res = await fetchWithTimeout('/api/fetch/url', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, name, tags }),
-    timeoutMs: 120000,
+    body: JSON.stringify({ url, name, tags, use_llm: options.use_llm ?? false, use_browser: options.use_browser ?? false }),
+    timeoutMs: 180000,
   });
   if (!res.ok) {
     const err = await res.text();
     throw new Error(err || `URL fetch failed: ${res.status}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function saveWikiPage(path: string, content: string): Promise<{ success: boolean; path: string }> {
@@ -237,14 +259,14 @@ export async function saveWikiPage(path: string, content: string): Promise<{ suc
     const err = await res.text();
     throw new Error(`Save failed: ${res.status} ${err}`);
   }
-  return res.json();
+  return safeJson(res);
 }
 
 export async function fetchWebSourcesConfig(): Promise<{ name: string; content: string }> {
   return dedupe('config:web_sources', async () => {
     const res = await fetchWithTimeout('/api/config/web_sources', { timeoutMs: 5000 });
     if (!res.ok) throw new Error(`Failed to load config: ${res.status}`);
-    return res.json();
+    return safeJson(res);
   });
 }
 
@@ -256,7 +278,7 @@ export async function saveWebSourcesConfig(yamlContent: string): Promise<{ succe
     timeoutMs: 5000,
   });
   if (!res.ok) throw new Error(`Failed to save config: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }
 
 export interface CrawlerRunResult {
@@ -275,7 +297,40 @@ export async function runCrawler(): Promise<CrawlerRunResult> {
     timeoutMs: 300000,
   });
   if (!res.ok) throw new Error(`Crawler failed: ${res.status}`);
-  return res.json();
+  return safeJson(res);
+}
+
+export async function runRssCrawler(): Promise<CrawlerRunResult> {
+  const res = await fetchWithTimeout('/api/crawler/run/rss', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`RSS crawler failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function runGithubCrawler(): Promise<CrawlerRunResult> {
+  const res = await fetchWithTimeout('/api/crawler/run/github', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`GitHub crawler failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function runArxivCrawler(): Promise<CrawlerRunResult> {
+  const res = await fetchWithTimeout('/api/crawler/run/arxiv', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`arXiv crawler failed: ${res.status}`);
+  return safeJson(res);
 }
 
 export interface BatchResult {
@@ -292,5 +347,5 @@ export async function runBatchPipeline(): Promise<BatchResult> {
     timeoutMs: 600000,
   });
   if (!res.ok) throw new Error(`Batch pipeline failed: ${res.status}`);
-  return res.json();
+  return safeJson(res);
 }

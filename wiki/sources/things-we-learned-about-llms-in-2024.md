@@ -45,7 +45,7 @@ source_file: raw-inbox/batches/batch-web-2026-05-06.md
 - [[AIAgent]] — concept discussed critically; agents remain impractical due to gullibility
 - [[ChainOfThought]] — precursor technique to inference-scaling reasoning models
 - [[AmandaAskell]] — Anthropic researcher, emphasized test-driven development for prompts
-- [[MLX]] — Apple's ML library for Apple Silicon
+- MLX — Apple's ML library for Apple Silicon
 - [[NotebookLM]] — Google's audio summary tool with realistic podcast voices
 - [[SyntheticData]] — deliberate use of AI-generated training data
 - [[Slop]] — term for unwanted AI-generated content, coined in 2024
