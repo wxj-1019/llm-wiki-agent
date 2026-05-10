@@ -50,7 +50,10 @@ class SafetyEngine:
             r"eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}",
         ]
         self._blocked_count: int = 0
+        self._daily_cost_usd: float = 0.0
+        self._budget_limit: float = 5.0
         self._load_config()
+        self._load_budget_from_config()
 
     def _load_config(self):
         config_path = REPO_ROOT / "config" / "jarvis.yaml"
@@ -78,6 +81,20 @@ class SafetyEngine:
         except Exception:
             pass
 
+    def _load_budget_from_config(self):
+        config_path = REPO_ROOT / "config" / "jarvis.yaml"
+        if not config_path.exists():
+            return
+        try:
+            import yaml
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+            safety = config.get("safety", {})
+            budget = safety.get("budget", {})
+            self._budget_limit = float(budget.get("daily_usd", 5.0))
+        except Exception:
+            pass
+
     def pre_check(self, step: PlanStep) -> SafetyCheckResult:
         if self._emergency_stopped:
             self._blocked_count += 1
@@ -101,6 +118,14 @@ class SafetyEngine:
             return SafetyCheckResult(
                 passed=False,
                 reason="Rate limit exceeded",
+                risk_level=RiskLevel.L3,
+            )
+
+        if not self._check_budget():
+            self._blocked_count += 1
+            return SafetyCheckResult(
+                passed=False,
+                reason=f"Daily budget exceeded: ${self._daily_cost_usd:.2f} / ${self._budget_limit:.2f}",
                 risk_level=RiskLevel.L3,
             )
 
@@ -207,6 +232,12 @@ class SafetyEngine:
             if re.search(pattern, param_str):
                 return False
         return True
+
+    def _check_budget(self) -> bool:
+        return self._daily_cost_usd < self._budget_limit
+
+    def record_cost(self, cost_usd: float):
+        self._daily_cost_usd += cost_usd
 
     def record_call(self):
         self._call_log.append(time.time())

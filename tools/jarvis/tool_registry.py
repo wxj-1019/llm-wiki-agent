@@ -2,14 +2,94 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 
+from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.types import RiskLevel, ToolDef, ToolResult
+
+logger = logging.getLogger(__name__)
 
 
 class ToolRegistry:
+    TABLE = "jarvis_tool_stats"
+
     def __init__(self):
         self._tools: dict[str, ToolDef] = {}
+        self._ensure_table()
+        self._load_stats()
+
+    def _ensure_table(self) -> None:
+        ddl = f"""
+        CREATE TABLE IF NOT EXISTS {self.TABLE} (
+            tool_name TEXT PRIMARY KEY,
+            call_count INTEGER NOT NULL DEFAULT 0,
+            success_count INTEGER NOT NULL DEFAULT 0,
+            fail_count INTEGER NOT NULL DEFAULT 0,
+            avg_duration_ms REAL NOT NULL DEFAULT 0.0,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        """
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(ddl)
+            cur.close()
+
+    def _maybe_load_stats(self, name: str) -> None:
+        tool = self._tools.get(name)
+        if tool is None:
+            return
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"SELECT call_count, success_count, fail_count, avg_duration_ms FROM {self.TABLE} WHERE tool_name = %s",
+                (name,),
+            )
+            row = cur.fetchone()
+            cur.close()
+        if row is None:
+            return
+        call_count, success_count, fail_count, avg_duration_ms = row
+        tool.call_count = call_count or 0
+        tool.success_count = success_count or 0
+        tool.fail_count = fail_count or 0
+        tool.avg_duration_ms = avg_duration_ms or 0.0
+
+    def _load_stats(self) -> None:
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"SELECT tool_name, call_count, success_count, fail_count, avg_duration_ms FROM {self.TABLE}")
+            rows = cur.fetchall()
+            cur.close()
+        for name, call_count, success_count, fail_count, avg_duration_ms in rows:
+            tool = self._tools.get(name)
+            if tool is None:
+                continue
+            tool.call_count = call_count or 0
+            tool.success_count = success_count or 0
+            tool.fail_count = fail_count or 0
+            tool.avg_duration_ms = avg_duration_ms or 0.0
+
+    def _persist_stats(self, name: str) -> None:
+        tool = self._tools.get(name)
+        if tool is None:
+            return
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                INSERT INTO {self.TABLE} (tool_name, call_count, success_count, fail_count, avg_duration_ms, updated_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (tool_name) DO UPDATE SET
+                    call_count = EXCLUDED.call_count,
+                    success_count = EXCLUDED.success_count,
+                    fail_count = EXCLUDED.fail_count,
+                    avg_duration_ms = EXCLUDED.avg_duration_ms,
+                    updated_at = NOW()
+                """,
+                (name, tool.call_count, tool.success_count, tool.fail_count, tool.avg_duration_ms),
+            )
+            cur.close()
 
     def register(
         self,
@@ -30,6 +110,7 @@ class ToolRegistry:
             output_schema=output_schema,
             category=category,
         )
+        self._maybe_load_stats(name)
 
     def unregister(self, name: str):
         self._tools.pop(name, None)
@@ -92,6 +173,7 @@ class ToolRegistry:
         else:
             total = tool.avg_duration_ms * (tool.call_count - 1) + duration_ms
             tool.avg_duration_ms = total / tool.call_count
+        self._persist_stats(name)
 
     def get_stats(self) -> dict:
         return {

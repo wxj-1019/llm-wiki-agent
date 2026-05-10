@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.types import ApprovalRequest, PlanStep, RiskLevel
 
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -21,26 +21,6 @@ DEFAULT_AUTO_APPROVE_RULES: list[dict[str, Any]] = [
 
 class ApprovalManager:
     def __init__(self):
-        self._state_dir = REPO_ROOT / "state"
-        self._state_dir.mkdir(parents=True, exist_ok=True)
-        self._db_path = self._state_dir / "jarvis_approvals.db"
-        self._conn = sqlite3.connect(str(self._db_path))
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS approvals (
-                id TEXT PRIMARY KEY,
-                step_json TEXT NOT NULL,
-                reason TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'pending',
-                created_at TEXT NOT NULL,
-                resolved_at TEXT,
-                resolved_by TEXT,
-                auto_approved INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
-        self._conn.commit()
         self._policies = self._load_policies()
 
     def _load_policies(self) -> list[dict[str, Any]]:
@@ -48,7 +28,6 @@ class ApprovalManager:
         if policy_path.exists():
             try:
                 import yaml
-
                 with open(policy_path, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 if isinstance(data, list):
@@ -68,50 +47,93 @@ class ApprovalManager:
             status="pending",
             created_at=datetime.now().isoformat(),
         )
-        self._conn.execute(
-            "INSERT INTO approvals (id, step_json, reason, status, created_at) VALUES (?, ?, ?, ?, ?)",
-            (req.id, json.dumps(self._step_to_dict(step)), req.reason, req.status, req.created_at),
-        )
-        self._conn.commit()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO jarvis_approvals (id, step_json, reason, status, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (req.id, json.dumps(self._step_to_dict(step)), req.reason, req.status, req.created_at),
+            )
+            cur.close()
         return req
 
     def approve(self, req_id: str, approver: str = "user") -> bool:
         now = datetime.now().isoformat()
-        cursor = self._conn.execute(
-            "UPDATE approvals SET status = 'approved', resolved_at = ?, resolved_by = ? WHERE id = ? AND status = 'pending'",
-            (now, approver, req_id),
-        )
-        self._conn.commit()
-        return cursor.rowcount > 0
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE jarvis_approvals
+                SET status = 'approved', resolved_at = %s, resolved_by = %s
+                WHERE id = %s AND status = 'pending'
+                """,
+                (now, approver, req_id),
+            )
+            rowcount = cur.rowcount
+            cur.close()
+        return rowcount > 0
 
     def reject(self, req_id: str, approver: str = "user") -> bool:
         now = datetime.now().isoformat()
-        cursor = self._conn.execute(
-            "UPDATE approvals SET status = 'rejected', resolved_at = ?, resolved_by = ? WHERE id = ? AND status = 'pending'",
-            (now, approver, req_id),
-        )
-        self._conn.commit()
-        return cursor.rowcount > 0
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                UPDATE jarvis_approvals
+                SET status = 'rejected', resolved_at = %s, resolved_by = %s
+                WHERE id = %s AND status = 'pending'
+                """,
+                (now, approver, req_id),
+            )
+            rowcount = cur.rowcount
+            cur.close()
+        return rowcount > 0
 
     def get_pending(self) -> list[ApprovalRequest]:
-        rows = self._conn.execute(
-            "SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at ASC"
-        ).fetchall()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, step_json, reason, status, created_at, resolved_at, resolved_by, auto_approved FROM jarvis_approvals WHERE status = 'pending' ORDER BY created_at ASC"
+            )
+            rows = cur.fetchall()
+            cur.close()
         return [self._row_to_request(r) for r in rows]
 
     def get_by_id(self, req_id: str) -> ApprovalRequest | None:
-        row = self._conn.execute(
-            "SELECT * FROM approvals WHERE id = ?", (req_id,)
-        ).fetchone()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, step_json, reason, status, created_at, resolved_at, resolved_by, auto_approved FROM jarvis_approvals WHERE id = %s",
+                (req_id,),
+            )
+            row = cur.fetchone()
+            cur.close()
         if row is None:
             return None
         return self._row_to_request(row)
 
     def get_history(self, limit: int = 100) -> list[ApprovalRequest]:
-        rows = self._conn.execute(
-            "SELECT * FROM approvals WHERE status != 'pending' ORDER BY resolved_at DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, step_json, reason, status, created_at, resolved_at, resolved_by, auto_approved FROM jarvis_approvals WHERE status != 'pending' ORDER BY resolved_at DESC LIMIT %s",
+                (limit,),
+            )
+            rows = cur.fetchall()
+            cur.close()
+        return [self._row_to_request(r) for r in rows]
+
+    def list_all(self, limit: int = 100) -> list[ApprovalRequest]:
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, step_json, reason, status, created_at, resolved_at, resolved_by, auto_approved FROM jarvis_approvals ORDER BY created_at DESC LIMIT %s",
+                (limit,),
+            )
+            rows = cur.fetchall()
+            cur.close()
         return [self._row_to_request(r) for r in rows]
 
     def auto_approve_check(self, step: PlanStep) -> bool:
@@ -131,19 +153,28 @@ class ApprovalManager:
 
     def _check_rate(self, pattern: str, max_per_hour: int) -> bool:
         one_hour_ago = (datetime.now() - timedelta(hours=1)).isoformat()
-        row = self._conn.execute(
-            "SELECT COUNT(*) as cnt FROM approvals WHERE reason LIKE ? AND status = 'approved' AND auto_approved = 1 AND resolved_at >= ?",
-            (f"%{pattern}%", one_hour_ago),
-        ).fetchone()
-        return row["cnt"] < max_per_hour
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM jarvis_approvals
+                WHERE reason LIKE %s AND status = 'approved' AND auto_approved = TRUE AND resolved_at >= %s
+                """,
+                (f"%{pattern}%", one_hour_ago),
+            )
+            count = cur.fetchone()[0]
+            cur.close()
+        return count < max_per_hour
 
     def stats(self) -> dict[str, int]:
-        rows = self._conn.execute(
-            "SELECT status, COUNT(*) as cnt FROM approvals GROUP BY status"
-        ).fetchall()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT status, COUNT(*) FROM jarvis_approvals GROUP BY status")
+            rows = cur.fetchall()
+            cur.close()
         result: dict[str, int] = {"pending": 0, "approved": 0, "rejected": 0}
         for r in rows:
-            result[r["status"]] = r["cnt"]
+            result[r[0]] = r[1]
         return result
 
     def _step_to_dict(self, step: PlanStep) -> dict:
@@ -156,8 +187,11 @@ class ApprovalManager:
             "status": step.status.value,
         }
 
-    def _row_to_request(self, row: sqlite3.Row) -> ApprovalRequest:
-        step_data = json.loads(row["step_json"])
+    def _row_to_request(self, row: tuple) -> ApprovalRequest:
+        # row order: id, step_json, reason, status, created_at, resolved_at, resolved_by, auto_approved
+        step_data = row[1]
+        if isinstance(step_data, str):
+            step_data = json.loads(step_data)
         step = PlanStep(
             id=step_data.get("id", ""),
             tool_name=step_data.get("tool_name", ""),
@@ -166,13 +200,13 @@ class ApprovalManager:
             requires_approval=step_data.get("requires_approval", False),
         )
         return ApprovalRequest(
-            id=row["id"],
+            id=row[0],
             step=step,
-            reason=row["reason"],
-            status=row["status"],
-            created_at=row["created_at"],
-            resolved_at=row["resolved_at"] or "",
-            resolved_by=row["resolved_by"] or "",
+            reason=row[2],
+            status=row[3],
+            created_at=row[4],
+            resolved_at=row[5] or "",
+            resolved_by=row[6] or "",
         )
 
 

@@ -11,6 +11,8 @@ from tools.jarvis.event_bus import get_event_bus
 from tools.jarvis.tool_registry import get_registry
 from tools.jarvis.safety import get_safety_engine
 from tools.jarvis.approval import get_approval_manager
+from tools.jarvis.state import get_state_store, AgentStateStore
+from tools.jarvis.audit import get_audit_store, AuditStore
 from tools.jarvis.types import (
     AgentState,
     AgentStatus,
@@ -28,12 +30,13 @@ from tools.jarvis.types import (
 from tools.shared.llm import call_llm
 
 REPO_ROOT = Path(__file__).parent.parent.parent
-AUDIT_PATH = REPO_ROOT / "state" / "jarvis_audit.jsonl"
 
 
 class AgentLoop:
     def __init__(self) -> None:
-        self.state = AgentState()
+        self._state_store = get_state_store()
+        self._audit_store = get_audit_store()
+        self.state = self._state_store.load()
         self.event_bus = get_event_bus()
         self.registry = get_registry()
         self.safety_engine = get_safety_engine()
@@ -52,6 +55,8 @@ class AgentLoop:
         self.state.last_cycle_time = datetime.now().isoformat()
 
         events = await self.perceive()
+        if events:
+            self.event_bus.mark_consumed([e.id for e in events])
         insights = await self.reason(events)
         self.state.insights = insights
 
@@ -61,6 +66,7 @@ class AgentLoop:
 
         results = await self.execute(plan)
         await self.learn(results)
+        self._state_store.save(self.state)
 
         return cycle_id
 
@@ -230,11 +236,11 @@ class AgentLoop:
                         reason=f"Tool '{step.tool_name}' requires approval (risk={step.risk_level.value})",
                     )
                     self.state.pending_approvals.append(req)
-                    self.approval_manager.submit(req)
+                    self.approval_manager.submit(step, req.reason)
                     step.status = StepStatus.AWAITING_APPROVAL
                     step.result = ToolResult(success=False, error="Awaiting approval", retryable=False)
                     results.append(step.result)
-                    self._write_audit(step, step.result, approved=False)
+                    self._audit_store.write(step, step.result, approved=False)
                     continue
 
             safety_result = self.safety_engine.pre_check(step)
@@ -246,11 +252,17 @@ class AgentLoop:
                     retryable=False,
                 )
                 results.append(step.result)
-                self._write_audit(step, step.result, safety_blocked=True)
+                self._audit_store.write(step, step.result, safety_blocked=True)
                 continue
 
             self.safety_engine.record_call()
             result = await self.registry.execute(step.tool_name, step.params)
+            # Track approximate cost for safety budget
+            if result.tokens_used:
+                inp = result.tokens_used.get("input", 0)
+                out = result.tokens_used.get("output", 0)
+                cost = (inp * 0.0000015) + (out * 0.000002)
+                self.safety_engine.record_cost(cost)
             step.result = result
 
             if result.success:
@@ -262,7 +274,7 @@ class AgentLoop:
 
             self.state.total_tool_calls += 1
             results.append(result)
-            self._write_audit(step, result)
+            self._audit_store.write(step, result)
 
         return results
 
@@ -335,6 +347,7 @@ class AgentLoop:
     def pause(self) -> None:
         if self.state.status == AgentStatus.RUNNING:
             self.state.status = AgentStatus.PAUSED
+            self._state_store.save(self.state)
             self.event_bus.publish(
                 Event(
                     name="agent.lifecycle.paused",
@@ -346,6 +359,7 @@ class AgentLoop:
     def resume(self) -> None:
         if self.state.status == AgentStatus.PAUSED:
             self.state.status = AgentStatus.RUNNING
+            self._state_store.save(self.state)
             self.event_bus.publish(
                 Event(
                     name="agent.lifecycle.resumed",
@@ -356,6 +370,7 @@ class AgentLoop:
 
     def stop(self) -> None:
         self.state.status = AgentStatus.STOPPED
+        self._state_store.save(self.state)
         self.event_bus.publish(
             Event(
                 name="agent.lifecycle.stopped",
@@ -432,23 +447,6 @@ class AgentLoop:
             f"Safety blocked: {safety_status.get('blocked_count', 0)}\n"
             f"Pending approvals: {len(self.state.pending_approvals)}"
         )
-
-    def _write_audit(self, step: PlanStep, result: ToolResult, approved: bool = True, safety_blocked: bool = False) -> None:
-        AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        entry = {
-            "timestamp": datetime.now().isoformat(),
-            "step_id": step.id,
-            "tool": step.tool_name,
-            "params": step.params,
-            "risk_level": step.risk_level.value,
-            "approved": approved,
-            "safety_blocked": safety_blocked,
-            "success": result.success,
-            "error": result.error if result.error else None,
-            "duration_ms": result.duration_ms,
-        }
-        with open(AUDIT_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
 
     @staticmethod
     def _hours_since(iso_timestamp: str) -> float:

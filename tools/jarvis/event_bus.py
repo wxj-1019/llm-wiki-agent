@@ -2,49 +2,57 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from fnmatch import fnmatch
-from pathlib import Path
 from typing import Callable
 
+from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.types import Event, EventCategory
-
-REPO_ROOT = Path(__file__).parent.parent.parent
-DB_PATH = REPO_ROOT / "state" / "jarvis_events.db"
 
 
 class EventBus:
     def __init__(self) -> None:
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         self._subscriptions: dict[str, tuple[str, Callable]] = {}
-        self._init_db()
+        self._ensure_table()
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.execute("PRAGMA journal_mode=WAL")
-        return conn
-
-    def _init_db(self) -> None:
-        with self._connect() as conn:
-            conn.execute(
+    def _ensure_table(self) -> None:
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS events (
+                CREATE TABLE IF NOT EXISTS jarvis_events (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     category TEXT NOT NULL,
-                    payload_json TEXT,
-                    timestamp TEXT NOT NULL,
+                    payload_json JSONB,
+                    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     source TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
-            conn.commit()
+            # Migration: add consumed column if missing
+            try:
+                cur.execute("ALTER TABLE jarvis_events ADD COLUMN consumed BOOLEAN NOT NULL DEFAULT FALSE")
+            except Exception:
+                conn.rollback()
+                cur = conn.cursor()
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_jarvis_events_unconsumed ON jarvis_events(consumed, timestamp DESC)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_jarvis_events_name ON jarvis_events(name, timestamp DESC)"
+            )
+            cur.close()
 
     def publish(self, event: Event) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO events (id, name, category, payload_json, timestamp, source) VALUES (?, ?, ?, ?, ?, ?)",
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO jarvis_events (id, name, category, payload_json, timestamp, source, consumed)
+                VALUES (%s, %s, %s, %s, %s, %s, FALSE)
+                ON CONFLICT (id) DO NOTHING
+                """,
                 (
                     event.id,
                     event.name,
@@ -54,21 +62,44 @@ class EventBus:
                     event.source,
                 ),
             )
-            conn.commit()
+            cur.close()
 
     def poll(self, since: str = "", limit: int = 100) -> list[Event]:
-        with self._connect() as conn:
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
             if since:
-                rows = conn.execute(
-                    "SELECT id, name, category, payload_json, timestamp, source FROM events WHERE timestamp > ? ORDER BY timestamp DESC LIMIT ?",
+                cur.execute(
+                    """
+                    SELECT id, name, category, payload_json, timestamp, source
+                    FROM jarvis_events WHERE consumed = FALSE AND timestamp > %s
+                    ORDER BY timestamp DESC LIMIT %s
+                    """,
                     (since, limit),
-                ).fetchall()
+                )
             else:
-                rows = conn.execute(
-                    "SELECT id, name, category, payload_json, timestamp, source FROM events ORDER BY timestamp DESC LIMIT ?",
+                cur.execute(
+                    """
+                    SELECT id, name, category, payload_json, timestamp, source
+                    FROM jarvis_events WHERE consumed = FALSE
+                    ORDER BY timestamp DESC LIMIT %s
+                    """,
                     (limit,),
-                ).fetchall()
+                )
+            rows = cur.fetchall()
+            cur.close()
         return [self._row_to_event(r) for r in rows]
+
+    def mark_consumed(self, event_ids: list[str]) -> None:
+        if not event_ids:
+            return
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            placeholders = ",".join("%s" for _ in event_ids)
+            cur.execute(
+                f"UPDATE jarvis_events SET consumed = TRUE WHERE id IN ({placeholders})",
+                event_ids,
+            )
+            cur.close()
 
     def subscribe(self, pattern: str, callback: Callable) -> str:
         sub_id = f"sub_{uuid.uuid4().hex[:8]}"
@@ -85,41 +116,56 @@ class EventBus:
                 callback(event)
 
     def get_recent(self, category: EventCategory | None = None, limit: int = 50) -> list[Event]:
-        with self._connect() as conn:
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
             if category is not None:
-                rows = conn.execute(
-                    "SELECT id, name, category, payload_json, timestamp, source FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?",
+                cur.execute(
+                    """
+                    SELECT id, name, category, payload_json, timestamp, source
+                    FROM jarvis_events WHERE category = %s
+                    ORDER BY timestamp DESC LIMIT %s
+                    """,
                     (category.value, limit),
-                ).fetchall()
+                )
             else:
-                rows = conn.execute(
-                    "SELECT id, name, category, payload_json, timestamp, source FROM events ORDER BY timestamp DESC LIMIT ?",
+                cur.execute(
+                    """
+                    SELECT id, name, category, payload_json, timestamp, source
+                    FROM jarvis_events ORDER BY timestamp DESC LIMIT %s
+                    """,
                     (limit,),
-                ).fetchall()
+                )
+            rows = cur.fetchall()
+            cur.close()
         return [self._row_to_event(r) for r in rows]
 
     def purge(self, older_than_hours: int = 168) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                "DELETE FROM events WHERE timestamp < datetime('now', ?)",
-                (f"-{older_than_hours} hours",),
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "DELETE FROM jarvis_events WHERE timestamp < NOW() - INTERVAL '%s hours'",
+                (older_than_hours,),
             )
-            conn.commit()
+            cur.close()
 
     def stats(self) -> dict:
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT category, COUNT(*) FROM events GROUP BY category"
-            ).fetchall()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT category, COUNT(*) FROM jarvis_events GROUP BY category")
+            rows = cur.fetchall()
+            cur.close()
         return {row[0]: row[1] for row in rows}
 
     @staticmethod
     def _row_to_event(row: tuple) -> Event:
+        payload = row[3]
+        if payload is not None and isinstance(payload, str):
+            payload = json.loads(payload)
         return Event(
             id=row[0],
             name=row[1],
             category=EventCategory(row[2]),
-            payload=json.loads(row[3]) if row[3] is not None else None,
+            payload=payload,
             timestamp=row[4],
             source=row[5],
         )
