@@ -1,0 +1,42 @@
+# ============================================================================
+# Database configuration for llm-wiki-agent
+#
+# This file is gitignored — copy config/database.example.yaml and fill in values.
+# ============================================================================
+
+database:
+  # Backend: "sqlite" (current) or "postgresql" (with pgvector)
+  backend: "sqlite"
+
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "llm_wiki"
+    user: "wiki_user"
+    password: "${PG_PASSWORD}"       # reads from env var PG_PASSWORD
+    pool_min: 2
+    pool_max: 10
+    sslmode: "prefer"
+
+vector:
+  dimension: 768                     # nomic-embed-text
+  index_type: "hnsw"                 # hnsw | ivfflat
+  hnsw:
+    m: 16
+    ef_construction: 200
+    ef_search: 50
+
+search:
+  # Hybrid search weights: fts_weight + vector_weight should = 1.0
+  fts_weight: 0.6
+  vector_weight: 0.4
+  # CJK parser: "zhparser" (if extension installed) or "bigram_app" (app-level tokenization)
+  cjk_parser: "bigram_app"
+  # Type boosts for ranking
+  type_boosts:
+    entity: 1.2
+    concept: 1.1
+    source: 1.0
+    synthesis: 1.05
+  # Penalize auto-ingested stubs
+  stub_penalty: 0.7

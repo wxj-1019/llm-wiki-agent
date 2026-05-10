@@ -11,7 +11,9 @@ import threading
 import re
 import hashlib
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Any
+
+from tools.shared.search_backend import SearchBackend
 
 try:
     from shared.logging_config import get_logger
@@ -99,8 +101,8 @@ def _file_hash(path: Path) -> str:
     return h.hexdigest()[:16]
 
 
-class WikiSearchEngine:
-    """FTS5-backed search engine for wiki pages."""
+class WikiSearchEngine(SearchBackend):
+    """FTS5-backed search engine for wiki pages. Implements SearchBackend."""
 
     def __init__(self, db_path: Path | str = DB_PATH) -> None:
         self.db_path = Path(db_path)
@@ -204,6 +206,10 @@ class WikiSearchEngine:
             self._conn.execute("DELETE FROM wiki_pages WHERE path = ?", (rel_path,))
             self._conn.commit()
         self._set_meta("wiki_hash", self._compute_wiki_hash())
+
+    def index_page(self, page_path: str, content: str) -> None:
+        """Index a single page (abstract impl). Delegates to update_page."""
+        self.update_page(page_path, content)
 
     def update_page(self, page_path: str, content: str) -> None:
         """Update a single page in FTS5 index without full rebuild.

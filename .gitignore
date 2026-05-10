@@ -36,6 +36,7 @@ npm-debug.log*
 # Local settings
 .claude/settings.local.json
 config/llm.yaml
+config/database.yaml
 
 # Graph cache files
 graph/.cache.json

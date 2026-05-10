@@ -1,6 +1,30 @@
 # PostgreSQL + pgvector 迁移方案
 
-> 创建: 2026-05-10 | 版本: v1.0 | 状态: **设计中**
+> 创建: 2026-05-10 | 版本: v1.1 | 状态: **Phase 1-3 已实现，Phase 4-6 待执行**
+
+---
+
+## 实施进度
+
+| Phase | 内容 | 状态 | 产出 |
+|-------|------|------|------|
+| 1 | 环境准备 | ✅ 设计完成 | `config/database.yaml`, `config/database.example.yaml` |
+| 2 | schema + 迁移脚本 | ✅ 已实现 | `config/schema.sql`, `tools/migrate_to_pgsql.py` |
+| 3 | SearchBackend 抽象 | ✅ 已实现 | `tools/shared/search_backend.py`, `search_engine.py` 重构 |
+| 4 | 状态管理统一 | ⏳ 待执行 | — |
+| 5 | 向量重建 | ⏳ 待执行 | — |
+| 6 | 切换 + 回退 | ⏳ 待执行 | — |
+
+**已落地的文件:**
+
+| 文件 | 说明 |
+|------|------|
+| `tools/shared/search_backend.py` | SearchBackend ABC + `get_search_backend()` 工厂函数 |
+| `tools/search_engine.py` | 重构为 `WikiSearchEngine(SearchBackend)` |
+| `config/schema.sql` | 6 张表 + 触发器 + `hybrid_search()` 函数 |
+| `config/database.yaml` | PG 连接配置 + 向量/搜索参数 (gitignored) |
+| `config/database.example.yaml` | 配置模板 (提交到 git) |
+| `tools/migrate_to_pgsql.py` | 一键迁移脚本，支持 `--dry-run` `--verify` |
 
 ---
 
