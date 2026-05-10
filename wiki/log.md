@@ -504,3 +504,12 @@ Auto-ingested from https://finance.sina.com.cn/stock/
 ## [2026-05-09 21:40] refresh-dry | Checked 1, changed 1, re-ingested 0
 
 ## [2026-05-09 21:40] refresh | Checked 1, changed 1, re-ingested 0
+
+## [2026-05-11]
+
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+277 nodes, 1235 edges (1235 extracted, 0 inferred).
+## [2026-05-11] report | Graph health report generated
+
+277 nodes analyzed.

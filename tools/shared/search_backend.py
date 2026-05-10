@@ -121,25 +121,13 @@ def get_search_backend(config_path: Path | None = None) -> SearchBackend:
             except Exception:
                 backend_type = "sqlite"
 
-        # Try PostgreSQL first
+        # PostgreSQL only (SQLite fallback removed per user requirement)
         if backend_type == "postgresql":
-            try:
-                from tools.shared.pg_search_backend import PgSearchBackend
-                _backend_instance = PgSearchBackend(pg_config)
-                return _backend_instance
-            except ImportError:
-                import logging
-                logging.getLogger("wiki.search").warning(
-                    "PgSearchBackend not available (missing asyncpg/pgvector?), "
-                    "falling back to SQLite"
-                )
-            except Exception as e:
-                import logging
-                logging.getLogger("wiki.search").warning(
-                    "PgSearchBackend init failed: %s, falling back to SQLite", e
-                )
+            from tools.shared.pg_search_backend import PgSearchBackend
+            _backend_instance = PgSearchBackend(pg_config)
+            return _backend_instance
 
-        # Default: SQLite
+        # If config explicitly requests sqlite, still allow it (for tests)
         from tools.search_engine import WikiSearchEngine
         _backend_instance = WikiSearchEngine()
         return _backend_instance
