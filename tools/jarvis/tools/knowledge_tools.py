@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
+
+from tools.jarvis.shared_utils import safe_subprocess
 
 from tools.jarvis.tool_registry import register_tool
 from tools.jarvis.types import RiskLevel
@@ -13,19 +14,9 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 def _run_subprocess(cmd: list[str], timeout: int = 300) -> dict:
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        cwd=str(REPO_ROOT),
-    )
-    return {
-        "returncode": result.returncode,
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "success": result.returncode == 0,
-    }
+    result = safe_subprocess(cmd, timeout=timeout, cwd=str(REPO_ROOT))
+    result["success"] = result["returncode"] == 0
+    return result
 
 
 def _register_wiki_read():

@@ -46,6 +46,22 @@ class StepStatus(enum.Enum):
     AWAITING_APPROVAL = "awaiting_approval"
 
 
+class EventSource(str, enum.Enum):
+    LOOP = "loop"
+    MULTI_AGENT = "multi_agent"
+    COMM_TOOLS = "comm_tools"
+    SYSTEM_TOOLS = "system_tools"
+    DEV_TOOLS = "dev_tools"
+    KNOWLEDGE_TOOLS = "knowledge_tools"
+    WEB_TOOLS = "web_tools"
+    COMPOSITE_TOOLS = "composite_tools"
+    PLANNER = "planner"
+    LEARNER = "learner"
+    SAFETY = "safety"
+    APPROVAL = "approval"
+    USER = "user"
+
+
 @dataclass
 class Event:
     name: str

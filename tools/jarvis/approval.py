@@ -9,7 +9,7 @@ from typing import Any
 
 from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.types import ApprovalRequest, PlanStep, RiskLevel
-from tools.jarvis.shared_utils import load_yaml_config
+from tools.jarvis.shared_utils import iso_now, load_yaml_config
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -46,7 +46,7 @@ class ApprovalManager:
             step=step,
             reason=reason,
             status="pending",
-            created_at=datetime.now().isoformat(),
+            created_at=iso_now(),
         )
         with get_pg_conn() as conn:
             cur = conn.cursor()
@@ -61,7 +61,7 @@ class ApprovalManager:
         return req
 
     def approve(self, req_id: str, approver: str = "user") -> bool:
-        now = datetime.now().isoformat()
+        now = iso_now()
         with get_pg_conn() as conn:
             cur = conn.cursor()
             cur.execute(
@@ -77,7 +77,7 @@ class ApprovalManager:
         return rowcount > 0
 
     def reject(self, req_id: str, approver: str = "user") -> bool:
-        now = datetime.now().isoformat()
+        now = iso_now()
         with get_pg_conn() as conn:
             cur = conn.cursor()
             cur.execute(

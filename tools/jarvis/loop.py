@@ -15,12 +15,13 @@ from tools.jarvis.approval import get_approval_manager
 from tools.jarvis.learner import get_learner
 from tools.jarvis.state import get_state_store, AgentStateStore
 from tools.jarvis.audit import get_audit_store, AuditStore
-from tools.jarvis.shared_utils import parse_llm_json, load_yaml_config
+from tools.jarvis.shared_utils import iso_now, load_yaml_config, parse_llm_json
 from tools.jarvis.types import (
     AgentState,
     AgentStatus,
     Event,
     EventCategory,
+    EventSource,
     Insight,
     Plan,
     PlanStep,
@@ -57,7 +58,7 @@ class AgentLoop:
     async def run_cycle(self) -> str:
         cycle_id = f"cycle_{uuid.uuid4().hex[:8]}"
         self.state.cycle_count += 1
-        self.state.last_cycle_time = datetime.now().isoformat()
+        self.state.last_cycle_time = iso_now()
 
         events = await self.perceive()
         if events:
@@ -81,14 +82,14 @@ class AgentLoop:
         polled = self.event_bus.poll(limit=50)
         events.extend(polled)
 
-        now = datetime.now().isoformat()
+        now = iso_now()
 
         if not self._last_health_check or self._hours_since(self._last_health_check) >= self._health_interval_hours:
             health_event = Event(
                 name="agent.health.check_due",
                 category=EventCategory.SYSTEM,
                 payload={"trigger": "interval"},
-                source="loop",
+                source=EventSource.LOOP,
             )
             events.append(health_event)
             self._last_health_check = now
@@ -98,7 +99,7 @@ class AgentLoop:
                 name="agent.quality.check_due",
                 category=EventCategory.SYSTEM,
                 payload={"trigger": "interval"},
-                source="loop",
+                source=EventSource.LOOP,
             )
             events.append(quality_event)
             self._last_quality_check = now
@@ -108,7 +109,7 @@ class AgentLoop:
                 name="agent.budget.check_due",
                 category=EventCategory.SYSTEM,
                 payload={"trigger": "interval"},
-                source="loop",
+                source=EventSource.LOOP,
             )
             events.append(budget_event)
             self._last_budget_check = now
@@ -227,7 +228,7 @@ class AgentLoop:
                         name="agent.plan.validation_issue",
                         category=EventCategory.SYSTEM,
                         payload={"issue": issue},
-                        source="loop",
+                        source=EventSource.LOOP,
                     )
                 )
         optimized.estimated_cost = self.planner.estimate_cost(optimized)
@@ -306,7 +307,7 @@ class AgentLoop:
                     name="agent.learn.record_failed",
                     category=EventCategory.SYSTEM,
                     payload={"error": str(exc)},
-                    source="loop",
+                    source=EventSource.LOOP,
                 )
             )
 
@@ -320,7 +321,7 @@ class AgentLoop:
                             name="agent.learn.threshold_adjusted",
                             category=EventCategory.SYSTEM,
                             payload=adj,
-                            source="loop",
+                            source=EventSource.LOOP,
                         )
                     )
         except Exception as exc:
@@ -329,7 +330,7 @@ class AgentLoop:
                     name="agent.learn.adjustment_failed",
                     category=EventCategory.SYSTEM,
                     payload={"error": str(exc)},
-                    source="loop",
+                    source=EventSource.LOOP,
                 )
             )
 
@@ -361,7 +362,7 @@ class AgentLoop:
                         "error": result.error if result.error else None,
                         "duration_ms": result.duration_ms,
                     },
-                    source="loop",
+                    source=EventSource.LOOP,
                 )
             )
 
@@ -372,7 +373,7 @@ class AgentLoop:
                 name="agent.lifecycle.started",
                 category=EventCategory.SYSTEM,
                 payload={"cycle_count": self.state.cycle_count},
-                source="loop",
+                source=EventSource.LOOP,
             )
         )
 
@@ -385,7 +386,7 @@ class AgentLoop:
                         name="agent.cycle.error",
                         category=EventCategory.SYSTEM,
                         payload={"error": str(exc)},
-                        source="loop",
+                        source=EventSource.LOOP,
                     )
                 )
 
@@ -407,7 +408,7 @@ class AgentLoop:
                 Event(
                     name="agent.lifecycle.paused",
                     category=EventCategory.SYSTEM,
-                    source="loop",
+                    source=EventSource.LOOP,
                 )
             )
 
@@ -419,7 +420,7 @@ class AgentLoop:
                 Event(
                     name="agent.lifecycle.resumed",
                     category=EventCategory.SYSTEM,
-                    source="loop",
+                    source=EventSource.LOOP,
                 )
             )
 
@@ -431,7 +432,7 @@ class AgentLoop:
                 name="agent.lifecycle.stopped",
                 category=EventCategory.SYSTEM,
                 payload={"cycle_count": self.state.cycle_count},
-                source="loop",
+                source=EventSource.LOOP,
             )
         )
 

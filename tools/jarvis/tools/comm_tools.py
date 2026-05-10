@@ -15,7 +15,7 @@ from pathlib import Path
 
 from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.tool_registry import register_tool
-from tools.jarvis.types import Event, EventCategory, RiskLevel
+from tools.jarvis.types import Event, EventCategory, EventSource, RiskLevel
 from tools.jarvis.shared_utils import load_yaml_config
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
@@ -107,7 +107,7 @@ def _register_notify_log():
             name=f"notify.{level}",
             category=EventCategory.AGENT,
             payload={"level": level, "message": message, "category": category},
-            source="comm_tools",
+            source=EventSource.COMM_TOOLS,
         )
         bus.dispatch(event)
         return {"success": True}

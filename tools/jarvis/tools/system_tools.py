@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import os
 import platform
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from tools.jarvis.shared_utils import safe_subprocess, normalize_path
 
 from tools.jarvis.tool_registry import register_tool
 from tools.jarvis.types import RiskLevel
@@ -21,14 +22,7 @@ except ImportError:
 
 
 def _resolve_path(path: str) -> Path | None:
-    if ".." in Path(path).parts:
-        return None
-    resolved = REPO_ROOT / path
-    try:
-        resolved.resolve().relative_to(REPO_ROOT.resolve())
-    except ValueError:
-        return None
-    return resolved
+    return normalize_path(path, str(REPO_ROOT))
 
 
 def _register_file_read():
@@ -162,15 +156,12 @@ def _register_process_list():
 
         is_windows = platform.system() == "Windows"
         cmd = ["tasklist", "/FO", "CSV"] if is_windows else ["ps", "aux"]
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        result = safe_subprocess(cmd, timeout=30)
+        if result["returncode"] == -1:
             return {"processes": []}
 
         procs = []
-        for line in result.stdout.strip().splitlines():
+        for line in result["stdout"].strip().splitlines():
             if is_windows:
                 parts = line.replace('"', "").split(",")
                 if len(parts) >= 2:
@@ -229,13 +220,10 @@ def _register_process_kill():
         else:
             sig = 9 if force else 15
             cmd = ["kill", f"-{sig}", str(pid)]
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                return {"success": True, "message": f"Process {pid} {'killed' if force else 'terminated'}"}
-            return {"success": False, "message": result.stderr.strip() or f"Failed to kill process {pid}"}
-        except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-            return {"success": False, "message": str(exc)}
+        result = safe_subprocess(cmd, timeout=10)
+        if result["returncode"] == 0:
+            return {"success": True, "message": f"Process {pid} {'killed' if force else 'terminated'}"}
+        return {"success": False, "message": result["stderr"].strip() or f"Failed to kill process {pid}"}
 
 
 def _register_terminal_exec():
@@ -260,38 +248,19 @@ def _register_terminal_exec():
     def terminal_exec(command: str, cwd: str = "", timeout: int = 60, shell: bool = True) -> dict:
         exec_cwd = str(REPO_ROOT / cwd) if cwd else str(REPO_ROOT)
         start = time.perf_counter()
-        try:
-            result = subprocess.run(
-                command if shell else command.split(),
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=exec_cwd,
-                shell=shell,
-            )
-            duration_ms = (time.perf_counter() - start) * 1000
-            return {
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
-                "duration_ms": round(duration_ms, 2),
-            }
-        except subprocess.TimeoutExpired:
-            duration_ms = (time.perf_counter() - start) * 1000
-            return {
-                "stdout": "",
-                "stderr": f"Command timed out after {timeout}s",
-                "returncode": -1,
-                "duration_ms": round(duration_ms, 2),
-            }
-        except Exception as exc:
-            duration_ms = (time.perf_counter() - start) * 1000
-            return {
-                "stdout": "",
-                "stderr": str(exc),
-                "returncode": -1,
-                "duration_ms": round(duration_ms, 2),
-            }
+        result = safe_subprocess(
+            command if shell else command.split(),
+            cwd=exec_cwd,
+            timeout=timeout,
+            shell=shell,
+        )
+        duration_ms = (time.perf_counter() - start) * 1000
+        return {
+            "stdout": result["stdout"],
+            "stderr": result["stderr"],
+            "returncode": result["returncode"],
+            "duration_ms": round(duration_ms, 2),
+        }
 
 
 def _register_system_info():

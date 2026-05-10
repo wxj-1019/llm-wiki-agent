@@ -12,6 +12,7 @@ from urllib.error import URLError, HTTPError
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
+from tools.jarvis.shared_utils import normalize_path
 from tools.jarvis.tool_registry import register_tool
 from tools.jarvis.types import RiskLevel
 
@@ -170,8 +171,8 @@ def download(url: str, save_path: str = "", timeout: int = 120) -> dict:
     filename = Path(parsed.path).name or f"download_{uuid.uuid4().hex[:8]}"
     if not save_path:
         save_path = str(REPO_ROOT / "raw" / filename)
-    target = Path(save_path)
-    if ".." in target.parts:
+    target = normalize_path(save_path, str(REPO_ROOT))
+    if target is None:
         return {"success": False, "error": "Path traversal detected"}
     target.parent.mkdir(parents=True, exist_ok=True)
     try:

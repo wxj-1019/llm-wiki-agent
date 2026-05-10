@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from tools.jarvis.shared_utils import iso_now
 from pathlib import Path
 
 from tools.jarvis.jarvis_pg import get_pg_conn
-from tools.jarvis.types import Event, EventCategory
+from tools.jarvis.types import Event, EventCategory, EventSource
 
 try:
     from tools.jarvis.event_bus import get_event_bus
@@ -92,7 +92,7 @@ class MultiAgentManager:
 
     def register_agent(self, name: str, role: str, description: str) -> dict:
         agent_id = f"agent_{uuid.uuid4().hex[:12]}"
-        now = datetime.now().isoformat()
+        now = iso_now()
 
         with get_pg_conn() as conn:
             cur = conn.cursor()
@@ -157,7 +157,7 @@ class MultiAgentManager:
 
     def assign_task(self, agent_id: str, task: str, priority: str = "medium") -> dict:
         task_id = f"task_{uuid.uuid4().hex[:12]}"
-        now = datetime.now().isoformat()
+        now = iso_now()
 
         with get_pg_conn() as conn:
             cur = conn.cursor()
@@ -210,7 +210,7 @@ class MultiAgentManager:
             return None
 
     def start_task(self, task_id: str) -> bool:
-        now = datetime.now().isoformat()
+        now = iso_now()
         with get_pg_conn() as conn:
             cur = conn.cursor()
             cur.execute(
@@ -224,7 +224,7 @@ class MultiAgentManager:
         return updated
 
     def complete_task(self, task_id: str, result: dict | None = None) -> bool:
-        now = datetime.now().isoformat()
+        now = iso_now()
         result_json = json.dumps(result) if result else "{}"
 
         with get_pg_conn() as conn:
@@ -263,7 +263,7 @@ class MultiAgentManager:
         return updated
 
     def fail_task(self, task_id: str, error: str = "") -> bool:
-        now = datetime.now().isoformat()
+        now = iso_now()
         result_json = json.dumps({"error": error}) if error else "{}"
 
         with get_pg_conn() as conn:
@@ -455,7 +455,7 @@ class MultiAgentManager:
                 name=name,
                 category=category,
                 payload=payload,
-                source="multi_agent",
+                source=EventSource.MULTI_AGENT,
             ))
         except Exception:
             pass

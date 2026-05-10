@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
+
+from tools.jarvis.shared_utils import safe_subprocess, normalize_path
 
 from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.tool_registry import register_tool
@@ -13,12 +14,10 @@ from tools.jarvis.types import RiskLevel
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
-def _run_git(args: list[str], cwd: str = "") -> subprocess.CompletedProcess:
+def _run_git(args: list[str], cwd: str = "") -> dict:
     work_dir = cwd if cwd else str(REPO_ROOT)
-    return subprocess.run(
+    return safe_subprocess(
         ["git"] + args,
-        capture_output=True,
-        text=True,
         cwd=work_dir,
         timeout=60,
     )
@@ -36,11 +35,11 @@ def _register_git_status():
     def git_status(path: str = "") -> dict:
         result = _run_git(["status", "--porcelain", "-b"], cwd=path)
         branch = ""
-        for line in result.stdout.splitlines():
+        for line in result["stdout"].splitlines():
             if line.startswith("## "):
                 branch = line[3:].split("...")[0]
                 break
-        return {"output": result.stdout, "branch": branch}
+        return {"output": result["stdout"], "branch": branch}
 
 
 def _register_git_diff():
@@ -61,9 +60,9 @@ def _register_git_diff():
             args.append("--staged")
         result = _run_git(args, cwd=path)
         files_changed = sum(
-            1 for line in result.stdout.splitlines() if line.startswith("---")
+            1 for line in result["stdout"].splitlines() if line.startswith("---")
         )
-        return {"output": result.stdout, "files_changed": files_changed}
+        return {"output": result["stdout"], "files_changed": files_changed}
 
 
 def _register_git_log():
@@ -80,7 +79,7 @@ def _register_git_log():
     )
     def git_log(count: int = 10, format: str = "%h %s (%cr)") -> dict:
         result = _run_git(["log", f"--pretty=format:{format}", f"-{count}"])
-        entries = result.stdout.splitlines() if result.stdout.strip() else []
+        entries = result["stdout"].splitlines() if result["stdout"].strip() else []
         return {"entries": entries}
 
 
@@ -99,13 +98,13 @@ def _register_git_commit():
     def git_commit(message: str, add_all: bool = False) -> dict:
         if add_all:
             add_result = _run_git(["add", "-A"])
-            if add_result.returncode != 0:
-                return {"success": False, "output": add_result.stderr}
+            if add_result["returncode"] != 0:
+                return {"success": False, "output": add_result["stderr"]}
         result = _run_git(["commit", "-m", message])
-        output = result.stdout
-        if result.stderr:
-            output += "\n" + result.stderr
-        return {"success": result.returncode == 0, "output": output}
+        output = result["stdout"]
+        if result["stderr"]:
+            output += "\n" + result["stderr"]
+        return {"success": result["returncode"] == 0, "output": output}
 
 
 def _register_git_push():
@@ -125,10 +124,10 @@ def _register_git_push():
         if branch:
             args.append(branch)
         result = _run_git(args)
-        output = result.stdout
-        if result.stderr:
-            output += "\n" + result.stderr
-        return {"success": result.returncode == 0, "output": output}
+        output = result["stdout"]
+        if result["stderr"]:
+            output += "\n" + result["stderr"]
+        return {"success": result["returncode"] == 0, "output": output}
 
 
 def _register_git_pull():
@@ -148,10 +147,10 @@ def _register_git_pull():
         if branch:
             args.append(branch)
         result = _run_git(args)
-        output = result.stdout
-        if result.stderr:
-            output += "\n" + result.stderr
-        return {"success": result.returncode == 0, "output": output}
+        output = result["stdout"]
+        if result["stderr"]:
+            output += "\n" + result["stderr"]
+        return {"success": result["returncode"] == 0, "output": output}
 
 
 def _register_db_query():
@@ -172,13 +171,8 @@ def _register_db_query():
         category="dev",
     )
     def db_query(db_path: str, query: str, params: list = []) -> dict:
-        resolved = Path(db_path)
-        if not resolved.is_absolute():
-            resolved = REPO_ROOT / db_path
-        resolved = resolved.resolve()
-        try:
-            resolved.relative_to(REPO_ROOT)
-        except ValueError:
+        resolved = normalize_path(db_path, str(REPO_ROOT))
+        if resolved is None:
             return {"rows": [], "row_count": 0, "columns": [], "error": "path traversal denied"}
         if not resolved.exists():
             return {"rows": [], "row_count": 0, "columns": [], "error": f"database not found: {db_path}"}
@@ -251,35 +245,13 @@ def _register_build_run():
     )
     def build_run(command: str = "npm run build", cwd: str = "", timeout: int = 300) -> dict:
         work_dir = cwd if cwd else str(REPO_ROOT)
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                cwd=work_dir,
-                timeout=timeout,
-            )
-            return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"command timed out after {timeout}s",
-                "returncode": -1,
-            }
-        except Exception as exc:
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": str(exc),
-                "returncode": -1,
-            }
+        result = safe_subprocess(command, cwd=work_dir, timeout=timeout, shell=True)
+        return {
+            "success": result["returncode"] == 0,
+            "stdout": result["stdout"],
+            "stderr": result["stderr"],
+            "returncode": result["returncode"],
+        }
 
 
 def _register_test_run():
@@ -302,35 +274,13 @@ def _register_test_run():
     )
     def test_run(command: str = "python -m pytest", cwd: str = "", timeout: int = 300) -> dict:
         work_dir = cwd if cwd else str(REPO_ROOT)
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                cwd=work_dir,
-                timeout=timeout,
-            )
-            return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": f"command timed out after {timeout}s",
-                "returncode": -1,
-            }
-        except Exception as exc:
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": str(exc),
-                "returncode": -1,
-            }
+        result = safe_subprocess(command, cwd=work_dir, timeout=timeout, shell=True)
+        return {
+            "success": result["returncode"] == 0,
+            "stdout": result["stdout"],
+            "stderr": result["stderr"],
+            "returncode": result["returncode"],
+        }
 
 
 def _register_pip_install():
@@ -349,16 +299,11 @@ def _register_pip_install():
         cmd = [sys.executable, "-m", "pip", "install", package]
         if upgrade:
             cmd.append("--upgrade")
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            output = result.stdout
-            if result.stderr:
-                output += "\n" + result.stderr
-            return {"success": result.returncode == 0, "output": output}
-        except subprocess.TimeoutExpired:
-            return {"success": False, "output": "pip install timed out after 300s"}
-        except Exception as exc:
-            return {"success": False, "output": str(exc)}
+        result = safe_subprocess(cmd, timeout=300)
+        output = result["stdout"]
+        if result["stderr"]:
+            output += "\n" + result["stderr"]
+        return {"success": result["returncode"] == 0, "output": output}
 
 
 _ALL_REGISTRARS = [

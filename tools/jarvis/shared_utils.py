@@ -44,3 +44,64 @@ def load_yaml_config(path: str | Path, defaults: dict | None = None) -> dict:
         return result
     except Exception:
         return result
+
+
+import subprocess
+from datetime import datetime
+
+
+def safe_subprocess(
+    cmd: list[str] | str,
+    cwd: str | None = None,
+    timeout: int = 60,
+    shell: bool = False,
+    capture_output: bool = True,
+) -> dict:
+    """Run a subprocess with safe defaults. Returns dict with stdout, stderr, returncode, duration_ms."""
+    result: dict = {"stdout": "", "stderr": "", "returncode": -1, "duration_ms": 0}
+    start = datetime.now()
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            timeout=timeout,
+            shell=shell,
+            capture_output=capture_output,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        result["stdout"] = proc.stdout or ""
+        result["stderr"] = proc.stderr or ""
+        result["returncode"] = proc.returncode
+    except subprocess.TimeoutExpired as exc:
+        result["stderr"] = f"Timed out after {timeout}s"
+        result["stdout"] = exc.stdout or ""
+        result["returncode"] = -1
+    except FileNotFoundError:
+        result["stderr"] = f"Command not found: {cmd}"
+        result["returncode"] = -1
+    except Exception as exc:
+        result["stderr"] = str(exc)
+        result["returncode"] = -1
+    result["duration_ms"] = int((datetime.now() - start).total_seconds() * 1000)
+    return result
+
+
+def normalize_path(user_path: str, base_dir: str) -> Path | None:
+    """Resolve a user-provided path relative to base_dir, with traversal protection.
+    Returns resolved Path or None if traversal detected.
+    """
+    try:
+        base = Path(base_dir).resolve()
+        target = (base / user_path).resolve()
+        # Ensure target is within base
+        target.relative_to(base)
+        return target
+    except (ValueError, RuntimeError):
+        return None
+
+
+def iso_now() -> str:
+    """Return current time as ISO 8601 string."""
+    return datetime.now().isoformat()
