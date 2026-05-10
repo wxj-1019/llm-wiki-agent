@@ -90,8 +90,53 @@ AGENT_DIR = WIKI / ".agent"
 _GRAPH_REBUILD_LOCK = threading.Lock()
 _TOOL_SCRIPT_WHITELIST = {
     "lint.py", "heal.py", "refresh.py", "build_graph.py",
-    "fetchers/web_fetcher.py", "batch_compiler.py", "batch_ingest.py",
+    "fetchers/web_fetcher.py", "fetchers/rss_fetcher.py",
+    "fetchers/github_fetcher.py", "fetchers/arxiv_fetcher.py",
+    "batch_compiler.py", "batch_ingest.py",
 }
+
+# ── Page content cache ──
+import time as _time
+from threading import Lock as _Lock
+
+_page_cache: dict[str, tuple[str, float]] = {}
+_page_cache_lock = _Lock()
+_PAGE_CACHE_MAX = 256
+_PAGE_CACHE_TTL = 300
+
+
+def _get_cached_page(path: str) -> str | None:
+    try:
+        with _page_cache_lock:
+            if path in _page_cache:
+                content, fetched_at = _page_cache[path]
+                if _time.time() - fetched_at < _PAGE_CACHE_TTL:
+                    return content
+    except Exception:
+        pass
+    return None
+
+
+def _set_cached_page(path: str, content: str) -> None:
+    try:
+        with _page_cache_lock:
+            if len(_page_cache) >= _PAGE_CACHE_MAX:
+                oldest_key = min(_page_cache, key=lambda k: _page_cache[k][1])
+                del _page_cache[oldest_key]
+            _page_cache[path] = (content, _time.time())
+    except Exception:
+        pass
+
+
+def _invalidate_page_cache(path: str | None = None) -> None:
+    try:
+        with _page_cache_lock:
+            if path:
+                _page_cache.pop(path, None)
+            else:
+                _page_cache.clear()
+    except Exception:
+        pass
 
 # ── Webhook auth (optional) ──
 _WEBHOOK_TOKEN = os.environ.get("WIKI_WEBHOOK_TOKEN", "").strip()
@@ -225,14 +270,10 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 
-# ── Global exception handler ──
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled exception at %s: %s", request.url.path, exc)
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Internal server error", "detail": str(exc) if os.getenv("DEBUG") else "Please check server logs."},
-    )
+# ── Replaced by the earlier exception handler (line 178) which handles both HTTPException and generic Exception.
+# Duplicate handlers for the same exception type cause the last one to win, swallowing the earlier one.
+# The handler at line 178 is the canonical one — it properly distinguishes HTTPException (returning the
+# correct status code) from unexpected exceptions (returning 500).
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -277,39 +318,52 @@ def get_graph():
 
 @app.get("/api/pages/{page_type}/{slug}")
 def get_page(page_type: str, slug: str):
-    # Whitelist allowed page types to prevent path traversal
     allowed_types = {"sources", "entities", "concepts", "syntheses"}
     if page_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid page type")
-    # Sanitize slug
     safe_slug = Path(slug).name
     if not safe_slug or safe_slug in (".", ".."):
         raise HTTPException(status_code=400, detail="Invalid slug")
     path = WIKI / page_type / f"{safe_slug}.md"
-    # Ensure resolved path stays within wiki
     try:
         path.resolve().relative_to(WIKI.resolve())
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid path")
     if not path.exists():
         raise HTTPException(status_code=404, detail="Not found")
-    return {"markdown": path.read_text(encoding="utf-8"), "path": str(path)}
+    rel = str(path.relative_to(REPO).as_posix())
+    cached = _get_cached_page(rel)
+    if cached is not None:
+        return {"markdown": cached, "path": str(path)}
+    content = path.read_text(encoding="utf-8")
+    _set_cached_page(rel, content)
+    return {"markdown": content, "path": str(path)}
 
 @app.get("/api/index")
 def get_index():
-    """Return the full content of wiki/index.md."""
+    rel = "wiki/index.md"
+    cached = _get_cached_page(rel)
+    if cached is not None:
+        return {"markdown": cached}
     path = WIKI / "index.md"
     if not path.exists():
         return {"markdown": ""}
-    return {"markdown": path.read_text(encoding="utf-8")}
+    content = path.read_text(encoding="utf-8")
+    _set_cached_page(rel, content)
+    return {"markdown": content}
 
 @app.get("/api/log")
 def get_log(tail: int = Query(0, ge=0, description="Return only the last N log entries. 0 = all.")):
-    """Return the full or tail-truncated content of wiki/log.md."""
-    path = WIKI / "log.md"
-    if not path.exists():
-        return {"markdown": ""}
-    content = path.read_text(encoding="utf-8")
+    rel = "wiki/log.md"
+    cached = _get_cached_page(rel)
+    if cached is not None:
+        content = cached
+    else:
+        path = WIKI / "log.md"
+        if not path.exists():
+            return {"markdown": ""}
+        content = path.read_text(encoding="utf-8")
+        _set_cached_page(rel, content)
     if tail > 0:
         lines = content.splitlines()
         entry_indices = [i for i, line in enumerate(lines) if line.startswith("## [")]
@@ -319,11 +373,16 @@ def get_log(tail: int = Query(0, ge=0, description="Return only the last N log e
 
 @app.get("/api/overview")
 def get_overview():
-    """Return the full content of wiki/overview.md."""
+    rel = "wiki/overview.md"
+    cached = _get_cached_page(rel)
+    if cached is not None:
+        return {"markdown": cached}
     path = WIKI / "overview.md"
     if not path.exists():
         return {"markdown": ""}
-    return {"markdown": path.read_text(encoding="utf-8")}
+    content = path.read_text(encoding="utf-8")
+    _set_cached_page(rel, content)
+    return {"markdown": content}
 
 # ── FTS5 Search ────────────────────────────────────────────────────
 
@@ -347,17 +406,16 @@ def _get_search_engine():
 
 @app.get("/api/search/fts")
 def search_fts(q: str = Query("", min_length=1), limit: int = Query(20, ge=1, le=100), semantic: bool = Query(False)):
-    """Full-text search via SQLite FTS5. Returns ranked results with excerpts."""
+    """Full-text search via SQLite FTS5. Returns ranked results with excerpts and did-you-mean."""
     if not q or len(q.strip()) == 0:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
     try:
         engine = _get_search_engine()
-        results = engine.search(q.strip(), limit, semantic=semantic)
-        return {"results": results, "count": len(results)}
+        result = engine.search(q.strip(), limit, semantic=semantic)
+        return result
     except Exception as e:
         logging.warning("Search failed: %s", e)
-        # Degrade to plain substring search
-        return {"results": _fallback_search(q.strip(), limit), "count": 0, "degraded": True}
+        return {"results": _fallback_search(q.strip(), limit), "count": 0, "did_you_mean": None, "degraded": True}
 
 
 @app.post("/api/search/reindex-embeddings")
@@ -389,6 +447,92 @@ async def reindex_fts():
     except Exception as e:
         logging.warning("FTS reindex failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Reindex failed: {e}")
+
+
+@app.get("/api/pipeline/health")
+def pipeline_health():
+    """Return pipeline health status: state.json, FTS index, graph, scheduler metrics."""
+    import json as _json
+    health: dict[str, Any] = {
+        "status": "ok",
+        "checks": {},
+        "stats": {},
+    }
+
+    # 1. State file health
+    state_path = REPO / "raw-inbox" / "state.json"
+    try:
+        if state_path.exists():
+            state = _json.loads(state_path.read_text(encoding="utf-8"))
+            processed = len(state.get("processed_urls", {}))
+            auto_ingested = len(state.get("auto_ingested", []))
+            last_web = state.get("last_runs", {}).get("web", "never")
+            last_auto_ingest = state.get("last_runs", {}).get("auto_ingest", "never")
+            last_refresh = state.get("last_runs", {}).get("refresh_monitor", "never")
+            health["checks"]["state_file"] = {"ok": True, "processed_urls": processed,
+                                                "auto_ingested": auto_ingested}
+            health["stats"]["last_web_fetch"] = last_web
+            health["stats"]["last_auto_ingest"] = last_auto_ingest
+            health["stats"]["last_refresh_monitor"] = last_refresh
+        else:
+            health["checks"]["state_file"] = {"ok": False, "error": "state.json not found"}
+    except Exception as e:
+        health["checks"]["state_file"] = {"ok": False, "error": str(e)}
+
+    # 2. FTS5 index health
+    try:
+        engine = _get_search_engine()
+        count = engine._conn.execute("SELECT COUNT(*) FROM wiki_pages").fetchone()[0]
+        health["checks"]["fts_index"] = {"ok": True, "indexed_pages": count}
+        health["stats"]["fts_pages"] = count
+    except Exception as e:
+        health["checks"]["fts_index"] = {"ok": False, "error": str(e)}
+
+    # 3. Graph health
+    graph_path = REPO / "graph" / "graph.json"
+    try:
+        if graph_path.exists():
+            g = _json.loads(graph_path.read_text(encoding="utf-8"))
+            nodes = len(g.get("nodes", []))
+            edges = len(g.get("edges", []))
+            health["checks"]["graph"] = {"ok": True, "nodes": nodes, "edges": edges}
+            health["stats"]["graph_nodes"] = nodes
+            health["stats"]["graph_edges"] = edges
+        else:
+            health["checks"]["graph"] = {"ok": False, "error": "graph.json not found"}
+    except Exception as e:
+        health["checks"]["graph"] = {"ok": False, "error": str(e)}
+
+    # 4. Wiki structure
+    try:
+        sources = len(list((REPO / "wiki" / "sources").glob("*.md"))) if (REPO / "wiki" / "sources").exists() else 0
+        entities = len(list((REPO / "wiki" / "entities").glob("*.md"))) if (REPO / "wiki" / "entities").exists() else 0
+        concepts = len(list((REPO / "wiki" / "concepts").glob("*.md"))) if (REPO / "wiki" / "concepts").exists() else 0
+        health["checks"]["wiki_structure"] = {"ok": True, "sources": sources,
+                                                "entities": entities, "concepts": concepts}
+        health["stats"]["wiki_sources"] = sources
+        health["stats"]["wiki_entities"] = entities
+        health["stats"]["wiki_concepts"] = concepts
+    except Exception as e:
+        health["checks"]["wiki_structure"] = {"ok": False, "error": str(e)}
+
+    # 5. Fetched files pending
+    try:
+        fetched_dir = REPO / "raw-inbox" / "fetched"
+        fetched_count = 0
+        if fetched_dir.exists():
+            for subdir in fetched_dir.iterdir():
+                if subdir.is_dir():
+                    fetched_count += len(list(subdir.glob("*.md")))
+        health["stats"]["fetched_files_pending"] = fetched_count
+    except Exception:
+        health["stats"]["fetched_files_pending"] = -1
+
+    # Overall status
+    if any(not v.get("ok", True) for v in health["checks"].values()):
+        health["status"] = "degraded"
+
+    return health
 
 
 def _fallback_search(query: str, limit: int) -> list[dict]:
@@ -443,6 +587,37 @@ def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200
     if not q or len(q.strip()) == 0:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required and must be non-empty")
     q_clean = q.strip().lower()
+    has_cjk = bool(re.search(r'[\u4e00-\u9fff]', q_clean))
+    search_terms = [q_clean]
+    if has_cjk:
+        non_cjk_tokens: list[str] = []
+        cjk_chars: list[str] = []
+        for seg in q_clean.split():
+            buf = ""
+            prev_type = ""
+            for ch in seg:
+                if '\u4e00' <= ch <= '\u9fff':
+                    cur = "cjk"
+                else:
+                    cur = "other"
+                if prev_type and cur != prev_type:
+                    if buf:
+                        if re.search(r'[\u4e00-\u9fff]', buf):
+                            cjk_chars.extend(c for c in buf if '\u4e00' <= c <= '\u9fff')
+                        else:
+                            non_cjk_tokens.append(buf)
+                    buf = ""
+                buf += ch
+                prev_type = cur
+            if buf:
+                if re.search(r'[\u4e00-\u9fff]', buf):
+                    cjk_chars.extend(c for c in buf if '\u4e00' <= c <= '\u9fff')
+                else:
+                    non_cjk_tokens.append(buf)
+        if non_cjk_tokens:
+            search_terms = non_cjk_tokens
+        elif cjk_chars:
+            search_terms = cjk_chars
     results = []
     for p in WIKI.rglob("*.md"):
         if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
@@ -452,7 +627,13 @@ def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200
         except Exception as e:
             logger.warning("Fallback search skipped file: %s", e)
             continue
-        if q_clean in content.lower():
+        content_lower = content.lower()
+        matched = False
+        if len(search_terms) == 1:
+            matched = search_terms[0] in content_lower
+        else:
+            matched = all(t in content_lower for t in search_terms)
+        if matched:
             preview_raw = content[:200].replace("<", "&lt;").replace(">", "&gt;")
             results.append({
                 "id": p.relative_to(WIKI).as_posix().replace(".md", ""),
@@ -925,6 +1106,7 @@ async def api_ingest(payload: IngestPayload):
 def _invalidate_search_index() -> None:
     """Force FTS index to recheck wiki files on next search.
     Called after any subprocess that modifies wiki/ (ingest, heal, refresh, etc.)."""
+    _invalidate_page_cache()
     global _search_engine
     if _search_engine is not None:
         try:
@@ -1861,6 +2043,13 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
     q_words = [w for w in q_lower.split() if len(w) >= 2]
     if not q_words:
         q_words = [q_lower]
+    has_cjk = bool(re.search(r'[\u4e00-\u9fff]', q_lower))
+    if has_cjk:
+        cjk_chars = [c for c in q_lower if '\u4e00' <= c <= '\u9fff']
+        for c in cjk_chars:
+            if c not in q_words:
+                q_words.append(c)
+        q_words = [w for w in q_words if len(w) >= 1]
     results = []
     for p in WIKI.rglob("*.md"):
         if p.name in ("index.md", "log.md", "lint-report.md", "health-report.md"):
@@ -1885,11 +2074,16 @@ def _search_wiki(query: str, max_results: int = MAX_SOURCES) -> list[dict]:
 
 def _extract_relevant_snippets(content: str, query: str, max_chars: int = MAX_WIKI_CHARS_PER_PAGE) -> str:
     """Extract most relevant parts of a wiki page for the query."""
-    # If content is short enough, return it all
     if len(content) <= max_chars:
         return content
-    # Otherwise try to find sections containing query keywords
-    q_words = [w for w in query.lower().split() if len(w) > 2]
+    q_lower = query.lower()
+    q_words = [w for w in q_lower.split() if len(w) > 2]
+    has_cjk = bool(re.search(r'[\u4e00-\u9fff]', q_lower))
+    if has_cjk:
+        cjk_chars = [c for c in q_lower if '\u4e00' <= c <= '\u9fff']
+        q_words.extend(cjk_chars)
+    if not q_words:
+        return content[:max_chars]
     lines = content.splitlines()
     scored_lines = []
     for i, line in enumerate(lines):
@@ -2561,6 +2755,7 @@ async def wiki_write(payload: WikiWritePayload):
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(payload.content, encoding="utf-8")
+        _invalidate_page_cache(payload.path)
         try:
             engine = _get_search_engine()
             engine.index_page(payload.path)
@@ -2699,6 +2894,13 @@ class FetchUrlPayload(BaseModel):
     url: str = Field(..., description="URL to fetch")
     name: str = Field(default="", description="Optional display name")
     tags: list[str] = Field(default_factory=list, description="Tags for the article")
+    use_llm: bool = Field(default=False, description="Enable LLM extraction cascade")
+    use_browser: bool = Field(default=False, description="Use Playwright browser for JS rendering")
+
+
+class CrawlerRunPayload(BaseModel):
+    use_llm: bool = Field(default=False, description="Enable LLM extraction cascade")
+    use_browser: bool = Field(default=False, description="Use Playwright browser for JS rendering")
 
 
 @app.post("/api/fetch/url")
@@ -2707,35 +2909,50 @@ async def fetch_url_endpoint(payload: FetchUrlPayload):
     url = payload.url.strip()
     if not url.startswith(("http://", "https://")):
         raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    cli_args = ["--url", url]
+    if payload.use_llm:
+        cli_args.append("--llm")
+    if payload.use_browser:
+        cli_args.append("--browser")
     result = await asyncio.to_thread(
-        _run_tool_script, "fetchers/web_fetcher.py", ["--url", url]
+        _run_tool_script, "fetchers/web_fetcher.py", cli_args
     )
-    # Parse stdout to find saved filename
     saved_file = None
     quality = None
+    engine = None
     for line in result.get("stdout", "").split("\n"):
         if "[OK] Saved to" in line:
             parts = line.split("Saved to ")
             if len(parts) > 1:
-                saved_file = parts[1].split(" ")[0]
+                rest = parts[1].strip()
+                saved_file = rest.split(" ")[0]
         if "[Q=" in line:
             q_part = line.split("[Q=")[1].split("]")[0] if "[Q=" in line else ""
             quality = q_part
+            paren = line.split("(")
+            if len(paren) > 1:
+                engine = paren[1].split(")")[0]
     return {
         "success": result["success"],
         "stdout": result["stdout"],
         "stderr": result["stderr"],
         "saved_file": saved_file,
         "quality": quality,
+        "engine": engine,
     }
 
 
 # ── Web Crawler (batch) ──
 @app.post("/api/crawler/run")
-async def crawler_run():
+async def crawler_run(payload: CrawlerRunPayload = CrawlerRunPayload()):
     """Run web_fetcher.py with config to crawl all URLs in web_sources.yaml."""
+    cli_args = ["--config", "config/web_sources.yaml"]
+    if payload.use_llm:
+        cli_args.append("--llm")
+    if payload.use_browser:
+        cli_args.append("--browser")
     result = await asyncio.to_thread(
-        _run_tool_script, "fetchers/web_fetcher.py", ["--config", "config/web_sources.yaml"]
+        _run_tool_script, "fetchers/web_fetcher.py", cli_args
     )
     stats = {"saved": 0, "skipped": 0, "errors": 0}
     for line in result.get("stdout", "").split("\n"):
@@ -2772,6 +2989,51 @@ async def crawler_batch():
     )
     steps.append({"name": "batch_ingest", **step3})
     return {"success": step3["success"], "steps": steps}
+
+
+# ── RSS Crawler ──
+@app.post("/api/crawler/run/rss")
+async def crawler_run_rss():
+    """Run rss_fetcher.py with config."""
+    result = await asyncio.to_thread(
+        _run_tool_script, "fetchers/rss_fetcher.py", ["--config", "config/rss_sources.yaml"]
+    )
+    stats = {"saved": 0, "skipped": 0, "errors": 0}
+    out = result.get("stdout", "")
+    m = re.search(r"Total new entries:\s*(\d+)", out)
+    if m:
+        stats["saved"] = int(m.group(1))
+    return {"success": result["success"], **result, "stats": stats}
+
+
+# ── GitHub Crawler ──
+@app.post("/api/crawler/run/github")
+async def crawler_run_github():
+    """Run github_fetcher.py with config."""
+    result = await asyncio.to_thread(
+        _run_tool_script, "fetchers/github_fetcher.py", ["--config", "config/github_sources.yaml"]
+    )
+    stats = {"saved": 0, "skipped": 0, "errors": 0}
+    out = result.get("stdout", "")
+    m = re.search(r"Total new files:\s*(\d+)", out)
+    if m:
+        stats["saved"] = int(m.group(1))
+    return {"success": result["success"], **result, "stats": stats}
+
+
+# ── arXiv Crawler ──
+@app.post("/api/crawler/run/arxiv")
+async def crawler_run_arxiv():
+    """Run arxiv_fetcher.py with config."""
+    result = await asyncio.to_thread(
+        _run_tool_script, "fetchers/arxiv_fetcher.py", ["--config", "config/arxiv_sources.yaml"]
+    )
+    stats = {"saved": 0, "skipped": 0, "errors": 0}
+    out = result.get("stdout", "")
+    m = re.search(r"Total new papers:\s*(\d+)", out)
+    if m:
+        stats["saved"] = int(m.group(1))
+    return {"success": result["success"], **result, "stats": stats}
 
 
 # ── Collaborative Editing (R24) ──
