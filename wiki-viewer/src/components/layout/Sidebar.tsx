@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, Network, Clock, Search, ChevronDown, Globe } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, Network, Clock, Search, ChevronDown, Globe, Bot, ShieldCheck, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,6 +50,9 @@ const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.group.system',
     items: [
+      { icon: Bot, translationKey: 'nav.jarvis', path: '/jarvis', matchPath: '/jarvis' },
+      { icon: ShieldCheck, translationKey: 'nav.approvals', path: '/approvals', matchPath: '/approvals' },
+      { icon: FileText, translationKey: 'nav.agentLog', path: '/agent-log', matchPath: '/agent-log' },
       { icon: Activity, translationKey: 'nav.status', path: '/status', matchPath: '/status' },
       { icon: Settings, translationKey: 'nav.settings', path: '/settings', matchPath: '/settings' },
     ],

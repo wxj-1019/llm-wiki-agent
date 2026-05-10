@@ -21,6 +21,9 @@ const TimelinePage = lazy(() => import('@/components/pages/TimelinePage').then((
 const MCPPage = lazy(() => import('@/components/pages/MCPPage').then((m) => ({ default: m.MCPPage })));
 const SkillsPage = lazy(() => import('@/components/pages/SkillsPage').then((m) => ({ default: m.SkillsPage })));
 const CrawlerPage = lazy(() => import('@/components/pages/CrawlerPage').then((m) => ({ default: m.CrawlerPage })));
+const JarvisPage = lazy(() => import('@/components/pages/JarvisPage').then((m) => ({ default: m.JarvisPage })));
+const ApprovalsPage = lazy(() => import('@/components/pages/ApprovalsPage').then((m) => ({ default: m.ApprovalsPage })));
+const AgentLogPage = lazy(() => import('@/components/pages/AgentLogPage').then((m) => ({ default: m.AgentLogPage })));
 
 import { LazyPage } from '@/components/layout/LazyPage';
 
@@ -49,6 +52,9 @@ export const router = createBrowserRouter([
       { path: '/mindmap/:slug', element: <LazyPage><MindmapPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/timeline', element: <LazyPage><TimelinePage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/crawler', element: <LazyPage><CrawlerPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/jarvis', element: <LazyPage><JarvisPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/approvals', element: <LazyPage><ApprovalsPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/agent-log', element: <LazyPage><AgentLogPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },
