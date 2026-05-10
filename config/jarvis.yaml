@@ -1,0 +1,38 @@
+agent:
+  name: "Jarvis"
+  cycle_interval: 300
+  cycle_interval_busy: 10
+  max_concurrent_tasks: 5
+  learning_enabled: true
+  auto_approve_enabled: true
+
+safety:
+  red_lines:
+    - "never_delete_raw_files"
+    - "never_expose_api_keys"
+    - "never_modify_tools_without_approval"
+    - "never_send_private_data_externally"
+  rate_limits:
+    max_tool_calls_per_minute: 30
+    max_tool_calls_per_hour: 200
+    max_tool_calls_per_day: 1000
+  budget:
+    daily_usd: 5.0
+    warning_percent: 80
+
+tools:
+  system:
+    enabled: true
+    allowed_commands: ["ls", "cat", "grep", "git", "python", "npm", "pip"]
+    blocked_commands: ["rm -rf /", "format", "del /s"]
+  web:
+    enabled: true
+    max_concurrent_fetches: 5
+    user_agent: "Jarvis/1.0"
+  dev:
+    enabled: true
+    git_auto_commit: false
+    auto_test_after_change: true
+  comm:
+    enabled: true
+    desktop_notifications: true

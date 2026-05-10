@@ -1,0 +1,14 @@
+auto_approve:
+  - pattern: "git_commit(message=auto-fix:*)"
+    max_per_hour: 5
+  - pattern: "terminal_exec(command=npm run *)"
+    max_per_hour: 3
+  - pattern: "terminal_exec(command=python tools/health.py*)"
+    max_per_hour: 10
+
+never_auto_approve:
+  - "git_push"
+  - "terminal_exec(command=rm *)"
+  - "terminal_exec(command=del *)"
+  - "deploy"
+  - "email_send"

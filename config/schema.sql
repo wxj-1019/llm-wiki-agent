@@ -179,6 +179,11 @@ CREATE OR REPLACE FUNCTION wiki_tsv_trigger() RETURNS trigger AS $$
 DECLARE
     cfg_name TEXT;
 BEGIN
+    -- Allow callers to supply their own body_tsv (e.g. CJK bigram fallback)
+    IF NEW.body_tsv IS NOT NULL THEN
+        RETURN NEW;
+    END IF;
+
     -- Check if zhparser config exists
     IF EXISTS (SELECT 1 FROM pg_ts_config WHERE cfgname = 'zh_cfg') THEN
         cfg_name := 'zh_cfg';
@@ -276,5 +281,124 @@ BEGIN
     LIMIT result_limit;
 END;
 $$ LANGUAGE plpgsql STABLE;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 7. Jarvis agent system tables
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Event bus
+CREATE TABLE jarvis_events (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    payload_json    JSONB,
+    timestamp       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    source          TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX idx_jarvis_events_time ON jarvis_events (timestamp DESC);
+CREATE INDEX idx_jarvis_events_cat ON jarvis_events (category, timestamp DESC);
+
+-- Approval queue
+CREATE TABLE jarvis_approvals (
+    id              TEXT PRIMARY KEY,
+    step_json       JSONB NOT NULL,
+    reason          TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at     TIMESTAMPTZ,
+    resolved_by     TEXT,
+    auto_approved   BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX idx_jarvis_approvals_status ON jarvis_approvals (status, created_at DESC);
+
+-- Goals
+CREATE TABLE jarvis_goals (
+    id              TEXT PRIMARY KEY,
+    title           TEXT NOT NULL,
+    description     TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'pending',
+    priority        TEXT NOT NULL DEFAULT 'medium',
+    progress        REAL NOT NULL DEFAULT 0.0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deadline        TEXT NOT NULL DEFAULT '',
+    parent_goal_id  TEXT NOT NULL DEFAULT '',
+    metrics_json    JSONB NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX idx_jarvis_goals_status ON jarvis_goals (status, created_at DESC);
+
+-- Learner lessons
+CREATE TABLE jarvis_lessons (
+    id              TEXT PRIMARY KEY,
+    category        TEXT NOT NULL,
+    pattern         TEXT NOT NULL,
+    action          TEXT NOT NULL,
+    confidence      REAL NOT NULL DEFAULT 0.5,
+    learned_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    source          TEXT NOT NULL DEFAULT '',
+    applied_count   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX idx_jarvis_lessons_cat ON jarvis_lessons (category, learned_at DESC);
+
+-- Multi-agent
+CREATE TABLE jarvis_agents (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    role            TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'idle',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_active     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    tasks_completed INTEGER NOT NULL DEFAULT 0,
+    tasks_failed    INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE jarvis_tasks (
+    id              TEXT PRIMARY KEY,
+    agent_id        TEXT NOT NULL REFERENCES jarvis_agents(id) ON DELETE CASCADE,
+    task            TEXT NOT NULL,
+    priority        TEXT NOT NULL DEFAULT 'medium',
+    status          TEXT NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at    TIMESTAMPTZ,
+    result_json     JSONB
+);
+
+CREATE INDEX idx_jarvis_tasks_agent ON jarvis_tasks (agent_id, status);
+
+-- Plugin market
+CREATE TABLE jarvis_plugins (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    version         TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    author          TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    tool_count      INTEGER NOT NULL DEFAULT 0,
+    risk_level      TEXT NOT NULL DEFAULT 'L1',
+    source_url      TEXT NOT NULL DEFAULT '',
+    installed       BOOLEAN NOT NULL DEFAULT FALSE,
+    installed_at    TIMESTAMPTZ
+);
+
+-- Scheduled tasks
+CREATE TABLE jarvis_scheduled_tasks (
+    id              TEXT PRIMARY KEY,
+    task_type       TEXT NOT NULL,
+    payload_json    JSONB,
+    scheduled_at    TIMESTAMPTZ NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at    TIMESTAMPTZ,
+    result_json     JSONB
+);
+
+CREATE INDEX idx_jarvis_sched_time ON jarvis_scheduled_tasks (scheduled_at, status);
+
 
 COMMIT;

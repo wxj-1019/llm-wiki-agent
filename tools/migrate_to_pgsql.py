@@ -25,6 +25,11 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
+# Ensure repo root is on path for sibling imports
+_repo = str(REPO_ROOT)
+if _repo not in sys.path:
+    sys.path.insert(0, _repo)
+
 STATE_DIR = REPO_ROOT / "state"
 SQLITE_DB = STATE_DIR / "search.db"
 SQLITE_SCHEDULER = STATE_DIR / "scheduler_metrics.db"
@@ -131,10 +136,16 @@ def _migrate_wiki_pages(sqlite_conn, pg_conn, dry_run: bool) -> int:
             if not str(path).startswith("wiki/"):
                 path = f"wiki/{path}"
 
+            # Normalize page_type to valid constraint values
+            raw_type = str(page_type or "source").lower().strip()
+            if raw_type not in ("source", "entity", "concept", "synthesis"):
+                raw_type = "source"
+
             # Tokenize CJK into bigrams if zhparser is not available
             body_tokenized = _tokenize_cjk_bigrams(body)
             title_tokenized = _tokenize_cjk_bigrams(str(title))
 
+            cursor.execute("SAVEPOINT sp_wiki_page")
             cursor.execute("""
                 INSERT INTO wiki_pages (path, title, page_type, tags, body, body_tsv, source_type)
                 VALUES (%s, %s, %s, %s, %s,
@@ -146,12 +157,17 @@ def _migrate_wiki_pages(sqlite_conn, pg_conn, dry_run: bool) -> int:
                     body_tsv = EXCLUDED.body_tsv,
                     updated_at = NOW()
             """, (
-                path, str(title), str(page_type or "source"),
+                path, str(title), raw_type,
                 _parse_tags(str(tags or "")),
                 body, title_tokenized, body_tokenized,
             ))
+            cursor.execute("RELEASE SAVEPOINT sp_wiki_page")
             migrated += 1
         except Exception as e:
+            try:
+                cursor.execute("ROLLBACK TO SAVEPOINT sp_wiki_page")
+            except Exception:
+                pass
             print(f"  WARNING: Failed to insert {path}: {e}")
             continue
 
@@ -353,34 +369,8 @@ def _migrate_analytics(sqlite_analytics: Path, pg_conn, dry_run: bool) -> int:
 # ── Helpers ─────────────────────────────────────────────────────────────────
 def _tokenize_cjk_bigrams(text: str) -> str:
     """Generate CJK bigrams for tsvector 'simple' config fallback."""
-    if not text:
-        return ""
-    result: list[str] = []
-    cjk_buf: list[str] = []
-
-    def flush():
-        if not cjk_buf:
-            return
-        chars = "".join(cjk_buf)
-        cjk_buf.clear()
-        if len(chars) == 1:
-            result.append(chars)
-        else:
-            for i in range(len(chars) - 1):
-                result.append(chars[i:i + 2])
-
-    for ch in text:
-        if '\u4e00' <= ch <= '\u9fff':
-            cjk_buf.append(ch)
-        elif ch.isspace():
-            flush()
-            result.append(" ")
-        else:
-            flush()
-            result.append(ch)
-
-    flush()
-    return " ".join(r for r in result if r.strip())
+    from tools.shared.cjk_utils import tokenize_cjk_bigrams
+    return tokenize_cjk_bigrams(text)
 
 
 def _parse_tags(tags_str: str) -> list[str]:
