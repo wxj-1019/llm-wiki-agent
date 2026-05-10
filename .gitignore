@@ -28,8 +28,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Logs
+# Logs & runtime artifacts
 *.log
+*.pid
 npm-debug.log*
 
 # Local settings
