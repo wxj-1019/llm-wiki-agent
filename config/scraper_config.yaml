@@ -5,16 +5,16 @@
 scraper:
   # ── 浏览器设置 (Phase 3 启用) ──
   browser:
-    enabled: false           # Phase 3 安装 Playwright 后启用
+    enabled: true            # Playwright 已安装，启用 JS 渲染
     timeout: 30
     wait_for_selector: "article, main, .content, #content"
 
   # ── LLM 提取策略 ──
   extraction:
     provider: "litellm"
-    model: "claude-haiku-4-5-20251001"    # 日常提取用小模型
-    fallback_model: "claude-sonnet-4-6"    # 复杂页面用大模型
-    max_input_tokens: 6000
+    model: "deepseek/deepseek-chat"       # DeepSeek V3 通用模型
+    fallback_model: "deepseek/deepseek-chat"  # DeepSeek 无更降级，同模型重试
+    max_input_tokens: 20000
     max_output_tokens: 2000
     temperature: 0.1
 
@@ -90,6 +90,61 @@ scraper:
   # ── 去重 ──
   dedup:
     url_hash: true                     # 基于 URL 去重 (通过 state.json)
+
+  # ── Playwright 站点特定等待策略 ──
+  # 为特定站点配置 wait_for_selector，等待内容加载完成
+  site_wait:
+    eastmoney.com:
+      selector: ".contentwrap, #ContentBody, .main-content"
+      timeout: 5000
+    cls.cn:
+      selector: ".detail-telegraph-content, .article-content"
+      timeout: 3000
+    gelonghui.com:
+      selector: ".article-content, #article-body"
+      timeout: 3000
+
+  # ── 站点专用 CSS 选择器 (Phase 6) ──
+  # 当域名匹配时，优先使用这些选择器提取正文，再回退到通用策略
+  site_selectors:
+    eastmoney.com:
+      - ".main-content"
+      - ".contentwrap"
+      - "#ContentBody"
+      - ".article-content"
+      - ".main-text"
+    cls.cn:  # 财联社
+      - ".detail-telegraph-content"
+      - ".article-content"
+      - ".article-detail"
+      - ".detail-content"
+    gelonghui.com:  # 格隆汇
+      - ".article-content"
+      - "#article-body"
+      - ".article__content"
+    xueqiu.com:  # 雪球 (需确认 robots.txt 允许)
+      - ".article__bd__detail"
+      - ".detail"
+      - ".article-content"
+    10jqka.com.cn:  # 同花顺
+      - ".article-content"
+      - ".main-text"
+    sina.com.cn:  # 新浪财经 (通常不需要，作为备份)
+      - "#artibody"
+      - ".article"
+    szse.cn:  # 深交所
+      - ".content"
+      - "#content"
+    sse.com.cn:  # 上交所
+      - ".content"
+      - "#content"
+    stats.gov.cn:  # 国家统计局
+      - ".content"
+      - "#content"
+    stcn.com:  # 证券时报
+      - ".detail-content-wrapper"
+      - ".detail-content"
+      - ".content"
 
   # ── 日志 ──
   logging:

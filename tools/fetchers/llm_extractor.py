@@ -19,27 +19,32 @@ Usage (CLI):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+# Load .env file if present (for local API key configuration)
+from dotenv import load_dotenv
+
+REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
+_env_path = REPO_ROOT / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path, override=False)
+
 REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # ── Logging ──────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("llm_extractor")
 
 
@@ -82,12 +87,28 @@ class QualityAssessment:
 
 
 @dataclass
+class Entity:
+    """Named entity recognized from content, with type and wiki link suggestion."""
+
+    name: str = ""
+    type: str = ""          # person|organization|project|concept|technology
+    context: str = ""       # one sentence of context from the article
+    wikilink: str = ""      # suggested wiki page name for [[wikilink]]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def to_dict(self) -> dict[str, str]:
+        return {"name": self.name, "type": self.type, "context": self.context, "wikilink": self.wikilink}
+
+
+@dataclass
 class ExtractionResult:
     """Full result of an LLM extraction pass."""
 
     content: str = ""                  # Clean Markdown body
     summary: str = ""                  # 2-3 sentence summary
-    entities: list[str] = field(default_factory=list)  # Entity name strings
+    entities: list[Entity] = field(default_factory=list)  # Named entities with metadata
     extractor: str = "llm"             # llm | trafilatura | raw
     quality: QualityAssessment | None = None
     metadata: dict[str, str] = field(default_factory=dict)
@@ -101,8 +122,8 @@ def _load_config(config_path: Path | None) -> dict[str, Any]:
             "browser": {"enabled": False, "timeout": 30, "wait_for_selector": ""},
             "extraction": {
                 "provider": "litellm",
-                "model": "claude-haiku-4-5-20251001",
-                "fallback_model": "claude-sonnet-4-6",
+                "model": os.getenv("LLM_MODEL", "deepseek/deepseek-chat"),
+                "fallback_model": os.getenv("LLM_MODEL_FAST", "deepseek/deepseek-chat"),
                 "max_input_tokens": 6000,
                 "max_output_tokens": 2000,
                 "temperature": 0.1,
@@ -143,9 +164,12 @@ def _deep_merge(base: dict, override: dict) -> None:
 
 
 def _extract_json(text: str) -> dict:
-    """Extract the first JSON object/array from LLM output text."""
-    # Try direct parse first
+    """Extract the first JSON object/array from LLM output text.
+
+    Uses brace-counting to correctly handle nested structures.
+    """
     text = text.strip()
+    # Try direct parse first
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -155,27 +179,32 @@ def _extract_json(text: str) -> dict:
     m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
     if m:
         try:
-            return json.loads(m[1].strip())
+            return json.loads(m.group(1).strip())
         except json.JSONDecodeError:
             pass
 
-    # Fallback: find first {...} or [...] (non-greedy with context)
-    for pattern in [r"\{[^{}]*\}", r"\[[^\[\]]*\]"]:
-        m = re.search(pattern, text)
-        if m:
-            try:
-                return json.loads(m[0])
-            except json.JSONDecodeError:
+    # Brace-counting search for nested JSON
+    def _find_json_block(s: str) -> str | None:
+        for start_char, end_char in (("{", "}"), ("[", "]")):
+            start = s.find(start_char)
+            if start == -1:
                 continue
+            depth = 0
+            for i in range(start, len(s)):
+                if s[i] == start_char:
+                    depth += 1
+                elif s[i] == end_char:
+                    depth -= 1
+                    if depth == 0:
+                        return s[start:i + 1]
+        return None
 
-    # Last resort: try greedier match for nested structures
-    for pattern in [r"\{[\s\S]*\}", r"\[[\s\S]*\]"]:
-        m = re.search(pattern, text)
-        if m:
-            try:
-                return json.loads(m[0])
-            except json.JSONDecodeError:
-                continue
+    block = _find_json_block(text)
+    if block:
+        try:
+            return json.loads(block)
+        except json.JSONDecodeError:
+            pass
 
     raise json.JSONDecodeError("No valid JSON found", text, 0)
 
@@ -186,7 +215,8 @@ def _truncate_html(html: str, max_tokens: int) -> str:
     if len(html) <= limit:
         return html
     half = limit // 2
-    return html[:half] + chr(10)*2 + '<!-- ... truncated ... -->' + chr(10)*2 + html[-half:]
+    return html[:half] + chr(10) * 2 + '<!-- ... truncated ... -->' + chr(10) * 2 + html[-half:]
+
 
 # ── Prompt templates ──────────────────────────────────────────────────
 CONTENT_EXTRACTION_PROMPT = """\
@@ -223,7 +253,8 @@ Extract key entities from the following article. Output a JSON array:
   {{
     "name": "entity name",
     "type": "person|organization|project|concept|technology",
-    "context": "one sentence of context from the article"
+    "context": "one sentence of context from the article",
+    "wikilink": "SuggestedWikiPageName"
   }}
 ]
 
@@ -234,6 +265,10 @@ Entity types:
 - concept: concepts, methodologies, theories
 - technology: tech stacks, frameworks, tools, programming languages
 
+wikilink rules:
+- Use TitleCase without spaces (e.g. "OpenAI", "MachineLearning", "React")
+- This will be used as [[wikilink]] in markdown
+
 Output ONLY the JSON array, no explanations.
 
 ---
@@ -241,6 +276,92 @@ Output ONLY the JSON array, no explanations.
 ---
 '''
 
+
+class ExtractionCache:
+    """Cache LLM extraction results by content hash."""
+
+    def __init__(self, cache_dir: Path | None = None):
+        self._cache_dir = cache_dir or (REPO_ROOT / "state" / "llm_cache")
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._ttl_days = 7
+
+    def get(self, content_hash: str) -> dict | None:
+        cache_file = self._cache_dir / content_hash[:2] / f"{content_hash}.json"
+        if not cache_file.exists():
+            return None
+        try:
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+            cached_at = data.get("cached_at", 0)
+            if time.time() - cached_at > self._ttl_days * 86400:
+                cache_file.unlink(missing_ok=True)
+                return None
+            return data
+        except (json.JSONDecodeError, OSError):
+            return None
+
+    def put(self, content_hash: str, result: dict, model: str = "", tokens_used: int = 0):
+        sub_dir = self._cache_dir / content_hash[:2]
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        cache_file = sub_dir / f"{content_hash}.json"
+        data = {
+            "cached_at": time.time(),
+            "model": model,
+            "tokens_used": tokens_used,
+            "content": result.get("content", ""),
+            "summary": result.get("summary", ""),
+            "entities": result.get("entities", []),
+        }
+        cache_file.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+    def cleanup(self, max_age_days: int = 30) -> int:
+        removed = 0
+        cutoff = time.time() - max_age_days * 86400
+        for sub_dir in self._cache_dir.iterdir():
+            if not sub_dir.is_dir():
+                continue
+            for cache_file in sub_dir.glob("*.json"):
+                try:
+                    data = json.loads(cache_file.read_text(encoding="utf-8"))
+                    if data.get("cached_at", 0) < cutoff:
+                        cache_file.unlink()
+                        removed += 1
+                except (json.JSONDecodeError, OSError):
+                    cache_file.unlink(missing_ok=True)
+                    removed += 1
+        return removed
+
+
+class ContentClassifier:
+    """Rule-based content complexity classifier (no LLM needed)."""
+
+    @staticmethod
+    def classify(html: str) -> str:
+        """Return 'simple', 'complex', or 'default'.
+
+        Rules:
+        - text/markup ratio > 0.5 AND has <article> → 'simple'
+        - text/markup ratio < 0.2 OR heavy nav/footer → 'complex'
+        - else → 'default'
+        """
+        import re
+        text_chars = len(re.sub(r'<[^>]+>', '', html))
+        markup_chars = len(html)
+        ratio = text_chars / max(markup_chars, 1)
+
+        has_article = "<article" in html.lower()
+        has_heavy_nav = html.lower().count("<nav") > 2 or html.lower().count("<footer") > 2
+
+        if ratio > 0.5 and has_article:
+            return "simple"
+        if ratio < 0.2 or has_heavy_nav:
+            return "complex"
+        return "default"
+
+    @staticmethod
+    def get_model_for_complexity(complexity: str, routing_config: dict | None = None) -> str | None:
+        """Return model name for given complexity level."""
+        cfg = routing_config or {}
+        return cfg.get(complexity)
 
 
 # ── Main class ────────────────────────────────────────────────────────
@@ -254,8 +375,8 @@ class LLMExtractor:
         self._quality_cfg = scraper.get("quality", {})
         self._rate_limit_cfg = scraper.get("rate_limit", {})
 
-        self.model = self._extraction_cfg.get("model", "claude-haiku-4-5-20251001")
-        self.fallback_model = self._extraction_cfg.get("fallback_model", "claude-sonnet-4-6")
+        self.model = self._extraction_cfg.get("model", os.getenv("LLM_MODEL", "deepseek/deepseek-chat"))
+        self.fallback_model = self._extraction_cfg.get("fallback_model", os.getenv("LLM_MODEL_FAST", "deepseek/deepseek-chat"))
         self.provider = self._extraction_cfg.get("provider", "litellm")
         self.max_input_tokens = self._extraction_cfg.get("max_input_tokens", 6000)
         self.max_output_tokens = self._extraction_cfg.get("max_output_tokens", 2000)
@@ -274,7 +395,8 @@ class LLMExtractor:
         )
 
         self._check_credentials()
-
+        self._extraction_cache = ExtractionCache()
+        self._routing_config = self._extraction_cfg.get("model_routing", {})
 
     async def extract(self, html: str, url: str = "", title: str = "") -> ExtractionResult:
         """Extract clean Markdown content from an HTML page via LLM."""
@@ -284,6 +406,32 @@ class LLMExtractor:
                 content="", summary="", extractor="raw",
                 quality=QualityAssessment(score=0, is_error=True, issues=["HTML too short"]),
             )
+
+        # 0.5 Check content hash cache
+        content_hash = hashlib.sha256(html.encode("utf-8")).hexdigest()
+        cached = self._extraction_cache.get(content_hash)
+        if cached and cached.get("content"):
+            logger.info(f"Extraction cache hit | hash={content_hash[:12]}")
+            return ExtractionResult(
+                content=cached["content"],
+                summary=cached.get("summary", ""),
+                entities=[
+                    Entity(name=e.get("name",""), type=e.get("type",""), context=e.get("context",""), wikilink=e.get("wikilink",""))
+                    for e in cached.get("entities", [])
+                    if isinstance(e, dict)
+                ],
+                extractor="llm_cached",
+                quality=QualityAssessment(score=70, is_article=True),
+                metadata={"url": url, "title": title},
+            )
+
+        # 0.6 Select model based on content complexity
+        complexity = ContentClassifier.classify(html)
+        routed_model = ContentClassifier.get_model_for_complexity(complexity, self._routing_config)
+        if routed_model:
+            logger.info(f"Model routing | complexity={complexity} model={routed_model}")
+            original_model = self.model
+            self.model = routed_model
 
         # 1. Truncate if needed
         truncated = _truncate_html(html, self.max_input_tokens)
@@ -327,11 +475,50 @@ class LLMExtractor:
             self.extract_entities(content),
         )
 
+        # Cache the result
+        try:
+            entity_dicts = [{"name": e.name, "type": e.type, "context": e.context, "wikilink": e.wikilink} for e in entities]
+            self._extraction_cache.put(content_hash, {
+                "content": content,
+                "summary": summary,
+                "entities": entity_dicts,
+            }, model=self.model)
+        except Exception:
+            pass
+
         return ExtractionResult(
             content=content, summary=summary, entities=entities,
             extractor="llm", quality=quality,
             metadata={"url": url, "title": title},
         )
+
+    async def batch_scrape(
+        self,
+        items: list[dict[str, str]],
+        max_concurrent: int = 3,
+    ) -> list[ExtractionResult]:
+        """Scrape multiple URLs concurrently with rate limiting.
+
+        Args:
+            items: list of {"url": str, "html": str, "title": str} dicts.
+            max_concurrent: max simultaneous LLM calls.
+
+        Returns:
+            list of ExtractionResult in same order as input.
+        """
+        import asyncio
+
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def _one(item: dict[str, str]) -> ExtractionResult:
+            async with semaphore:
+                return await self.extract(
+                    html=item.get("html", ""),
+                    url=item.get("url", ""),
+                    title=item.get("title", ""),
+                )
+
+        return await asyncio.gather(*(_one(item) for item in items))
 
     async def quality_check(self, content: str, url: str = "") -> QualityAssessment:
         """Heuristic quality assessment on pre-extracted content (free, no LLM)."""
@@ -360,8 +547,8 @@ class LLMExtractor:
         except LLMExtractionError:
             return ""
 
-    async def extract_entities(self, content: str) -> list[str]:
-        """Extract named entity names from content."""
+    async def extract_entities(self, content: str) -> list[Entity]:
+        """Extract named entities with type, context and wikilink from content."""
         if len(content) < 200:
             return []
 
@@ -371,11 +558,19 @@ class LLMExtractor:
             raw = await self._call_llm(prompt, title="entities")
             items = _extract_json(raw)
             if isinstance(items, list):
-                return [item.get("name", "") for item in items if isinstance(item, dict)]
+                return [
+                    Entity(
+                        name=str(item.get("name", "")).strip(),
+                        type=str(item.get("type", "")).strip(),
+                        context=str(item.get("context", "")).strip(),
+                        wikilink=str(item.get("wikilink", "")).strip(),
+                    )
+                    for item in items
+                    if isinstance(item, dict) and item.get("name")
+                ]
             return []
         except (LLMExtractionError, json.JSONDecodeError):
             return []
-
 
     async def _call_llm(self, prompt: str, title: str = "") -> str:
         """Call litellm acompletion. Returns text content, raises LLMExtractionError."""
@@ -419,12 +614,15 @@ class LLMExtractor:
     def _check_credentials(self) -> None:
         """Log a warning if the required API key is not set."""
         model_lower = self.model.lower()
-        key_env_vars = {
-            "claude": "ANTHROPIC_API_KEY",
-            "gpt": "OPENAI_API_KEY",
-            "gemini": "GEMINI_API_KEY",
-        }
-        for prefix, var in key_env_vars.items():
+        key_env_vars = [
+            ("anthropic", "ANTHROPIC_API_KEY"),
+            ("claude", "ANTHROPIC_API_KEY"),
+            ("gpt", "OPENAI_API_KEY"),
+            ("openai", "OPENAI_API_KEY"),
+            ("gemini", "GEMINI_API_KEY"),
+            ("deepseek", "DEEPSEEK_API_KEY"),
+        ]
+        for prefix, var in key_env_vars:
             if prefix in model_lower and not os.environ.get(var):
                 logger.warning(
                     f"Model '{self.model}' may require {var} env var, which is not set"
@@ -467,7 +665,7 @@ def main():
         if args.entities and result.entities:
             print("\n---\n## Entities\n")
             for e in result.entities:
-                print(f"- {e}")
+                print(f"- {e.name} ({e.type}) — {e.wikilink or 'no wikilink'}")
 
     import asyncio
     asyncio.run(run())
