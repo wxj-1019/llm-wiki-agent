@@ -209,6 +209,97 @@ class MultiAgentManager:
                 return _row_to_task(row)
             return None
 
+    def start_task(self, task_id: str) -> bool:
+        now = datetime.now().isoformat()
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE jarvis_tasks SET status = 'running' WHERE id = %s AND status = 'pending'",
+                (task_id,),
+            )
+            updated = cur.rowcount > 0
+            cur.close()
+        if updated:
+            self._publish_event("task.started", {"task_id": task_id})
+        return updated
+
+    def complete_task(self, task_id: str, result: dict | None = None) -> bool:
+        now = datetime.now().isoformat()
+        result_json = json.dumps(result) if result else "{}"
+
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            # Get agent_id first
+            cur.execute("SELECT agent_id FROM jarvis_tasks WHERE id = %s", (task_id,))
+            row = cur.fetchone()
+            if not row:
+                cur.close()
+                return False
+            agent_id = row[0]
+
+            cur.execute(
+                """
+                UPDATE jarvis_tasks
+                SET status = 'completed', completed_at = %s, result_json = %s
+                WHERE id = %s AND status IN ('pending', 'running')
+                """,
+                (now, result_json, task_id),
+            )
+            updated = cur.rowcount > 0
+
+            if updated:
+                cur.execute(
+                    """
+                    UPDATE jarvis_agents
+                    SET tasks_completed = tasks_completed + 1, status = 'idle', last_active = %s
+                    WHERE id = %s
+                    """,
+                    (now, agent_id),
+                )
+            cur.close()
+
+        if updated:
+            self._publish_event("task.completed", {"task_id": task_id, "agent_id": agent_id})
+        return updated
+
+    def fail_task(self, task_id: str, error: str = "") -> bool:
+        now = datetime.now().isoformat()
+        result_json = json.dumps({"error": error}) if error else "{}"
+
+        with get_pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT agent_id FROM jarvis_tasks WHERE id = %s", (task_id,))
+            row = cur.fetchone()
+            if not row:
+                cur.close()
+                return False
+            agent_id = row[0]
+
+            cur.execute(
+                """
+                UPDATE jarvis_tasks
+                SET status = 'failed', completed_at = %s, result_json = %s
+                WHERE id = %s AND status IN ('pending', 'running')
+                """,
+                (now, result_json, task_id),
+            )
+            updated = cur.rowcount > 0
+
+            if updated:
+                cur.execute(
+                    """
+                    UPDATE jarvis_agents
+                    SET tasks_failed = tasks_failed + 1, status = 'idle', last_active = %s
+                    WHERE id = %s
+                    """,
+                    (now, agent_id),
+                )
+            cur.close()
+
+        if updated:
+            self._publish_event("task.failed", {"task_id": task_id, "agent_id": agent_id, "error": error})
+        return updated
+
     def list_tasks(self, agent_id: str = "", status: str = "") -> list[dict]:
         with get_pg_conn() as conn:
             cur = conn.cursor()

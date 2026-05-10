@@ -9,6 +9,7 @@ from typing import Any
 
 from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.types import ApprovalRequest, PlanStep, RiskLevel
+from tools.jarvis.shared_utils import load_yaml_config
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -22,21 +23,21 @@ DEFAULT_AUTO_APPROVE_RULES: list[dict[str, Any]] = [
 class ApprovalManager:
     def __init__(self):
         self._policies = self._load_policies()
+        self._never_auto = self._load_never_auto()
 
     def _load_policies(self) -> list[dict[str, Any]]:
-        policy_path = REPO_ROOT / "config" / "approval_policies.yaml"
-        if policy_path.exists():
-            try:
-                import yaml
-                with open(policy_path, "r", encoding="utf-8") as f:
-                    data = yaml.safe_load(f)
-                if isinstance(data, list):
-                    return data
-                if isinstance(data, dict) and "rules" in data:
-                    return data["rules"]
-            except Exception:
-                pass
+        data = load_yaml_config(REPO_ROOT / "config" / "approval_policies.yaml", {})
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict) and "rules" in data:
+            return data["rules"]
         return DEFAULT_AUTO_APPROVE_RULES
+
+    def _load_never_auto(self) -> list[str]:
+        data = load_yaml_config(REPO_ROOT / "config" / "approval_policies.yaml", {})
+        if isinstance(data, dict):
+            return data.get("never_auto_approve", [])
+        return []
 
     def submit(self, step: PlanStep, reason: str) -> ApprovalRequest:
         req_id = f"apr_{uuid.uuid4().hex[:8]}"
@@ -137,6 +138,29 @@ class ApprovalManager:
         return [self._row_to_request(r) for r in rows]
 
     def auto_approve_check(self, step: PlanStep) -> bool:
+        # 1. Deny-list check — never auto-approve these
+        for deny in self._never_auto:
+            if "(" in deny:
+                # Pattern like "terminal_exec(command=rm *)"
+                tool_part, param_part = deny.split("(", 1)
+                param_part = param_part.rstrip(")")
+                if step.tool_name == tool_part.strip():
+                    key_val = param_part.split("=", 1)
+                    if len(key_val) == 2:
+                        key, val_pattern = key_val
+                        actual = step.params.get(key, "")
+                        # Simple wildcard matching
+                        if val_pattern.endswith("*"):
+                            prefix = val_pattern[:-1]
+                            if actual.startswith(prefix):
+                                return False
+                        elif actual == val_pattern:
+                            return False
+            else:
+                if step.tool_name == deny:
+                    return False
+
+        # 2. Allow-list check
         for rule in self._policies:
             tool = rule.get("tool", "")
             pattern = rule.get("pattern", "")

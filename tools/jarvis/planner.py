@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tools.jarvis.shared_utils import parse_llm_json
 from tools.jarvis.tool_registry import get_registry
 from tools.jarvis.types import (
     Insight,
@@ -86,11 +87,8 @@ class Planner:
         )
         raw = call_llm(prompt=prompt, system=system, max_tokens=4096)
         plan = Plan(goal=goal)
-        try:
-            start = raw.index("{")
-            end = raw.rindex("}") + 1
-            data = json.loads(raw[start:end])
-        except (ValueError, json.JSONDecodeError):
+        data = parse_llm_json(raw)
+        if data is None:
             return plan
         for item in data.get("steps", []):
             tool_name = item.get("tool", "")

@@ -9,10 +9,13 @@ from pathlib import Path
 
 from tools.jarvis.event_bus import get_event_bus
 from tools.jarvis.tool_registry import get_registry
+from tools.jarvis.planner import get_planner
 from tools.jarvis.safety import get_safety_engine
 from tools.jarvis.approval import get_approval_manager
+from tools.jarvis.learner import get_learner
 from tools.jarvis.state import get_state_store, AgentStateStore
 from tools.jarvis.audit import get_audit_store, AuditStore
+from tools.jarvis.shared_utils import parse_llm_json, load_yaml_config
 from tools.jarvis.types import (
     AgentState,
     AgentStatus,
@@ -34,13 +37,15 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 
 class AgentLoop:
     def __init__(self) -> None:
-        self._state_store = get_state_store()
-        self._audit_store = get_audit_store()
-        self.state = self._state_store.load()
+        self.state_store = get_state_store()
+        self.audit_store = get_audit_store()
+        self.state = self.state_store.load()
         self.event_bus = get_event_bus()
         self.registry = get_registry()
+        self.planner = get_planner()
         self.safety_engine = get_safety_engine()
         self.approval_manager = get_approval_manager()
+        self.learner = get_learner()
         self.config = self._load_config()
         self._last_health_check: str = ""
         self._last_quality_check: str = ""
@@ -66,7 +71,7 @@ class AgentLoop:
 
         results = await self.execute(plan)
         await self.learn(results)
-        self._state_store.save(self.state)
+        self.state_store.save(self.state)
 
         return cycle_id
 
@@ -148,13 +153,10 @@ class AgentLoop:
 
         insights: list[Insight] = []
         try:
-            cleaned = raw.strip()
-            if cleaned.startswith("```"):
-                first_newline = cleaned.index("\n")
-                last_backtick = cleaned.rindex("```")
-                cleaned = cleaned[first_newline + 1 : last_backtick].strip()
-            parsed = json.loads(cleaned)
-            if not isinstance(parsed, list):
+            parsed = parse_llm_json(raw)
+            if parsed is None:
+                return []
+            if isinstance(parsed, dict):
                 parsed = [parsed]
             for item in parsed:
                 if not isinstance(item, dict):
@@ -184,30 +186,26 @@ class AgentLoop:
         return insights
 
     async def plan(self, insights: list[Insight]) -> Plan:
-        plan = Plan(goal="Process insights from current cycle")
-
+        # Build raw plan from insights using the existing loop logic
+        raw_plan = Plan(goal="Process insights from current cycle")
         for insight in insights:
             for call_spec in insight.tool_calls:
                 tool_name = call_spec.get("tool", "")
                 params = call_spec.get("params", {})
                 if not tool_name:
                     continue
-
                 registered = self.registry.get(tool_name)
                 if registered is None:
                     continue
-
                 risk = registered.risk_level
                 requires_approval = risk in (RiskLevel.L3, RiskLevel.L4)
-
                 step = PlanStep(
                     tool_name=tool_name,
                     params=params if isinstance(params, dict) else {},
                     risk_level=risk,
                     requires_approval=requires_approval,
                 )
-                plan.add_step(step)
-
+                raw_plan.add_step(step)
             if not insight.tool_calls:
                 risk = insight.risk_level
                 requires_approval = risk in (RiskLevel.L3, RiskLevel.L4)
@@ -217,9 +215,23 @@ class AgentLoop:
                     risk_level=risk,
                     requires_approval=requires_approval,
                 )
-                plan.add_step(step)
+                raw_plan.add_step(step)
 
-        return plan
+        # Delegate to Planner for optimization, validation, and cost estimation
+        optimized = self.planner.optimize_plan(raw_plan)
+        issues = self.planner.validate_plan(optimized)
+        if issues:
+            for issue in issues:
+                self.event_bus.publish(
+                    Event(
+                        name="agent.plan.validation_issue",
+                        category=EventCategory.SYSTEM,
+                        payload={"issue": issue},
+                        source="loop",
+                    )
+                )
+        optimized.estimated_cost = self.planner.estimate_cost(optimized)
+        return optimized
 
     async def execute(self, plan: Plan) -> list[ToolResult]:
         results: list[ToolResult] = []
@@ -240,7 +252,7 @@ class AgentLoop:
                     step.status = StepStatus.AWAITING_APPROVAL
                     step.result = ToolResult(success=False, error="Awaiting approval", retryable=False)
                     results.append(step.result)
-                    self._audit_store.write(step, step.result, approved=False)
+                    self.audit_store.write(step, step.result, approved=False)
                     continue
 
             safety_result = self.safety_engine.pre_check(step)
@@ -252,7 +264,7 @@ class AgentLoop:
                     retryable=False,
                 )
                 results.append(step.result)
-                self._audit_store.write(step, step.result, safety_blocked=True)
+                self.audit_store.write(step, step.result, safety_blocked=True)
                 continue
 
             self.safety_engine.record_call()
@@ -274,14 +286,56 @@ class AgentLoop:
 
             self.state.total_tool_calls += 1
             results.append(result)
-            self._audit_store.write(step, result)
+            self.audit_store.write(step, result)
 
         return results
 
     async def learn(self, results: list[ToolResult]) -> None:
+        cycle_id = f"cycle_{self.state.cycle_count}"
+
+        # 1. Record cycle in learning system
+        try:
+            self.learner.record_cycle(
+                cycle_id=cycle_id,
+                insights=self.state.insights,
+                results=results,
+            )
+        except Exception as exc:
+            self.event_bus.publish(
+                Event(
+                    name="agent.learn.record_failed",
+                    category=EventCategory.SYSTEM,
+                    payload={"error": str(exc)},
+                    source="loop",
+                )
+            )
+
+        # 2. Apply safe auto-adjustments
+        try:
+            adjustments = self.learner.apply_auto_adjustments()
+            if adjustments:
+                for adj in adjustments:
+                    self.event_bus.publish(
+                        Event(
+                            name="agent.learn.threshold_adjusted",
+                            category=EventCategory.SYSTEM,
+                            payload=adj,
+                            source="loop",
+                        )
+                    )
+        except Exception as exc:
+            self.event_bus.publish(
+                Event(
+                    name="agent.learn.adjustment_failed",
+                    category=EventCategory.SYSTEM,
+                    payload={"error": str(exc)},
+                    source="loop",
+                )
+            )
+
+        # 3. Update daily stats (existing behavior preserved)
         success_count = sum(1 for r in results if r.success)
         fail_count = sum(1 for r in results if not r.success)
-
         today = datetime.now().strftime("%Y-%m-%d")
         if today not in self.state.daily_stats:
             self.state.daily_stats[today] = {
@@ -295,6 +349,7 @@ class AgentLoop:
         self.state.daily_stats[today]["successes"] += success_count
         self.state.daily_stats[today]["failures"] += fail_count
 
+        # 4. Publish completion events (existing behavior preserved)
         for result in results:
             event_name = "agent.action.completed" if result.success else "agent.action.failed"
             self.event_bus.publish(
@@ -347,7 +402,7 @@ class AgentLoop:
     def pause(self) -> None:
         if self.state.status == AgentStatus.RUNNING:
             self.state.status = AgentStatus.PAUSED
-            self._state_store.save(self.state)
+            self.state_store.save(self.state)
             self.event_bus.publish(
                 Event(
                     name="agent.lifecycle.paused",
@@ -359,7 +414,7 @@ class AgentLoop:
     def resume(self) -> None:
         if self.state.status == AgentStatus.PAUSED:
             self.state.status = AgentStatus.RUNNING
-            self._state_store.save(self.state)
+            self.state_store.save(self.state)
             self.event_bus.publish(
                 Event(
                     name="agent.lifecycle.resumed",
@@ -370,7 +425,7 @@ class AgentLoop:
 
     def stop(self) -> None:
         self.state.status = AgentStatus.STOPPED
-        self._state_store.save(self.state)
+        self.state_store.save(self.state)
         self.event_bus.publish(
             Event(
                 name="agent.lifecycle.stopped",
@@ -404,22 +459,12 @@ class AgentLoop:
             "max_concurrent_tasks": 5,
             "learning_enabled": True,
         }
-        config_path = REPO_ROOT / "config" / "jarvis.yaml"
-        if not config_path.exists():
-            return defaults
-        try:
-            import yaml
-
-            with open(config_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
-
-            agent_config = data.get("agent", {})
-            for key in defaults:
-                if key in agent_config:
-                    defaults[key] = agent_config[key]
-            return defaults
-        except Exception:
-            return defaults
+        loaded = load_yaml_config(REPO_ROOT / "config" / "jarvis.yaml", {})
+        agent_config = loaded.get("agent", {})
+        for key in defaults:
+            if key in agent_config:
+                defaults[key] = agent_config[key]
+        return defaults
 
     def _system_status_str(self) -> str:
         wiki_dir = REPO_ROOT / "wiki"

@@ -16,6 +16,7 @@ from pathlib import Path
 from tools.jarvis.jarvis_pg import get_pg_conn
 from tools.jarvis.tool_registry import register_tool
 from tools.jarvis.types import Event, EventCategory, RiskLevel
+from tools.jarvis.shared_utils import load_yaml_config
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
@@ -29,16 +30,8 @@ def _get_event_bus():
 
 
 def _load_email_config() -> dict | None:
-    config_path = REPO_ROOT / "config" / "jarvis.yaml"
-    if not config_path.exists():
-        return None
-    try:
-        import yaml
-        with open(config_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-        return data.get("tools", {}).get("comm", {}).get("email")
-    except Exception:
-        return None
+    data = load_yaml_config(REPO_ROOT / "config" / "jarvis.yaml", {})
+    return data.get("tools", {}).get("comm", {}).get("email")
 
 
 def _register_notify_desktop():

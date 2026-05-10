@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tools.jarvis.types import PlanStep, RiskLevel, ToolResult
+from tools.jarvis.shared_utils import load_yaml_config
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -56,44 +57,26 @@ class SafetyEngine:
         self._load_budget_from_config()
 
     def _load_config(self):
-        config_path = REPO_ROOT / "config" / "jarvis.yaml"
-        if not config_path.exists():
-            return
-        try:
-            import yaml
-
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
-
-            safety_config = config.get("safety", {})
-            if "rate_limits" in safety_config:
-                for key, value in safety_config["rate_limits"].items():
-                    if key in self._rate_limits:
-                        self._rate_limits[key] = int(value)
-            if "blocked_commands" in safety_config:
-                extra = safety_config["blocked_commands"]
-                if isinstance(extra, list):
-                    self._blocked_commands.extend(extra)
-            if "blocked_patterns" in safety_config:
-                extra = safety_config["blocked_patterns"]
-                if isinstance(extra, list):
-                    self._blocked_patterns.extend(extra)
-        except Exception:
-            pass
+        config = load_yaml_config(REPO_ROOT / "config" / "jarvis.yaml", {})
+        safety_config = config.get("safety", {})
+        if "rate_limits" in safety_config:
+            for key, value in safety_config["rate_limits"].items():
+                if key in self._rate_limits:
+                    self._rate_limits[key] = int(value)
+        if "blocked_commands" in safety_config:
+            extra = safety_config["blocked_commands"]
+            if isinstance(extra, list):
+                self._blocked_commands.extend(extra)
+        if "blocked_patterns" in safety_config:
+            extra = safety_config["blocked_patterns"]
+            if isinstance(extra, list):
+                self._blocked_patterns.extend(extra)
 
     def _load_budget_from_config(self):
-        config_path = REPO_ROOT / "config" / "jarvis.yaml"
-        if not config_path.exists():
-            return
-        try:
-            import yaml
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
-            safety = config.get("safety", {})
-            budget = safety.get("budget", {})
-            self._budget_limit = float(budget.get("daily_usd", 5.0))
-        except Exception:
-            pass
+        config = load_yaml_config(REPO_ROOT / "config" / "jarvis.yaml", {})
+        safety = config.get("safety", {})
+        budget = safety.get("budget", {})
+        self._budget_limit = float(budget.get("daily_usd", 5.0))
 
     def pre_check(self, step: PlanStep) -> SafetyCheckResult:
         if self._emergency_stopped:
