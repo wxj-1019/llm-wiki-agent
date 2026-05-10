@@ -96,13 +96,14 @@ def _register_wiki_search():
         print("WARNING: tools.search_engine unavailable, skipping wiki_search tool")
         return
 
-    _engine = None
+    _backend = None
 
-    def _get_engine():
-        nonlocal _engine
-        if _engine is None:
-            _engine = WikiSearchEngine()
-        return _engine
+    def _get_backend():
+        nonlocal _backend
+        if _backend is None:
+            from tools.shared.search_backend import get_search_backend
+            _backend = get_search_backend()
+        return _backend
 
     @register_tool(
         name="wiki_search",
@@ -116,8 +117,8 @@ def _register_wiki_search():
         category="knowledge",
     )
     def wiki_search(query: str, limit: int = 10) -> dict:
-        engine = _get_engine()
-        result = engine.search(query, limit=limit)
+        backend = _get_backend()
+        result = backend.search(query, limit=limit)
         return {"results": result.get("results", [])}
 
 
