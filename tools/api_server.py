@@ -3294,7 +3294,10 @@ async def jarvis_approvals(status: str = "pending"):
 async def jarvis_approve(req_id: str):
     try:
         from tools.jarvis.approval import get_approval_manager
-        return {"success": get_approval_manager().approve(req_id, approver="user")}
+        from tools.jarvis.loop import get_agent_loop
+        result = get_approval_manager().approve(req_id, approver="user")
+        get_agent_loop().resolve_approval(req_id, approved=True)
+        return {"success": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -3302,7 +3305,10 @@ async def jarvis_approve(req_id: str):
 async def jarvis_reject(req_id: str):
     try:
         from tools.jarvis.approval import get_approval_manager
-        return {"success": get_approval_manager().reject(req_id, approver="user")}
+        from tools.jarvis.loop import get_agent_loop
+        result = get_approval_manager().reject(req_id, approver="user")
+        get_agent_loop().resolve_approval(req_id, approved=False)
+        return {"success": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

@@ -51,6 +51,8 @@ class AgentLoop:
         self._health_interval_hours: int = 1
         self._quality_interval_hours: int = 6
         self._budget_interval_hours: int = 1
+        self._approval_events: dict[str, asyncio.Event] = {}
+        self._approval_results: dict[str, bool] = {}
 
     async def run_cycle(self) -> str:
         cycle_id = f"cycle_{uuid.uuid4().hex[:8]}"
@@ -103,11 +105,41 @@ class AgentLoop:
                 if step.requires_approval:
                     auto_approved = self.approval_manager.auto_approve_check(step)
                     if not auto_approved:
-                        await _emit("tool_call", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params, "status": "awaiting_approval"})
-                        step.status = StepStatus.AWAITING_APPROVAL
-                        step.result = ToolResult(success=False, error="Awaiting approval", retryable=False)
-                        results.append(step.result)
-                        continue
+                        req = self.approval_manager.submit(step, f"Tool '{step.tool_name}' requires approval (risk={step.risk_level.value})")
+                        await _emit("approval_required", {
+                            "req_id": req.id,
+                            "step_id": step.id,
+                            "tool_name": step.tool_name,
+                            "params": step.params,
+                            "risk_level": step.risk_level.value,
+                            "reason": req.reason,
+                        })
+
+                        # Wait for frontend approval (30s timeout)
+                        event = asyncio.Event()
+                        self._approval_events[req.id] = event
+                        try:
+                            await asyncio.wait_for(event.wait(), timeout=30.0)
+                            approved = self._approval_results.pop(req.id, False)
+                        except asyncio.TimeoutError:
+                            approved = False
+                            self.approval_manager.reject(req.id, approver="system_timeout")
+                            await _emit("tool_result", {
+                                "step_id": step.id,
+                                "tool_name": step.tool_name,
+                                "success": False,
+                                "error": "Approval timed out (30s)",
+                            })
+                        finally:
+                            self._approval_events.pop(req.id, None)
+
+                        if not approved:
+                            step.status = StepStatus.SKIPPED
+                            step.result = ToolResult(success=False, error="Approval denied or timed out", retryable=False)
+                            results.append(step.result)
+                            continue
+
+                        # Approval granted - continue to execute below
 
                 safety_result = self.safety_engine.pre_check(step)
                 if not safety_result.passed:
@@ -622,6 +654,14 @@ class AgentLoop:
             return delta.total_seconds() / 3600
         except (ValueError, TypeError):
             return 999.0
+
+    def resolve_approval(self, req_id: str, approved: bool) -> bool:
+        """Resolve a pending approval request. Called by API endpoints when user approves/rejects."""
+        if req_id in self._approval_events:
+            self._approval_results[req_id] = approved
+            self._approval_events[req_id].set()
+            return True
+        return False
 
 
 _loop: AgentLoop | None = None

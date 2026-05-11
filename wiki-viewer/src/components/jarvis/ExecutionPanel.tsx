@@ -1,8 +1,47 @@
+import { useState, useCallback } from 'react';
 import { useAgentChatStore } from '@/stores/agentChatStore';
-import { CheckCircle, XCircle, Loader2, AlertTriangle, Clock, Brain, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertTriangle, Clock, Brain, MessageSquare, Shield } from 'lucide-react';
+
+function riskColor(level: string): string {
+  switch (level) {
+    case 'L0': return 'bg-apple-green/10 text-apple-green';
+    case 'L1': return 'bg-apple-blue/10 text-apple-blue';
+    case 'L2': return 'bg-apple-orange/10 text-apple-orange';
+    case 'L3': return 'bg-apple-red/10 text-apple-red';
+    case 'L4': return 'bg-apple-red/10 text-apple-red';
+    default: return 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)]';
+  }
+}
+
+function riskDot(level: string): string {
+  switch (level) {
+    case 'L0': return 'bg-apple-green';
+    case 'L1': return 'bg-apple-blue';
+    case 'L2': return 'bg-apple-orange';
+    case 'L3': return 'bg-apple-red';
+    case 'L4': return 'bg-apple-red';
+    default: return 'bg-[var(--text-tertiary)]';
+  }
+}
 
 export function ExecutionPanel() {
   const current = useAgentChatStore((s) => s.currentExecution);
+  const pendingApprovals = useAgentChatStore((s) => s.pendingApprovals);
+  const removePendingApproval = useAgentChatStore((s) => s.removePendingApproval);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const resolveApproval = useCallback(async (reqId: string, action: 'approve' | 'reject') => {
+    setActionLoading(reqId);
+    try {
+      const res = await fetch(`/api/jarvis/approvals/${reqId}/${action}`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      removePendingApproval(reqId);
+    } catch (e) {
+      console.error('Approval failed:', e);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [removePendingApproval]);
 
   if (!current) return null;
 
@@ -35,6 +74,53 @@ export function ExecutionPanel() {
         </span>
       </div>
 
+      {/* Approval Dialogs */}
+      {pendingApprovals.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className="text-amber-500" />
+            <span className="text-xs font-semibold text-amber-500">Approval Required</span>
+          </div>
+          {pendingApprovals.map((approval) => (
+            <div key={approval.req_id} className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">{approval.tool_name}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${riskColor(approval.risk_level)}`}>
+                    {approval.risk_level}
+                  </span>
+                </div>
+                <span className="text-[10px] text-[var(--text-tertiary)]">{approval.req_id}</span>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)]">{approval.reason}</p>
+              {Object.keys(approval.params).length > 0 && (
+                <pre className="text-[10px] bg-[var(--bg-secondary)] p-2 rounded overflow-x-auto text-[var(--text-tertiary)]">
+                  {JSON.stringify(approval.params, null, 2)}
+                </pre>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => resolveApproval(approval.req_id, 'approve')}
+                  disabled={actionLoading === approval.req_id}
+                  className="apple-button flex items-center gap-1.5 px-3 py-1.5 text-xs bg-apple-green/10 text-apple-green hover:bg-apple-green/20"
+                >
+                  {actionLoading === approval.req_id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                  Approve
+                </button>
+                <button
+                  onClick={() => resolveApproval(approval.req_id, 'reject')}
+                  disabled={actionLoading === approval.req_id}
+                  className="apple-button flex items-center gap-1.5 px-3 py-1.5 text-xs bg-apple-red/10 text-apple-red hover:bg-apple-red/20"
+                >
+                  <XCircle size={12} />
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Plan Steps */}
       {current.steps.length > 0 && (
         <div className="space-y-2">
@@ -58,6 +144,7 @@ export function ExecutionPanel() {
                 {step.status === 'awaiting_approval' && <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
                 {step.status === 'pending' && <span className="w-3 h-3 rounded-full border-2 border-[var(--border-default)] shrink-0" />}
                 <span className="flex-1 truncate">{step.tool_name}</span>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${riskDot(step.result ? 'L0' : (typeof step.risk_level === 'string' ? step.risk_level : 'L1'))}`} />
                 {step.result?.duration_ms && (
                   <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{step.result.duration_ms}ms</span>
                 )}

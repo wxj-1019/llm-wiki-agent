@@ -23,6 +23,8 @@ export function useAgentChat() {
   const setError = useAgentChatStore((s) => s.setError);
   const setDone = useAgentChatStore((s) => s.setDone);
   const setConnected = useAgentChatStore((s) => s.setConnected);
+  const addPendingApproval = useAgentChatStore((s) => s.addPendingApproval);
+  const removePendingApproval = useAgentChatStore((s) => s.removePendingApproval);
 
   const connect = useCallback(async (opts: AgentChatOptions) => {
     if (abortRef.current) {
@@ -109,6 +111,18 @@ export function useAgentChat() {
               updateStep(evtSessionId, data.step_id as string, { status: 'running' });
               break;
             }
+            case 'approval_required': {
+              addPendingApproval({
+                req_id: data.req_id as string,
+                step_id: data.step_id as string,
+                tool_name: data.tool_name as string,
+                params: (data.params as Record<string, unknown>) ?? {},
+                risk_level: (data.risk_level as string) ?? 'L3',
+                reason: (data.reason as string) ?? '',
+                created_at: Date.now(),
+              });
+              break;
+            }
             case 'tool_call': {
               const tcStatus = (data.status as string) === 'awaiting_approval'
                 ? 'awaiting_approval'
@@ -172,7 +186,7 @@ export function useAgentChat() {
       setError(sessionId, (err as Error).message || 'Connection failed');
       setConnected(false);
     }
-  }, [startExecution, updateExecution, addStep, updateStep, addToolCall, updateToolCall, addReflection, setContent, setError, setDone, setConnected]);
+  }, [startExecution, updateExecution, addStep, updateStep, addToolCall, updateToolCall, addReflection, setContent, setError, setDone, setConnected, addPendingApproval, removePendingApproval]);
 
   const disconnect = useCallback(() => {
     if (abortRef.current) {

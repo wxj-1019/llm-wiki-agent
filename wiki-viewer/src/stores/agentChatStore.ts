@@ -29,6 +29,16 @@ export interface AgentReflection {
   timestamp: number;
 }
 
+export interface PendingApproval {
+  req_id: string;
+  step_id: string;
+  tool_name: string;
+  params: Record<string, unknown>;
+  risk_level: string;
+  reason: string;
+  created_at: number;
+}
+
 export interface AgentExecutionState {
   session_id: string;
   goal: string;
@@ -47,6 +57,7 @@ interface AgentChatState {
   executions: AgentExecutionState[];
   currentExecution: AgentExecutionState | null;
   isConnected: boolean;
+  pendingApprovals: PendingApproval[];
   startExecution: (goal: string, strategy: string) => AgentExecutionState;
   updateExecution: (sessionId: string, partial: Partial<AgentExecutionState>) => void;
   addStep: (sessionId: string, step: AgentStep) => void;
@@ -59,12 +70,15 @@ interface AgentChatState {
   setDone: (sessionId: string) => void;
   setConnected: (connected: boolean) => void;
   clearCurrent: () => void;
+  addPendingApproval: (approval: PendingApproval) => void;
+  removePendingApproval: (reqId: string) => void;
 }
 
 export const useAgentChatStore = create<AgentChatState>((set, get) => ({
   executions: [],
   currentExecution: null,
   isConnected: false,
+  pendingApprovals: [],
 
   startExecution: (goal, strategy) => {
     const session_id = `goal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -197,4 +211,16 @@ export const useAgentChatStore = create<AgentChatState>((set, get) => ({
   setConnected: (connected) => set({ isConnected: connected }),
 
   clearCurrent: () => set({ currentExecution: null, isConnected: false }),
+
+  addPendingApproval: (approval) => {
+    set((state) => ({
+      pendingApprovals: [...state.pendingApprovals, approval],
+    }));
+  },
+
+  removePendingApproval: (reqId) => {
+    set((state) => ({
+      pendingApprovals: state.pendingApprovals.filter((a) => a.req_id !== reqId),
+    }));
+  },
 }));
