@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from tools.jarvis.jarvis_pg import get_pg_conn
+from tools.jarvis.shared_utils import iso_now
 from tools.jarvis.types import GoalRequest, PlanStep, ToolResult
 
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -61,7 +62,7 @@ class ExecutionStore:
                     goal_request.description,
                     goal_request.strategy,
                     "running",
-                    datetime.now().isoformat(),
+                    iso_now(),
                 ),
             )
             conn.commit()
@@ -116,7 +117,7 @@ class ExecutionStore:
                 SET status = %s, content = %s, error = %s, finished_at = %s
                 WHERE session_id = %s
                 """,
-                (status, content, error, datetime.now().isoformat(), session_id),
+                (status, content, error, iso_now(), session_id),
             )
             conn.commit()
             cur.close()

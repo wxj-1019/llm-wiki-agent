@@ -4,7 +4,7 @@ import enum
 import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from tools.jarvis.shared_utils import iso_now
 from typing import Any, Callable
 
 
@@ -69,7 +69,7 @@ class Event:
     name: str
     category: EventCategory
     payload: Any = None
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=iso_now)
     source: str = ""
     id: str = ""
 
@@ -163,7 +163,7 @@ class ApprovalRequest:
     step: PlanStep
     reason: str
     status: str = "pending"
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    created_at: str = field(default_factory=iso_now)
     resolved_at: str = ""
     resolved_by: str = ""
 

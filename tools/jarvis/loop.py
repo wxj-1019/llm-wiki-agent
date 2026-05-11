@@ -182,7 +182,7 @@ class AgentLoop:
             if len(plan.steps) >= 3:
                 reflection = await self._reflect_on_results(plan, results)
                 await _emit("reflection", {"session_id": session_id, "text": reflection})
-                execution_store.update_reflections(session_id, [{"text": reflection, "timestamp": datetime.now().isoformat()}])
+                execution_store.update_reflections(session_id, [{"text": reflection, "timestamp": iso_now()}])
 
             # 4. Final content/summary
             summary = await self._summarize_results(plan, results)
@@ -221,15 +221,10 @@ class AgentLoop:
         )
 
         raw = call_llm(prompt=prompt, system="You are a planning assistant for Jarvis.", max_tokens=4096)
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            first_newline = cleaned.index("\n")
-            last_backtick = cleaned.rindex("```")
-            cleaned = cleaned[first_newline + 1 : last_backtick].strip()
-
-        steps_data = json.loads(cleaned)
-        if not isinstance(steps_data, list):
-            steps_data = [steps_data]
+        parsed = parse_llm_json(raw)
+        if parsed is None:
+            return plan
+        steps_data = parsed if isinstance(parsed, list) else [parsed]
 
         plan = Plan(goal=goal_request.description)
         for item in steps_data:
