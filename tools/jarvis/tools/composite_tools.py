@@ -21,6 +21,8 @@ def _sync_execute(tool_name: str, params: dict = None) -> dict:
             result = future.result(timeout=600)
     except RuntimeError:
         result = asyncio.run(registry.execute(tool_name, params))
+    except Exception as exc:
+        return {"error": str(exc)}
     if result.success:
         return result.data if result.data is not None else {}
     return {"error": result.error}
