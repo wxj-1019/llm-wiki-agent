@@ -2,11 +2,26 @@ import { create } from 'zustand';
 
 export type AgentStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'awaiting_approval';
 
+export interface ReasoningStep {
+  text: string;
+  evidence?: string;
+}
+
+export interface AlternativeAction {
+  label: string;
+  description?: string;
+}
+
 export interface AgentStep {
   id: string;
   tool_name: string;
   params: Record<string, unknown>;
   status: AgentStepStatus;
+  risk_level?: string;
+  confidence?: number;
+  reasoning?: ReasoningStep[];
+  alternatives?: AlternativeAction[];
+  decision?: string;
   result?: {
     success: boolean;
     data?: unknown;
@@ -229,4 +244,19 @@ export const useAgentChatStore = create<AgentChatState>((set, get) => ({
       pendingApprovals: state.pendingApprovals.filter((a) => a.req_id !== reqId),
     }));
   },
+
+  loadHistory: async () => {
+    set({ historyLoading: true });
+    try {
+      const res = await fetch('/api/jarvis/executions');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const executions = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      set({ history: executions, historyLoading: false });
+    } catch {
+      set({ historyLoading: false });
+    }
+  },
+
+  setHistory: (history) => set({ history }),
 }));
