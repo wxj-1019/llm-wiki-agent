@@ -7,7 +7,7 @@ export async function safeJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!text || text.trim().length === 0) {
     throw new Error(
-      `Backend returned empty response (HTTP ${res.status}). Is the API server running on port 8000?`
+      `Backend returned empty response (HTTP ${res.status}). Is the API server running on port 8666?`
     );
   }
   try {

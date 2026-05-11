@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import {
   Bot, Activity, RefreshCw, AlertCircle, Play, Pause, Square,
   Zap, Target, Brain, Clock, Wrench, CheckCircle, XCircle,
-  TrendingUp,
+  TrendingUp, MessageSquare, LayoutDashboard,
 } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { AgentChatPanel } from '@/components/jarvis/AgentChatPanel';
+import { GoalHistory } from '@/components/jarvis/GoalHistory';
 
 interface SafetyStatus {
   emergency_stopped: boolean;
@@ -79,6 +81,7 @@ export function JarvisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const API_BASE = '/api/jarvis';
@@ -113,14 +116,17 @@ export function JarvisPage() {
       if (statusData) setStatus(statusData);
       setTools(Array.isArray(toolsData?.tools) ? toolsData.tools : []);
       const rawEvents = Array.isArray(eventsData?.events) ? eventsData.events : [];
-      setEvents(rawEvents.map((e: Record<string, unknown>) => ({
-        id: (e.id as string) || '',
-        timestamp: (e.timestamp as string) || '',
-        name: (e.name as string) || '',
-        category: (e.category as string) || '',
-        detail: (e.detail ?? (typeof e.payload === 'string' ? e.payload : JSON.stringify(e.payload ?? ''))) as string,
-        source: e.source as string | undefined,
-      })));
+      setEvents(rawEvents.map((e: unknown) => {
+        const ev = e as Record<string, unknown>;
+        return {
+          id: (ev.id as string) || '',
+          timestamp: (ev.timestamp as string) || '',
+          name: (ev.name as string) || '',
+          category: (ev.category as string) || '',
+          detail: (ev.detail ?? (typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload ?? ''))) as string,
+          source: ev.source as string | undefined,
+        };
+      }));
       setGoals(Array.isArray(goalsData?.goals) ? goalsData.goals : []);
 
       const learningData = learningRaw && typeof learningRaw === 'object' ? {
@@ -201,8 +207,38 @@ export function JarvisPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      {/* Tab Switcher */}
+      <div className="flex items-center gap-2 mb-6 border-b border-[var(--border-default)]">
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'chat'
+              ? 'border-apple-blue text-apple-blue'
+              : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          <MessageSquare size={16} />
+          Chat
+        </button>
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'dashboard'
+              ? 'border-apple-blue text-apple-blue'
+              : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          <LayoutDashboard size={16} />
+          Dashboard
+        </button>
+      </div>
+
+      {activeTab === 'chat' && <AgentChatPanel />}
+
+      {activeTab === 'dashboard' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <GoalHistory />
           <div className="apple-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -424,6 +460,7 @@ export function JarvisPage() {
           )}
         </div>
       </div>
+    )}
 
       {error && (
         <div className="mt-4 flex items-center gap-2 text-xs text-amber-500">

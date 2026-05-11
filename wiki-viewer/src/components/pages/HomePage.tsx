@@ -671,7 +671,7 @@ export function HomePage() {
                 { key: 'browse', labelKey: 'home.quickActions.browse', icon: Compass, path: '/browse', color: 'text-apple-blue bg-apple-blue/10 hover:bg-apple-blue/20' },
                 { key: 'graph', labelKey: 'home.quickActions.graph', icon: GitBranch, path: '/graph', color: 'text-apple-purple bg-apple-purple/10 hover:bg-apple-purple/20' },
                 { key: 'upload', labelKey: 'home.quickActions.upload', icon: Upload, path: '/upload', color: 'text-apple-green bg-apple-green/10 hover:bg-apple-green/20' },
-                { key: 'chat', labelKey: 'home.quickActions.chat', icon: MessageCircle, path: '/chat', color: 'text-apple-orange bg-apple-orange/10 hover:bg-apple-orange/20' },
+                { key: 'chat', labelKey: 'home.quickActions.chat', icon: MessageCircle, path: '/search?tab=chat', color: 'text-apple-orange bg-apple-orange/10 hover:bg-apple-orange/20' },
               ].map((action) => (
                 <Link
                   key={action.key}

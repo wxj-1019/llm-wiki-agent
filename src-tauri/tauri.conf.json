@@ -7,7 +7,7 @@
     "beforeBuildCommand": "cd ../wiki-viewer && npm run build",
     "beforeDevCommand": "cd ../wiki-viewer && npm run dev",
     "frontendDist": "../wiki-viewer/dist",
-    "devUrl": "http://localhost:3000"
+    "devUrl": "http://localhost:3666"
   },
   "app": {
     "windows": [

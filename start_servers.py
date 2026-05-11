@@ -12,8 +12,8 @@ from pathlib import Path
 
 REPO = Path(__file__).parent
 
-DEFAULT_BACKEND_PORT = 8000
-DEFAULT_FRONTEND_PORT = 3000
+DEFAULT_BACKEND_PORT = 8666
+DEFAULT_FRONTEND_PORT = 3666
 
 
 def is_port_free(port: int, host: str = "127.0.0.1") -> bool:

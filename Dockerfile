@@ -39,12 +39,12 @@ COPY --from=frontend-builder /app/wiki-viewer/dist ./wiki-viewer/dist
 RUN groupadd -r appuser && useradd -r -g appuser appuser && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8666
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8666/api/health')"
 
-CMD ["python", "tools/api_server.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "tools/api_server.py", "--host", "0.0.0.0", "--port", "8666"]

@@ -115,7 +115,7 @@ All scripts in `tools/` are standalone and require `litellm` (and optionally `ma
 | `refresh.py` | Refresh stale source pages | Yes (via ingest) | `python tools/refresh.py [--force] [--page sources/X]` — hash-based change detection |
 | `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
 | `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
-| `api_server.py` | Local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
+| `api_server.py` | Local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8666]` |
 
 ### Automation Pipeline Tools
 
@@ -220,7 +220,7 @@ Generates self-contained agent capability packages (MCP Servers, Kimi Skills) fr
 ### Python (backend)
 
 ```bash
-# API smoke tests (requires api_server running on port 8000)
+# API smoke tests (requires api_server running on port 8666)
 python tools/test_api.py
 
 # pytest-based API tests
@@ -245,14 +245,14 @@ Frontend tests live in `wiki-viewer/src/**/*.test.{ts,tsx}`. Test setup (`src/te
 
 ## Wiki Viewer (React Frontend)
 
-The `wiki-viewer/` directory contains a React + TypeScript + Vite frontend for browsing the wiki. It connects to `api_server.py` on port 8000.
+The `wiki-viewer/` directory contains a React + TypeScript + Vite frontend for browsing the wiki. It connects to `api_server.py` on port 8666.
 
 ```bash
 cd wiki-viewer
 npm install        # install dependencies (one-time)
-npm run dev        # development server with HMR (port 3000, proxies /api → 8000)
+npm run dev        # development server with HMR (port 3666, proxies /api → 8666)
 npm run build      # production build → wiki-viewer/dist/
-npm run preview    # preview production build (port 3000)
+npm run preview    # preview production build (port 3666)
 npm run lint       # ESLint with max-warnings 0
 npx vitest run     # run tests once
 npx vitest         # watch mode
@@ -260,7 +260,7 @@ npx vitest         # watch mode
 
 Or use the convenience script to start both servers at once:
 ```bash
-python start_servers.py    # starts api_server (port 8000) + vite preview (port 3000)
+python start_servers.py    # starts api_server (port 8666) + vite preview (port 3666)
 ```
 
 Tech: React 18, React Router 7, Tailwind CSS 4, Zustand (state), fuse.js (search), vis-network (graph), Shiki (syntax highlighting), react-markdown + remark-gfm, i18next (i18n with en/zh-CN), PWA (vite-plugin-pwa with Workbox caching), framer-motion (animations), DOMPurify (XSS sanitization), vitest + @testing-library/react (tests).

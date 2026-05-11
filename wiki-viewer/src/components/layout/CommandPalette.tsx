@@ -69,7 +69,7 @@ export function CommandPalette() {
     { id: 'nav-search', label: t('cmd.search'), subtitle: t('cmd.searchSub'), icon: Search, action: () => navigate('/search') },
     { id: 'nav-graph', label: t('cmd.graph'), subtitle: t('cmd.graphSub'), icon: Network, action: () => navigate('/graph') },
     { id: 'nav-upload', label: t('cmd.upload'), subtitle: t('cmd.uploadSub'), icon: Upload, action: () => navigate('/upload') },
-    { id: 'nav-chat', label: t('cmd.chat'), subtitle: t('cmd.chatSub'), icon: MessageCircle, action: () => navigate('/chat') },
+    { id: 'nav-chat', label: t('cmd.chat'), subtitle: t('cmd.chatSub'), icon: MessageCircle, action: () => navigate('/search?tab=chat') },
     { id: 'nav-settings', label: t('cmd.settings'), subtitle: t('cmd.settingsSub'), icon: Settings, action: () => navigate('/settings') },
   ], [navigate, t]);
 

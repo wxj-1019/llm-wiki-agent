@@ -42,6 +42,17 @@ config/database.yaml
 graph/.cache.json
 graph/.inferred_edges.jsonl
 graph/.refresh_cache.json
+graph/code-graph.json
+graph/*.csv
+graph/*.graphml
+graph/*.cypher
+
+# Auto-generated wiki reports
+wiki/health-report.md
+wiki/lint-report.md
+
+# Installed pip packages (local venv alternative)
+.pip_packages/
 
 # Auto-generated agent assets
 agent-kit/

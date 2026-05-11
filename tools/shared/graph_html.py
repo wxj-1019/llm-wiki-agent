@@ -13,6 +13,9 @@ TYPE_COLORS = {
     "concept": "#FF9800",
     "synthesis": "#9C27B0",
     "unknown": "#9E9E9E",
+    "code_module": "#607D8B",
+    "code_func": "#795548",
+    "code_class": "#3F51B5",
 }
 
 EDGE_COLORS = {

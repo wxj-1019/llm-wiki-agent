@@ -4,7 +4,7 @@ import { isValidFilePath } from '@/lib/validation';
 
 /**
  * Fetch wiki data from the API server (tools/api_server.py).
- * In development, vite.config.ts proxies /api/* to localhost:8000.
+ * In development, vite.config.ts proxies /api/* to localhost:8666.
  * In production (static build), graph data is embedded in public/data/graph.json.
  *
  * GET requests are deduplicated: multiple concurrent calls to the same endpoint

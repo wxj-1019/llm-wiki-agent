@@ -65,6 +65,21 @@ try:
 except ImportError:
     WEB_SEARCH_AVAILABLE = False
 
+# Graphify query engine
+try:
+    from tools.shared.graph_query_engine import GraphQueryEngine
+    GRAPH_QUERY_AVAILABLE = True
+except ImportError:
+    GraphQueryEngine = None
+    GRAPH_QUERY_AVAILABLE = False
+
+try:
+    from tools.shared.graph_export import export_all
+    GRAPH_EXPORT_AVAILABLE = True
+except ImportError:
+    export_all = None
+    GRAPH_EXPORT_AVAILABLE = False
+
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
@@ -193,6 +208,12 @@ class AgentKitGeneratePayload(BaseModel):
 class DownloadZipPayload(BaseModel):
     paths: list[str] = Field(..., min_length=1, description="List of file paths to include in ZIP")
 
+class GraphQueryPayload(BaseModel):
+    query: str = Field(..., min_length=1, description="Graph query string")
+
+class GraphExportPayload(BaseModel):
+    format: str = Field(default="all", pattern="^(all|graphml|csv|cypher)$")
+
 class SaveFilePayload(BaseModel):
     path: str = Field(..., min_length=1)
     content: str = Field(default="")
@@ -315,6 +336,81 @@ def get_graph():
     except UnicodeDecodeError:
         data = graph_path.read_text(encoding="utf-8", errors="replace")
     return json.loads(data)
+
+@app.post("/api/graph/query")
+def graph_query(payload: GraphQueryPayload):
+    if not GRAPH_QUERY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph query engine not available")
+    try:
+        engine = GraphQueryEngine()
+        result = engine.execute(payload.query)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post("/api/graph/export")
+def graph_export(payload: GraphExportPayload):
+    if not GRAPH_EXPORT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph export not available")
+    try:
+        if payload.format == "all":
+            results = export_all()
+        elif payload.format == "graphml":
+            from tools.shared.graph_export import export_graphml
+            results = {"graphml": export_graphml()}
+        elif payload.format == "csv":
+            from tools.shared.graph_export import export_csv
+            results = export_csv()
+        elif payload.format == "cypher":
+            from tools.shared.graph_export import export_cypher
+            cypher = export_cypher()
+            cypher_path = GRAPH / "graph.cypher"
+            cypher_path.write_text(cypher, encoding="utf-8")
+            results = {"cypher": str(cypher_path)}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format")
+        return {"format": payload.format, "files": results}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/graph/stats")
+def graph_stats():
+    graph_path = GRAPH / "graph.json"
+    if not graph_path.exists():
+        raise HTTPException(status_code=404, detail="Graph not found. Run build_graph first.")
+    try:
+        data = json.loads(graph_path.read_text(encoding="utf-8"))
+        nodes = data.get("nodes", [])
+        edges = data.get("edges", [])
+        type_counts = {}
+        for n in nodes:
+            t = n.get("type", "unknown")
+            type_counts[t] = type_counts.get(t, 0) + 1
+        comms = set(n.get("group", -1) for n in nodes)
+        return {
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "community_count": len(comms) - (1 if -1 in comms else 0),
+            "type_distribution": type_counts,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/graph/node/{node_id:path}")
+def graph_node(node_id: str):
+    if not GRAPH_QUERY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph query engine not available")
+    try:
+        engine = GraphQueryEngine()
+        engine.load()
+        result = engine.execute(f"explain {node_id}")
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 @app.get("/api/pages/{page_type}/{slug}")
 def get_page(page_type: str, slug: str):
@@ -3198,7 +3294,10 @@ async def jarvis_approvals(status: str = "pending"):
 async def jarvis_approve(req_id: str):
     try:
         from tools.jarvis.approval import get_approval_manager
-        return {"success": get_approval_manager().approve(req_id, approver="user")}
+        from tools.jarvis.loop import get_agent_loop
+        result = get_approval_manager().approve(req_id, approver="user")
+        get_agent_loop().resolve_approval(req_id, approved=True)
+        return {"success": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -3206,7 +3305,10 @@ async def jarvis_approve(req_id: str):
 async def jarvis_reject(req_id: str):
     try:
         from tools.jarvis.approval import get_approval_manager
-        return {"success": get_approval_manager().reject(req_id, approver="user")}
+        from tools.jarvis.loop import get_agent_loop
+        result = get_approval_manager().reject(req_id, approver="user")
+        get_agent_loop().resolve_approval(req_id, approved=False)
+        return {"success": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -3274,6 +3376,103 @@ async def jarvis_strategies():
         return {"success": True, "strategies": get_strategies().list_strategies()}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+class AgentChatRequest(BaseModel):
+    description: str = Field(..., min_length=1, description="User goal description")
+    strategy: str = Field(default="balanced", description="Execution strategy: conservative|balanced|aggressive")
+    options: dict = Field(default_factory=dict, description="Optional execution parameters")
+
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentChatRequest):
+    """Start a single-shot goal execution and stream progress via SSE.
+
+    Request body:
+      { "description": "列出 wiki 中的孤立页面", "strategy": "balanced", "options": {} }
+
+    SSE events:
+      - plan            : execution plan with steps
+      - step_start      : a step is about to run
+      - tool_call       : tool is being invoked
+      - tool_result     : tool execution result
+      - reflection      : agent reflection (every 3 steps)
+      - content         : final summary
+      - done            : execution complete
+      - error           : execution error
+    """
+    from tools.jarvis.loop import get_agent_loop
+    from tools.jarvis.types import GoalRequest, SSEEvent
+
+    goal_req = GoalRequest(
+        description=request.description,
+        strategy=request.strategy,
+        options=request.options,
+    )
+
+    queue: asyncio.Queue[str] = asyncio.Queue()
+
+    async def sse_callback(event: SSEEvent) -> None:
+        await queue.put(event.to_sse())
+
+    async def event_generator():
+        try:
+            loop = get_agent_loop()
+            task = asyncio.create_task(loop.run_goal(goal_req, sse_callback=sse_callback))
+
+            while not task.done():
+                try:
+                    chunk = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    yield chunk
+                except asyncio.TimeoutError:
+                    continue
+
+            while not queue.empty():
+                yield queue.get_nowait()
+
+            try:
+                await task
+            except Exception as exc:
+                yield SSEEvent(type="error", data={"error": str(exc)}, session_id=goal_req.session_id).to_sse()
+
+            yield SSEEvent(type="done", data={"session_id": goal_req.session_id}, session_id=goal_req.session_id).to_sse()
+
+        except Exception as exc:
+            yield SSEEvent(type="error", data={"error": str(exc)}, session_id=goal_req.session_id).to_sse()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.get("/api/jarvis/executions")
+async def jarvis_executions(limit: int = 50):
+    """Return recent goal execution history."""
+    try:
+        from tools.jarvis.execution_store import get_execution_store
+        rows = get_execution_store().list_recent(limit=limit)
+        return {"success": True, "executions": rows, "total": len(rows)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/jarvis/executions/{session_id}")
+async def jarvis_execution_detail(session_id: str):
+    """Return a single execution by session_id."""
+    try:
+        from tools.jarvis.execution_store import get_execution_store
+        row = get_execution_store().get_by_id(session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Execution not found")
+        return {"success": True, "execution": row}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():

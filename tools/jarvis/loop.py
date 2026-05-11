@@ -6,6 +6,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Callable, Awaitable
 
 from tools.jarvis.event_bus import get_event_bus
 from tools.jarvis.tool_registry import get_registry
@@ -16,6 +17,7 @@ from tools.jarvis.learner import get_learner
 from tools.jarvis.state import get_state_store, AgentStateStore
 from tools.jarvis.audit import get_audit_store, AuditStore
 from tools.jarvis.shared_utils import iso_now, load_yaml_config, parse_llm_json
+from tools.jarvis.execution_store import get_execution_store
 from tools.jarvis.types import (
     AgentState,
     AgentStatus,
@@ -30,6 +32,8 @@ from tools.jarvis.types import (
     Urgency,
     RiskLevel,
     ApprovalRequest,
+    GoalRequest,
+    SSEEvent,
 )
 from tools.shared.llm import call_llm
 
@@ -54,6 +58,8 @@ class AgentLoop:
         self._health_interval_hours: int = 1
         self._quality_interval_hours: int = 6
         self._budget_interval_hours: int = 1
+        self._approval_events: dict[str, asyncio.Event] = {}
+        self._approval_results: dict[str, bool] = {}
 
     async def run_cycle(self) -> str:
         cycle_id = f"cycle_{uuid.uuid4().hex[:8]}"
@@ -75,6 +81,289 @@ class AgentLoop:
         self.state_store.save(self.state)
 
         return cycle_id
+
+    async def run_goal(
+        self,
+        goal_request: GoalRequest,
+        sse_callback: Callable[[SSEEvent], Awaitable[None]] | None = None,
+    ) -> str:
+        """Run a single user-defined goal and stream progress via SSE."""
+        session_id = goal_request.session_id
+        execution_store = get_execution_store()
+        execution_store.create(goal_request)
+
+        async def _emit(event_type: str, data: dict) -> None:
+            if sse_callback:
+                await sse_callback(SSEEvent(type=event_type, data=data, session_id=session_id))
+
+        try:
+            # 1. Build plan from goal
+            plan = await self._build_plan_for_goal(goal_request)
+            await _emit("plan", {
+                "session_id": session_id,
+                "goal": goal_request.description,
+                "strategy": goal_request.strategy,
+                "steps": [{"id": s.id, "tool_name": s.tool_name, "params": s.params, "status": s.status.value} for s in plan.steps],
+            })
+
+            # 2. Execute each step
+            results: list[ToolResult] = []
+            for step in plan.steps:
+                await _emit("step_start", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params})
+
+                if step.requires_approval:
+                    auto_approved = self.approval_manager.auto_approve_check(step)
+                    if not auto_approved:
+                        req = self.approval_manager.submit(step, f"Tool '{step.tool_name}' requires approval (risk={step.risk_level.value})")
+                        await _emit("approval_required", {
+                            "req_id": req.id,
+                            "step_id": step.id,
+                            "tool_name": step.tool_name,
+                            "params": step.params,
+                            "risk_level": step.risk_level.value,
+                            "reason": req.reason,
+                        })
+
+                        # Wait for frontend approval (30s timeout)
+                        event = asyncio.Event()
+                        self._approval_events[req.id] = event
+                        try:
+                            await asyncio.wait_for(event.wait(), timeout=30.0)
+                            approved = self._approval_results.pop(req.id, False)
+                        except asyncio.TimeoutError:
+                            approved = False
+                            self.approval_manager.reject(req.id, approver="system_timeout")
+                            await _emit("tool_result", {
+                                "step_id": step.id,
+                                "tool_name": step.tool_name,
+                                "success": False,
+                                "error": "Approval timed out (30s)",
+                            })
+                        finally:
+                            self._approval_events.pop(req.id, None)
+
+                        if not approved:
+                            step.status = StepStatus.SKIPPED
+                            step.result = ToolResult(success=False, error="Approval denied or timed out", retryable=False)
+                            results.append(step.result)
+                            continue
+
+                        # Approval granted - continue to execute below
+
+                safety_result = self.safety_engine.pre_check(step)
+                if not safety_result.passed:
+                    step.status = StepStatus.SKIPPED
+                    step.result = ToolResult(success=False, error=f"Safety check failed: {safety_result.reason}", retryable=False)
+                    results.append(step.result)
+                    await _emit("tool_result", {"step_id": step.id, "tool_name": step.tool_name, "success": False, "error": step.result.error})
+                    continue
+
+                await _emit("tool_call", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params, "status": "running"})
+                result = await self.registry.execute(step.tool_name, step.params)
+                step.result = result
+
+                if result.success:
+                    step.status = StepStatus.COMPLETED
+                else:
+                    step.status = StepStatus.FAILED
+
+                results.append(result)
+                await _emit("tool_result", {
+                    "step_id": step.id,
+                    "tool_name": step.tool_name,
+                    "success": result.success,
+                    "data": result.data,
+                    "error": result.error,
+                    "duration_ms": result.duration_ms,
+                })
+                execution_store.update_steps(session_id, plan.steps)
+
+            # 3. Reflection every 3 steps
+            if len(plan.steps) >= 3:
+                reflection = await self._reflect_on_results(plan, results)
+                await _emit("reflection", {"session_id": session_id, "text": reflection})
+                execution_store.update_reflections(session_id, [{"text": reflection, "timestamp": datetime.now().isoformat()}])
+
+            # 4. Final content/summary
+            summary = await self._summarize_results(plan, results)
+            await _emit("content", {"session_id": session_id, "text": summary})
+            await _emit("done", {"session_id": session_id, "step_count": len(plan.steps), "success_count": sum(1 for r in results if r.success)})
+            execution_store.finish(session_id, "done", summary, "")
+
+            # Phase 5: Auto-extract skill from execution trajectory
+            await self._extract_skill_from_execution(goal_request, plan, results, summary)
+
+            return summary
+
+        except Exception as exc:
+            await _emit("error", {"session_id": session_id, "error": str(exc)})
+            execution_store.finish(session_id, "error", "", str(exc))
+            raise
+
+    async def _build_plan_for_goal(self, goal_request: GoalRequest) -> Plan:
+        """Use LLM to break a user goal into a plan with tool calls."""
+        registry = self.registry
+        tool_descriptions = []
+        for tool in registry.list_tools():
+            tool_descriptions.append(f"- {tool.name}: {tool.description} (risk={tool.risk_level.value}, category={tool.category})")
+
+        prompt = (
+            f"You are Jarvis, an autonomous knowledge management assistant.\n"
+            f"The user has given you the following goal:\n\n"
+            f'"""{goal_request.description}"""\n\n'
+            f"Strategy: {goal_request.strategy}\n\n"
+            f"Available tools:\n" + "\n".join(tool_descriptions) + "\n\n"
+            f"Break this goal into a sequence of tool calls. Return ONLY a JSON array of step objects, each with:\n"
+            f"- tool_name: string (must match an available tool)\n"
+            f"- params: object (parameters for the tool)\n"
+            f"- reasoning: string (why this step is needed)\n\n"
+            f"Return ONLY the JSON array, no other text."
+        )
+
+        raw = call_llm(prompt=prompt, system="You are a planning assistant for Jarvis.", max_tokens=4096)
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            first_newline = cleaned.index("\n")
+            last_backtick = cleaned.rindex("```")
+            cleaned = cleaned[first_newline + 1 : last_backtick].strip()
+
+        steps_data = json.loads(cleaned)
+        if not isinstance(steps_data, list):
+            steps_data = [steps_data]
+
+        plan = Plan(goal=goal_request.description)
+        for item in steps_data:
+            tool_name = item.get("tool_name", "")
+            params = item.get("params", {})
+            registered = registry.get(tool_name)
+            risk = registered.risk_level if registered else RiskLevel.L1
+            requires_approval = risk in (RiskLevel.L3, RiskLevel.L4)
+            step = PlanStep(
+                tool_name=tool_name,
+                params=params if isinstance(params, dict) else {},
+                risk_level=risk,
+                requires_approval=requires_approval,
+            )
+            plan.add_step(step)
+        return plan
+
+    async def _reflect_on_results(self, plan: Plan, results: list[ToolResult]) -> str:
+        """Generate a reflection on the execution results."""
+        step_summaries = []
+        for step, result in zip(plan.steps, results):
+            status = "success" if result.success else "failed"
+            step_summaries.append(f"- {step.tool_name}: {status} ({result.error if result.error else 'OK'})")
+
+        prompt = (
+            f"Reflect on the following execution results:\n\n"
+            f"Goal: {plan.goal}\n"
+            f"Steps:\n" + "\n".join(step_summaries) + "\n\n"
+            f"Provide a brief reflection (1-2 sentences) on what went well, what failed, and what could be improved."
+        )
+        try:
+            return call_llm(prompt=prompt, system="You are Jarvis reflecting on task execution.", max_tokens=512)
+        except Exception:
+            return "Reflection unavailable."
+
+    async def _summarize_results(self, plan: Plan, results: list[ToolResult]) -> str:
+        """Generate a final summary of the execution."""
+        success_count = sum(1 for r in results if r.success)
+        fail_count = len(results) - success_count
+        data_outputs = [str(r.data) for r in results if r.data and r.success]
+
+        prompt = (
+            f"Summarize the results of the following task execution for the user:\n\n"
+            f"Goal: {plan.goal}\n"
+            f"Success: {success_count}/{len(results)} steps\n"
+            f"Failed: {fail_count}/{len(results)} steps\n"
+            f"Outputs:\n" + "\n".join(data_outputs[:10]) + "\n\n"
+            f"Provide a concise summary (2-4 sentences) of what was accomplished."
+        )
+        try:
+            return call_llm(prompt=prompt, system="You are Jarvis summarizing task results.", max_tokens=1024)
+        except Exception:
+            return f"Task completed with {success_count}/{len(results)} successful steps."
+
+    async def _extract_skill_from_execution(
+        self,
+        goal_request: GoalRequest,
+        plan: Plan,
+        results: list[ToolResult],
+        summary: str,
+    ) -> None:
+        """Phase 5: Auto-extract a reusable skill from execution trajectory.
+
+        Only extract if success rate >= 50% and at least 2 steps were executed.
+        """
+        success_count = sum(1 for r in results if r.success)
+        if len(results) < 2 or success_count / len(results) < 0.5:
+            return
+
+        steps_desc = []
+        for step, result in zip(plan.steps, results):
+            status = "success" if result.success else "failed"
+            steps_desc.append(f"- {step.tool_name}: {status} — params: {json.dumps(step.params)}")
+
+        prompt = (
+            f"The following task was successfully executed by an AI agent.\n\n"
+            f"Goal: {goal_request.description}\n"
+            f"Summary: {summary}\n\n"
+            f"Execution steps:\n" + "\n".join(steps_desc) + "\n\n"
+            f"Extract a reusable skill from this execution. Return ONLY a YAML frontmatter block followed by markdown content, using this exact format:\n\n"
+            f"---\n"
+            f"name: <kebab-case-skill-name>\n"
+            f"version: 1.0.0\n"
+            f"author: jarvis-auto\n"
+            f"description: <one-line description>\n"
+            f"tags: [<tag1>, <tag2>]\n"
+            f"priority: 10\n"
+            f"requires: []\n"
+            f"---\n\n"
+            f"# <Skill Title>\n\n"
+            f"## Description\n"
+            f"<description>\n\n"
+            f"## Usage\n"
+            f"- Trigger: <when to use>\n"
+            f"- Input: <expected input>\n"
+            f"- Output: <expected output>\n\n"
+            f"## Workflow\n"
+            f"<numbered steps>\n\n"
+            f"## Example Prompts\n"
+            f"- <example 1>\n"
+            f"- <example 2>\n\n"
+            f"Return ONLY the skill markdown, no other text."
+        )
+        try:
+            raw = call_llm(
+                prompt=prompt,
+                system="You are a skill extraction assistant for Jarvis.",
+                max_tokens=2048,
+            )
+            cleaned = raw.strip()
+            if cleaned.startswith("```"):
+                first_newline = cleaned.index("\n")
+                last_backtick = cleaned.rindex("```")
+                cleaned = cleaned[first_newline + 1 : last_backtick].strip()
+
+            # Parse name from frontmatter
+            name_match = __import__("re").search(r"^name:\s*(.+)$", cleaned, __import__("re").MULTILINE)
+            skill_name = name_match.group(1).strip() if name_match else f"auto-skill-{__import__('uuid').uuid4().hex[:8]}"
+            skill_name = skill_name.replace(" ", "-").lower()
+
+            from tools.skill_engine import SkillEngine
+            engine = SkillEngine()
+            engine.install(skill_name, source="generated", code=cleaned)
+
+            self.event_bus.publish(
+                Event(
+                    name="agent.skill.extracted",
+                    category=EventCategory.AGENT,
+                    payload={"skill_name": skill_name, "goal": goal_request.description},
+                    source="loop",
+                )
+            )
+        except Exception:
+            pass
 
     async def perceive(self) -> list[Event]:
         events: list[Event] = []
@@ -502,6 +791,14 @@ class AgentLoop:
             return delta.total_seconds() / 3600
         except (ValueError, TypeError):
             return 999.0
+
+    def resolve_approval(self, req_id: str, approved: bool) -> bool:
+        """Resolve a pending approval request. Called by API endpoints when user approves/rejects."""
+        if req_id in self._approval_events:
+            self._approval_results[req_id] = approved
+            self._approval_events[req_id].set()
+            return True
+        return False
 
 
 _loop: AgentLoop | None = None

@@ -6,6 +6,10 @@
 
 ---
 
+## [2026-05-11] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
 ## [2026-05-10] lint | Wiki health check
 
 Ran lint. See lint-report.md for details.
@@ -513,3 +517,27 @@ Auto-ingested from https://finance.sina.com.cn/stock/
 ## [2026-05-11] report | Graph health report generated
 
 277 nodes analyzed.
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1877 nodes, 2975 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1916 nodes, 2961 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+2236 nodes, 3000 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1958 nodes, 3000 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1812 nodes, 2855 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+278 nodes, 1235 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1959 nodes, 3001 edges (1235 extracted, 0 inferred).
+## [2026-05-11] graph | Knowledge graph rebuilt
+
+1959 nodes, 3000 edges (1235 extracted, 0 inferred).

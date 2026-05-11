@@ -51,7 +51,7 @@ export function useKeyboardShortcuts() {
             return;
           case 'g c':
             e.preventDefault();
-            navigate('/chat');
+            navigate('/search?tab=chat');
             return;
           case 'g u':
             e.preventDefault();

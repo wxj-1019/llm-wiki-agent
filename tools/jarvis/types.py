@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import enum
+import json
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable
@@ -183,3 +185,21 @@ class AgentState:
         if self.total_tool_calls == 0:
             return 0.0
         return self.total_success / self.total_tool_calls * 100
+
+
+@dataclass
+class GoalRequest:
+    description: str
+    strategy: str = "balanced"
+    options: dict = field(default_factory=dict)
+    session_id: str = field(default_factory=lambda: f"goal_{uuid.uuid4().hex[:8]}")
+
+
+@dataclass
+class SSEEvent:
+    type: str
+    data: dict
+    session_id: str = ""
+
+    def to_sse(self) -> str:
+        return f"event: {self.type}\ndata: {json.dumps(self.data, default=str)}\n\n"
