@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useAgentChatStore, type AgentExecutionState } from '@/stores/agentChatStore';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
+import { ConfidenceBar } from './ConfidenceBar';
+import { ReasoningChain } from './ReasoningChain';
 import { CheckCircle, XCircle, Loader2, AlertTriangle, Clock, Brain, MessageSquare, Shield, History } from 'lucide-react';
 
 interface ExecutionPanelProps {
@@ -143,31 +145,53 @@ export function ExecutionPanel({ execution }: ExecutionPanelProps = {}) {
       {current.steps.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs text-[var(--text-tertiary)]">Plan Steps</div>
-          <div className="space-y-1">
-            {current.steps.map((step, idx) => (
-              <div
-                key={step.id}
-                className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
-                  step.status === 'running' ? 'bg-apple-blue/5 border border-apple-blue/20' :
-                  step.status === 'completed' ? 'bg-apple-green/5' :
-                  step.status === 'failed' ? 'bg-apple-red/5' :
-                  step.status === 'awaiting_approval' ? 'bg-amber-500/5 border border-amber-500/20' :
-                  'bg-[var(--bg-secondary)]'
-                }`}
-              >
-                <span className="text-xs text-[var(--text-tertiary)] w-5">{idx + 1}.</span>
-                {step.status === 'completed' && <CheckCircle size={12} className="text-apple-green shrink-0" />}
-                {step.status === 'failed' && <XCircle size={12} className="text-apple-red shrink-0" />}
-                {step.status === 'running' && <Loader2 size={12} className="animate-spin text-apple-blue shrink-0" />}
-                {step.status === 'awaiting_approval' && <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
-                {step.status === 'pending' && <span className="w-3 h-3 rounded-full border-2 border-[var(--border-default)] shrink-0" />}
-                <span className="flex-1 truncate">{step.tool_name}</span>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${riskDot(typeof step.risk_level === 'string' ? step.risk_level : 'L1')}`} />
-                {step.result?.duration_ms && (
-                  <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{step.result.duration_ms}ms</span>
-                )}
-              </div>
-            ))}
+          <div className="space-y-2">
+            {current.steps.map((step, idx) => {
+              const rl = typeof step.risk_level === 'string' ? step.risk_level : 'L1';
+              return (
+                <div
+                  key={step.id}
+                  className={`p-2.5 rounded-lg space-y-2 ${
+                    step.status === 'running' ? 'bg-apple-blue/5 border border-apple-blue/20' :
+                    step.status === 'completed' ? 'bg-apple-green/5' :
+                    step.status === 'failed' ? 'bg-apple-red/5' :
+                    step.status === 'awaiting_approval' ? 'bg-amber-500/5 border border-amber-500/20' :
+                    'bg-[var(--bg-secondary)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--text-tertiary)] w-5">{idx + 1}.</span>
+                    {step.status === 'completed' && <CheckCircle size={12} className="text-apple-green shrink-0" />}
+                    {step.status === 'failed' && <XCircle size={12} className="text-apple-red shrink-0" />}
+                    {step.status === 'running' && <Loader2 size={12} className="animate-spin text-apple-blue shrink-0" />}
+                    {step.status === 'awaiting_approval' && <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
+                    {step.status === 'pending' && <span className="w-3 h-3 rounded-full border-2 border-[var(--border-default)] shrink-0" />}
+                    <span className="flex-1 truncate text-sm">{step.tool_name}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${riskDot(rl)}`} />
+                    {step.result?.duration_ms && (
+                      <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{step.result.duration_ms}ms</span>
+                    )}
+                  </div>
+
+                  {/* Confidence bar */}
+                  {step.confidence != null && (
+                    <ConfidenceBar value={step.confidence} size="sm" className="ml-7" />
+                  )}
+
+                  {/* Reasoning chain */}
+                  {step.reasoning && step.reasoning.length > 0 && (
+                    <div className="ml-7">
+                      <ReasoningChain
+                        steps={step.reasoning}
+                        alternatives={step.alternatives}
+                        confidence={step.confidence}
+                        decision={step.decision}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

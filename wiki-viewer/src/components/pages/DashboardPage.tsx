@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { BarChart3, FileText, Users, Lightbulb, Layers, Link2, Calendar, Activity, RefreshCw, Frown, ScrollText, TrendingUp } from 'lucide-react';
+import { BarChart3, FileText, Users, Lightbulb, Layers, Link2, Calendar, Activity, RefreshCw, Frown, ScrollText, TrendingUp, Bot, Zap, Clock, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import { fetchLog, type LogEntry } from '@/services/dataService';
 import { useNotificationStore } from '@/stores/notificationStore';
 import type { GraphEdge } from '@/types/graph';
+import { SmartSuggestions } from '@/components/jarvis/SmartSuggestions';
 
 interface SystemStatus {
   wiki: {
@@ -315,7 +316,7 @@ function RecentActivity() {
       <div className="space-y-3">
         {entries.map((entry, i) => (
           <motion.div
-            key={`${entry.date}-${entry.operation}-${entry.title || i}`}
+            key={`${entry.date}-${entry.operation}-${entry.title || ''}-${i}`}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: i * 0.05 }}
@@ -514,6 +515,164 @@ function GrowthTrendChart({ currentPages }: { currentPages: number }) {
   );
 }
 
+interface JarvisStatus {
+  status: string;
+  cycle_count: number;
+  total_tool_calls: number;
+  total_success: number;
+  total_failed: number;
+  success_rate: string;
+  pending_approvals: number;
+}
+
+function JarvisAgentActivity() {
+  const { t } = useTranslation();
+  const [jarvisStatus, setJarvisStatus] = useState<JarvisStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/jarvis/status')
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => {
+        if (!cancelled && json) {
+          const raw = json?.data ?? json;
+          if (raw && typeof raw === 'object') setJarvisStatus(raw as JarvisStatus);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="apple-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Bot size={18} className="text-[var(--text-secondary)]" />
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
+            {t('dashboard.jarvisActivity', 'Jarvis Agent Activity')}
+          </h2>
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="w-24 h-4 rounded-xl" />
+                <Skeleton className="w-16 h-3 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!jarvisStatus) {
+    return (
+      <div className="apple-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Bot size={18} className="text-[var(--text-secondary)]" />
+          <h2 className="text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
+            {t('dashboard.jarvisActivity', 'Jarvis Agent Activity')}
+          </h2>
+        </div>
+        <div className="text-center py-8">
+          <Bot size={32} className="mx-auto text-[var(--text-tertiary)] mb-2" />
+          <p className="text-sm text-[var(--text-secondary)]">
+            {t('dashboard.jarvisOffline', 'Jarvis agent is not running')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const metrics = [
+    {
+      icon: Bot,
+      label: t('dashboard.agentStatus', 'Agent Status'),
+      value: jarvisStatus.status || 'stopped',
+      color: jarvisStatus.status === 'running' ? 'var(--apple-green)' : 
+             jarvisStatus.status === 'paused' ? 'var(--apple-orange)' : 'var(--text-tertiary)',
+      bgColor: jarvisStatus.status === 'running' ? 'rgba(48,209,88,0.1)' : 
+                jarvisStatus.status === 'paused' ? 'rgba(255,159,10,0.1)' : 'var(--bg-secondary)',
+    },
+    {
+      icon: Zap,
+      label: t('dashboard.toolCalls', 'Tool Calls'),
+      value: jarvisStatus.total_tool_calls || 0,
+      color: 'var(--apple-blue)',
+      bgColor: 'rgba(10,132,255,0.1)',
+    },
+    {
+      icon: CheckCircle,
+      label: t('dashboard.successRate', 'Success Rate'),
+      value: jarvisStatus.success_rate || '0%',
+      color: parseFloat(jarvisStatus.success_rate || '0') >= 90 ? 'var(--apple-green)' : 
+             parseFloat(jarvisStatus.success_rate || '0') >= 70 ? 'var(--apple-orange)' : 'var(--apple-red)',
+      bgColor: parseFloat(jarvisStatus.success_rate || '0') >= 90 ? 'rgba(48,209,88,0.1)' : 
+                parseFloat(jarvisStatus.success_rate || '0') >= 70 ? 'rgba(255,159,10,0.1)' : 'rgba(255,69,58,0.1)',
+    },
+    {
+      icon: Clock,
+      label: t('dashboard.cycles', 'Cycles'),
+      value: jarvisStatus.cycle_count || 0,
+      color: 'var(--apple-purple)',
+      bgColor: 'rgba(175,82,222,0.1)',
+    },
+  ];
+
+  return (
+    <div className="apple-card p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Bot size={18} className="text-[var(--apple-teal)]" />
+        <h2 className="text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
+          {t('dashboard.jarvisActivity', 'Jarvis Agent Activity')}
+        </h2>
+      </div>
+      <div className="space-y-3">
+        {metrics.map((metric, i) => (
+          <motion.div
+            key={metric.label}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.1 }}
+            className="flex items-center gap-3"
+          >
+            <div className="p-2 rounded-lg" style={{ backgroundColor: metric.bgColor }}>
+              <metric.icon size={18} style={{ color: metric.color }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-xs text-[var(--text-secondary)]">{metric.label}</div>
+              <div className="text-lg font-semibold" style={{ color: metric.color }}>
+                {typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+      {jarvisStatus.pending_approvals > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 p-3 rounded-lg border border-[var(--apple-orange)]/20 bg-[var(--apple-orange)]/5"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[var(--apple-orange)] animate-pulse" />
+            <span className="text-xs font-medium text-[var(--apple-orange)]">
+              {jarvisStatus.pending_approvals} pending approval(s)
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Agent is waiting for your review
+          </p>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('nav.dashboard') || 'Dashboard');
@@ -629,6 +788,12 @@ export function DashboardPage() {
         <p className="text-xs text-[var(--text-tertiary)] mt-2">
           {t('dashboard.linkDensityHint', 'Edges per page ratio. Higher means better connected knowledge.')}
         </p>
+      </div>
+
+      {/* Jarvis Agent Activity + Smart Suggestions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <JarvisAgentActivity />
+        <SmartSuggestions />
       </div>
 
       {/* Recent Activity */}

@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNotificationStore } from '@/stores/notificationStore';
 import {
   Wrench, Play, Trash2, Plus, Power, PowerOff, FileText,
   Zap, LayoutTemplate, X, Loader2, Frown, Rocket,
+  TrendingUp, Clock, BarChart3, Activity, Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SkillsSkeleton } from '@/components/ui/Skeleton';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { ConfidenceBar } from '@/components/jarvis/ConfidenceBar';
 
 interface Skill {
   name: string;
@@ -18,6 +20,17 @@ interface Skill {
   enabled: boolean;
   usage_count: number;
   last_used: string | null;
+  success_count?: number;
+  fail_count?: number;
+  avg_duration_ms?: number;
+}
+
+interface ToolStat {
+  name: string;
+  call_count: number;
+  success_count: number;
+  fail_count: number;
+  avg_duration_ms: number;
 }
 
 interface SkillTemplate {
@@ -39,6 +52,7 @@ export function SkillsPage() {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [executing, setExecuting] = useState<string | null>(null);
   const [executeResult, setExecuteResult] = useState<{ name: string; result: unknown } | null>(null);
+  const [toolStats, setToolStats] = useState<Map<string, ToolStat>>(new Map());
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   useBodyScrollLock(showTemplates);
@@ -55,11 +69,26 @@ export function SkillsPage() {
     }
   }, []);
 
+  const fetchToolStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/jarvis/tools');
+      if (!res.ok) return;
+      const data = await res.json();
+      const tools = (data?.data?.tools ?? data?.tools ?? []) as ToolStat[];
+      const map = new Map<string, ToolStat>();
+      for (const t of tools) map.set(t.name, t);
+      setToolStats(map);
+    } catch {
+      // silent
+    }
+  }, []);
+
   useEffect(() => {
     fetchSkills();
-    const interval = setInterval(() => fetchSkills(), 30000);
+    fetchToolStats();
+    const interval = setInterval(() => { fetchSkills(); fetchToolStats(); }, 30000);
     return () => clearInterval(interval);
-  }, [fetchSkills]);
+  }, [fetchSkills, fetchToolStats]);
 
   const action = useCallback(async (url: string, method: string = 'POST', name?: string) => {
     setLoading(true);
@@ -151,6 +180,16 @@ export function SkillsPage() {
     loadTemplates();
   };
 
+  const enrichedSkills = useMemo(() => skills.map((s) => {
+    const stat = toolStats.get(s.name);
+    return {
+      ...s,
+      success_count: stat?.success_count ?? s.success_count ?? 0,
+      fail_count: stat?.fail_count ?? s.fail_count ?? 0,
+      avg_duration_ms: stat?.avg_duration_ms ?? s.avg_duration_ms ?? 0,
+    };
+  }), [skills, toolStats]);
+
   if (initialLoading) {
     return <SkillsSkeleton />;
   }
@@ -176,7 +215,7 @@ export function SkillsPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {skills.length === 0 && (
+        {enrichedSkills.length === 0 && (
           <div className="empty-state-warm md:col-span-2 py-12">
             <Zap size={40} className="text-[var(--text-tertiary)] mb-3" />
             <h3 className="text-lg font-semibold mb-1">{t('skills.empty.title', 'No skills installed')}</h3>
@@ -186,67 +225,123 @@ export function SkillsPage() {
             </button>
           </div>
         )}
-        {skills.map((s, i) => (
-          <motion.div
-            key={s.name}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`apple-card p-5 space-y-3 ${!s.enabled ? 'opacity-60' : ''}`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <h3 className="font-semibold truncate">{s.name}</h3>
-                <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full shrink-0">
-                  v{s.version}
-                </span>
+        {enrichedSkills.map((s, i) => {
+          const totalCalls = s.success_count + s.fail_count;
+          const successRate = totalCalls > 0 ? s.success_count / totalCalls : 0;
+          const isHot = s.usage_count >= 10;
+          const isNew = !s.last_used;
+          return (
+            <motion.div
+              key={s.name}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`apple-card p-5 space-y-3 ${!s.enabled ? 'opacity-60' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <h3 className="font-semibold truncate">{s.name}</h3>
+                  <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full shrink-0">
+                    v{s.version}
+                  </span>
+                  {isHot && (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{ backgroundColor: 'rgba(255,159,10,0.1)', color: 'var(--apple-orange)' }}>
+                      <Sparkles size={8} /> HOT
+                    </span>
+                  )}
+                  {isNew && (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{ backgroundColor: 'rgba(100,210,255,0.1)', color: 'var(--apple-teal)' }}>
+                      NEW
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => executeSkill(s.name)}
+                    disabled={!s.enabled || executing === s.name || loading}
+                    className="p-2 rounded-xl transition-colors hover:bg-apple-blue/10 hover:text-apple-blue disabled:opacity-40"
+                    title={t('skills.execute', 'Execute')}
+                  >
+                    {executing === s.name ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                  </button>
+                  <button
+                    onClick={() => action(`/api/skills/${s.enabled ? 'disable' : 'enable'}/${s.name}`, 'POST', s.name)}
+                    disabled={loading}
+                    className={`p-2 rounded-xl transition-colors ${
+                      s.enabled
+                        ? 'hover:bg-apple-red/10 hover:text-apple-red'
+                        : 'hover:bg-green-500/10 hover:text-green-500'
+                    }`}
+                    title={s.enabled ? t('skills.disable', '禁用') : t('skills.enable', '启用')}
+                  >
+                    {s.enabled ? <PowerOff size={14} /> : <Power size={14} />}
+                  </button>
+                  <button
+                    onClick={() => showDetail(s.name)}
+                    className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl transition-colors"
+                    title={t('skills.detail', '详情')}
+                  >
+                    <FileText size={14} />
+                  </button>
+                  <button
+                    onClick={() => action(`/api/skills/uninstall/${s.name}`, 'DELETE', s.name)}
+                    disabled={loading}
+                    className="p-2 hover:bg-apple-red/10 hover:text-apple-red rounded-xl transition-colors"
+                    title={t('skills.uninstall', '卸载')}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => executeSkill(s.name)}
-                  disabled={!s.enabled || executing === s.name || loading}
-                  className="p-2 rounded-xl transition-colors hover:bg-apple-blue/10 hover:text-apple-blue disabled:opacity-40"
-                  title={t('skills.execute', 'Execute')}
-                >
-                  {executing === s.name ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                </button>
-                <button
-                  onClick={() => action(`/api/skills/${s.enabled ? 'disable' : 'enable'}/${s.name}`, 'POST', s.name)}
-                  disabled={loading}
-                  className={`p-2 rounded-xl transition-colors ${
-                    s.enabled
-                      ? 'hover:bg-apple-red/10 hover:text-apple-red'
-                      : 'hover:bg-green-500/10 hover:text-green-500'
-                  }`}
-                  title={s.enabled ? t('skills.disable', '禁用') : t('skills.enable', '启用')}
-                >
-                  {s.enabled ? <PowerOff size={14} /> : <Power size={14} />}
-                </button>
-                <button
-                  onClick={() => showDetail(s.name)}
-                  className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl transition-colors"
-                  title={t('skills.detail', '详情')}
-                >
-                  <FileText size={14} />
-                </button>
-                <button
-                  onClick={() => action(`/api/skills/uninstall/${s.name}`, 'DELETE', s.name)}
-                  disabled={loading}
-                  className="p-2 hover:bg-apple-red/10 hover:text-apple-red rounded-xl transition-colors"
-                  title={t('skills.uninstall', '卸载')}
-                >
-                  <Trash2 size={14} />
-                </button>
+              <p className="text-sm text-[var(--text-secondary)]">{s.description}</p>
+
+              {/* Performance Metrics Bar */}
+              <div className="flex items-center gap-3 text-[10px] font-mono-data flex-wrap">
+                {/* Usage count */}
+                <div className="inline-flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
+                  <BarChart3 size={10} />
+                  <span>{s.usage_count} calls</span>
+                </div>
+
+                {/* Success rate */}
+                {totalCalls > 0 && (
+                  <div className="inline-flex items-center gap-1.5">
+                    <Activity size={10} style={{ color: successRate >= 0.9 ? 'var(--apple-green)' : successRate >= 0.7 ? 'var(--apple-orange)' : 'var(--apple-red)' }} />
+                    <div className="w-12">
+                      <ConfidenceBar value={successRate} size="sm" showLabel={false} showIcon={false} />
+                    </div>
+                    <span style={{ color: successRate >= 0.9 ? 'var(--apple-green)' : successRate >= 0.7 ? 'var(--apple-orange)' : 'var(--apple-red)' }}>
+                      {Math.round(successRate * 100)}%
+                    </span>
+                  </div>
+                )}
+
+                {/* Avg duration */}
+                {s.avg_duration_ms > 0 && (
+                  <div className="inline-flex items-center gap-1" style={{ color: 'var(--text-tertiary)' }}>
+                    <Clock size={10} />
+                    <span>{s.avg_duration_ms < 1000 ? `${Math.round(s.avg_duration_ms)}ms` : `${(s.avg_duration_ms / 1000).toFixed(1)}s`}</span>
+                  </div>
+                )}
+
+                {/* Trend indicator */}
+                {s.usage_count >= 5 && (
+                  <div className="inline-flex items-center gap-0.5" style={{ color: 'var(--apple-teal)' }}>
+                    <TrendingUp size={10} />
+                  </div>
+                )}
               </div>
-            </div>
-            <p className="text-sm text-[var(--text-secondary)]">{s.description}</p>
-            <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)] flex-wrap">
-              <span>{t('skills.source', '来源')}: {s.source}</span>
-              <span>{t('skills.usage', '使用')}: {s.usage_count}</span>
-              {s.last_used && <span>{t('skills.lastUsed', '最近使用')}: {s.last_used}</span>}
-            </div>
-          </motion.div>
-        ))}
+
+              {/* Footer meta */}
+              <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)] flex-wrap">
+                <span>{t('skills.source', '来源')}: {s.source}</span>
+                {s.last_used && <span>{t('skills.lastUsed', '最近使用')}: {s.last_used}</span>}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Detail Panel */}
