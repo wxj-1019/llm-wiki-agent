@@ -24419,9 +24419,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/ui/Skeleton.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 14,
-      "color": "#F44336"
+      "value": 14
     },
     {
       "id": "code/wiki-viewer/src/components/ui/Skeleton#Skeleton",
@@ -24430,9 +24430,9 @@
       "path": "wiki-viewer/src/components/ui/Skeleton.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/ui/Skeleton",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/ui/Skeleton#SkeletonCard",
@@ -24441,9 +24441,9 @@
       "path": "wiki-viewer/src/components/ui/Skeleton.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/ui/Skeleton",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/ui/Skeleton#SkeletonStat",
@@ -24452,9 +24452,9 @@
       "path": "wiki-viewer/src/components/ui/Skeleton.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/ui/Skeleton",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/ui/Skeleton#SkeletonSearch",
@@ -24463,9 +24463,9 @@
       "path": "wiki-viewer/src/components/ui/Skeleton.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/ui/Skeleton",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/ui/ToastContainer",
@@ -24473,9 +24473,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/ui/ToastContainer.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 3,
-      "color": "#F44336"
+      "value": 3
     },
     {
       "id": "code/wiki-viewer/src/components/upload/FileList",
@@ -24483,9 +24483,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/upload/FileList.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 5,
-      "color": "#F44336"
+      "value": 5
     },
     {
       "id": "code/wiki-viewer/src/components/upload/IngestProgress",
@@ -24493,9 +24493,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/upload/IngestProgress.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 4,
-      "color": "#F44336"
+      "value": 4
     },
     {
       "id": "code/wiki-viewer/src/components/upload/IngestProgress#toggleExpand",
@@ -24504,9 +24504,9 @@
       "path": "wiki-viewer/src/components/upload/IngestProgress.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/upload/IngestProgress",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/upload/PasteTextPanel",
@@ -24514,9 +24514,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/upload/PasteTextPanel.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 3,
-      "color": "#F44336"
+      "value": 3
     },
     {
       "id": "code/wiki-viewer/src/components/upload/PasteTextPanel#PasteTextPanel",
@@ -24525,9 +24525,9 @@
       "path": "wiki-viewer/src/components/upload/PasteTextPanel.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/upload/PasteTextPanel",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     },
     {
       "id": "code/wiki-viewer/src/components/upload/PreviewPanel",
@@ -24535,9 +24535,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/upload/PreviewPanel.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 5,
-      "color": "#F44336"
+      "value": 5
     },
     {
       "id": "code/wiki-viewer/src/components/upload/UploadZone",
@@ -24545,9 +24545,9 @@
       "type": "code_module",
       "path": "wiki-viewer/src/components/upload/UploadZone.tsx",
       "language": "typescript",
+      "color": "#F44336",
       "group": 97,
-      "value": 3,
-      "color": "#F44336"
+      "value": 3
     },
     {
       "id": "code/wiki-viewer/src/components/upload/UploadZone#UploadZone",
@@ -24556,9 +24556,9 @@
       "path": "wiki-viewer/src/components/upload/UploadZone.tsx",
       "language": "typescript",
       "parent": "code/wiki-viewer/src/components/upload/UploadZone",
+      "color": "#F44336",
       "group": 97,
-      "value": 2,
-      "color": "#F44336"
+      "value": 2
     }
   ],
   "edges": [
