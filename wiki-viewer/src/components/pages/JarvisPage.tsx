@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { AgentChatPanel } from '@/components/jarvis/AgentChatPanel';
 
 interface SafetyStatus {
   emergency_stopped: boolean;
@@ -113,14 +114,17 @@ export function JarvisPage() {
       if (statusData) setStatus(statusData);
       setTools(Array.isArray(toolsData?.tools) ? toolsData.tools : []);
       const rawEvents = Array.isArray(eventsData?.events) ? eventsData.events : [];
-      setEvents(rawEvents.map((e: Record<string, unknown>) => ({
-        id: (e.id as string) || '',
-        timestamp: (e.timestamp as string) || '',
-        name: (e.name as string) || '',
-        category: (e.category as string) || '',
-        detail: (e.detail ?? (typeof e.payload === 'string' ? e.payload : JSON.stringify(e.payload ?? ''))) as string,
-        source: e.source as string | undefined,
-      })));
+      setEvents(rawEvents.map((e: unknown) => {
+        const ev = e as Record<string, unknown>;
+        return {
+          id: (ev.id as string) || '',
+          timestamp: (ev.timestamp as string) || '',
+          name: (ev.name as string) || '',
+          category: (ev.category as string) || '',
+          detail: (ev.detail ?? (typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload ?? ''))) as string,
+          source: ev.source as string | undefined,
+        };
+      }));
       setGoals(Array.isArray(goalsData?.goals) ? goalsData.goals : []);
 
       const learningData = learningRaw && typeof learningRaw === 'object' ? {
@@ -200,6 +204,8 @@ export function JarvisPage() {
           </button>
         </div>
       </div>
+
+      <AgentChatPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

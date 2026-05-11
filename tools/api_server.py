@@ -3371,6 +3371,79 @@ async def jarvis_strategies():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+
+class AgentChatRequest(BaseModel):
+    description: str = Field(..., min_length=1, description="User goal description")
+    strategy: str = Field(default="balanced", description="Execution strategy: conservative|balanced|aggressive")
+    options: dict = Field(default_factory=dict, description="Optional execution parameters")
+
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentChatRequest):
+    """Start a single-shot goal execution and stream progress via SSE.
+
+    Request body:
+      { "description": "列出 wiki 中的孤立页面", "strategy": "balanced", "options": {} }
+
+    SSE events:
+      - plan            : execution plan with steps
+      - step_start      : a step is about to run
+      - tool_call       : tool is being invoked
+      - tool_result     : tool execution result
+      - reflection      : agent reflection (every 3 steps)
+      - content         : final summary
+      - done            : execution complete
+      - error           : execution error
+    """
+    from tools.jarvis.loop import get_agent_loop
+    from tools.jarvis.types import GoalRequest, SSEEvent
+
+    goal_req = GoalRequest(
+        description=request.description,
+        strategy=request.strategy,
+        options=request.options,
+    )
+
+    queue: asyncio.Queue[str] = asyncio.Queue()
+
+    async def sse_callback(event: SSEEvent) -> None:
+        await queue.put(event.to_sse())
+
+    async def event_generator():
+        try:
+            loop = get_agent_loop()
+            task = asyncio.create_task(loop.run_goal(goal_req, sse_callback=sse_callback))
+
+            while not task.done():
+                try:
+                    chunk = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    yield chunk
+                except asyncio.TimeoutError:
+                    continue
+
+            while not queue.empty():
+                yield queue.get_nowait()
+
+            try:
+                await task
+            except Exception as exc:
+                yield SSEEvent(type="error", data={"error": str(exc)}, session_id=goal_req.session_id).to_sse()
+
+            yield SSEEvent(type="done", data={"session_id": goal_req.session_id}, session_id=goal_req.session_id).to_sse()
+
+        except Exception as exc:
+            yield SSEEvent(type="error", data={"error": str(exc)}, session_id=goal_req.session_id).to_sse()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():
     for _sub in ("assets", "fonts", "locales", "data"):

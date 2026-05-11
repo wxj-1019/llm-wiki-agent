@@ -6,6 +6,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Callable, Awaitable
 
 from tools.jarvis.event_bus import get_event_bus
 from tools.jarvis.tool_registry import get_registry
@@ -26,6 +27,8 @@ from tools.jarvis.types import (
     Urgency,
     RiskLevel,
     ApprovalRequest,
+    GoalRequest,
+    SSEEvent,
 )
 from tools.shared.llm import call_llm
 
@@ -69,6 +72,169 @@ class AgentLoop:
         self._state_store.save(self.state)
 
         return cycle_id
+
+    async def run_goal(
+        self,
+        goal_request: GoalRequest,
+        sse_callback: Callable[[SSEEvent], Awaitable[None]] | None = None,
+    ) -> str:
+        """Run a single user-defined goal and stream progress via SSE."""
+        session_id = goal_request.session_id
+
+        async def _emit(event_type: str, data: dict) -> None:
+            if sse_callback:
+                await sse_callback(SSEEvent(type=event_type, data=data, session_id=session_id))
+
+        try:
+            # 1. Build plan from goal
+            plan = await self._build_plan_for_goal(goal_request)
+            await _emit("plan", {
+                "session_id": session_id,
+                "goal": goal_request.description,
+                "strategy": goal_request.strategy,
+                "steps": [{"id": s.id, "tool_name": s.tool_name, "params": s.params, "status": s.status.value} for s in plan.steps],
+            })
+
+            # 2. Execute each step
+            results: list[ToolResult] = []
+            for step in plan.steps:
+                await _emit("step_start", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params})
+
+                if step.requires_approval:
+                    auto_approved = self.approval_manager.auto_approve_check(step)
+                    if not auto_approved:
+                        await _emit("tool_call", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params, "status": "awaiting_approval"})
+                        step.status = StepStatus.AWAITING_APPROVAL
+                        step.result = ToolResult(success=False, error="Awaiting approval", retryable=False)
+                        results.append(step.result)
+                        continue
+
+                safety_result = self.safety_engine.pre_check(step)
+                if not safety_result.passed:
+                    step.status = StepStatus.SKIPPED
+                    step.result = ToolResult(success=False, error=f"Safety check failed: {safety_result.reason}", retryable=False)
+                    results.append(step.result)
+                    await _emit("tool_result", {"step_id": step.id, "tool_name": step.tool_name, "success": False, "error": step.result.error})
+                    continue
+
+                await _emit("tool_call", {"step_id": step.id, "tool_name": step.tool_name, "params": step.params, "status": "running"})
+                result = await self.registry.execute(step.tool_name, step.params)
+                step.result = result
+
+                if result.success:
+                    step.status = StepStatus.COMPLETED
+                else:
+                    step.status = StepStatus.FAILED
+
+                results.append(result)
+                await _emit("tool_result", {
+                    "step_id": step.id,
+                    "tool_name": step.tool_name,
+                    "success": result.success,
+                    "data": result.data,
+                    "error": result.error,
+                    "duration_ms": result.duration_ms,
+                })
+
+            # 3. Reflection every 3 steps
+            if len(plan.steps) >= 3:
+                reflection = await self._reflect_on_results(plan, results)
+                await _emit("reflection", {"session_id": session_id, "text": reflection})
+
+            # 4. Final content/summary
+            summary = await self._summarize_results(plan, results)
+            await _emit("content", {"session_id": session_id, "text": summary})
+            await _emit("done", {"session_id": session_id, "step_count": len(plan.steps), "success_count": sum(1 for r in results if r.success)})
+
+            return summary
+
+        except Exception as exc:
+            await _emit("error", {"session_id": session_id, "error": str(exc)})
+            raise
+
+    async def _build_plan_for_goal(self, goal_request: GoalRequest) -> Plan:
+        """Use LLM to break a user goal into a plan with tool calls."""
+        registry = self.registry
+        tool_descriptions = []
+        for tool in registry.list_tools():
+            tool_descriptions.append(f"- {tool.name}: {tool.description} (risk={tool.risk_level.value}, category={tool.category})")
+
+        prompt = (
+            f"You are Jarvis, an autonomous knowledge management assistant.\n"
+            f"The user has given you the following goal:\n\n"
+            f'"""{goal_request.description}"""\n\n'
+            f"Strategy: {goal_request.strategy}\n\n"
+            f"Available tools:\n" + "\n".join(tool_descriptions) + "\n\n"
+            f"Break this goal into a sequence of tool calls. Return ONLY a JSON array of step objects, each with:\n"
+            f"- tool_name: string (must match an available tool)\n"
+            f"- params: object (parameters for the tool)\n"
+            f"- reasoning: string (why this step is needed)\n\n"
+            f"Return ONLY the JSON array, no other text."
+        )
+
+        raw = call_llm(prompt=prompt, system="You are a planning assistant for Jarvis.", max_tokens=4096)
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            first_newline = cleaned.index("\n")
+            last_backtick = cleaned.rindex("```")
+            cleaned = cleaned[first_newline + 1 : last_backtick].strip()
+
+        steps_data = json.loads(cleaned)
+        if not isinstance(steps_data, list):
+            steps_data = [steps_data]
+
+        plan = Plan(goal=goal_request.description)
+        for item in steps_data:
+            tool_name = item.get("tool_name", "")
+            params = item.get("params", {})
+            registered = registry.get(tool_name)
+            risk = registered.risk_level if registered else RiskLevel.L1
+            requires_approval = risk in (RiskLevel.L3, RiskLevel.L4)
+            step = PlanStep(
+                tool_name=tool_name,
+                params=params if isinstance(params, dict) else {},
+                risk_level=risk,
+                requires_approval=requires_approval,
+            )
+            plan.add_step(step)
+        return plan
+
+    async def _reflect_on_results(self, plan: Plan, results: list[ToolResult]) -> str:
+        """Generate a reflection on the execution results."""
+        step_summaries = []
+        for step, result in zip(plan.steps, results):
+            status = "success" if result.success else "failed"
+            step_summaries.append(f"- {step.tool_name}: {status} ({result.error if result.error else 'OK'})")
+
+        prompt = (
+            f"Reflect on the following execution results:\n\n"
+            f"Goal: {plan.goal}\n"
+            f"Steps:\n" + "\n".join(step_summaries) + "\n\n"
+            f"Provide a brief reflection (1-2 sentences) on what went well, what failed, and what could be improved."
+        )
+        try:
+            return call_llm(prompt=prompt, system="You are Jarvis reflecting on task execution.", max_tokens=512)
+        except Exception:
+            return "Reflection unavailable."
+
+    async def _summarize_results(self, plan: Plan, results: list[ToolResult]) -> str:
+        """Generate a final summary of the execution."""
+        success_count = sum(1 for r in results if r.success)
+        fail_count = len(results) - success_count
+        data_outputs = [str(r.data) for r in results if r.data and r.success]
+
+        prompt = (
+            f"Summarize the results of the following task execution for the user:\n\n"
+            f"Goal: {plan.goal}\n"
+            f"Success: {success_count}/{len(results)} steps\n"
+            f"Failed: {fail_count}/{len(results)} steps\n"
+            f"Outputs:\n" + "\n".join(data_outputs[:10]) + "\n\n"
+            f"Provide a concise summary (2-4 sentences) of what was accomplished."
+        )
+        try:
+            return call_llm(prompt=prompt, system="You are Jarvis summarizing task results.", max_tokens=1024)
+        except Exception:
+            return f"Task completed with {success_count}/{len(results)} successful steps."
 
     async def perceive(self) -> list[Event]:
         events: list[Event] = []
