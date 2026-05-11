@@ -8,6 +8,7 @@ import {
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 interface AuditEntry {
+  id?: string;
   step_id?: string;
   timestamp: string;
   tool: string;

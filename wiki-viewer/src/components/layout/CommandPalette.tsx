@@ -111,7 +111,7 @@ export function CommandPalette() {
       return {
         id: `page-${node.id}`,
         label: node.label,
-        subtitle: t('cmd.pageSub', { type: node.type, preview: node.preview.slice(0, 60) }),
+        subtitle: t('cmd.pageSub', { type: node.type, preview: (node.preview ?? '').slice(0, 60) }),
         icon: typeInfo.icon,
         color: typeInfo.color,
         action: () => navigate(getPagePath(node)),

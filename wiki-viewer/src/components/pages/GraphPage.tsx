@@ -219,6 +219,10 @@ export function GraphPage() {
             },
             minVelocity: 0.75,
           },
+          layout: {
+            randomSeed: 2,
+            improvedLayout: false,
+          },
           interaction: { hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true },
           nodes: {
             shape: 'dot',

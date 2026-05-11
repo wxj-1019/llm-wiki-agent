@@ -222,11 +222,11 @@ class AgentLoop:
 
         raw = call_llm(prompt=prompt, system="You are a planning assistant for Jarvis.", max_tokens=4096)
         parsed = parse_llm_json(raw)
+        plan = Plan(goal=goal_request.description)
         if parsed is None:
             return plan
         steps_data = parsed if isinstance(parsed, list) else [parsed]
 
-        plan = Plan(goal=goal_request.description)
         for item in steps_data:
             tool_name = item.get("tool_name", "")
             params = item.get("params", {})

@@ -66,6 +66,17 @@
       "updated_at": "2026-05-05T20:38:00",
       "usage_count": 0,
       "last_used": null
+    },
+    {
+      "name": "wiki-health-check",
+      "version": "1.0.0",
+      "description": "",
+      "source": "generated",
+      "enabled": true,
+      "installed_at": "2026-05-12T01:29:30",
+      "updated_at": "2026-05-12T01:29:30",
+      "usage_count": 0,
+      "last_used": null
     }
   ]
 }

@@ -345,7 +345,7 @@ function RecentActivity() {
       <div className="space-y-3">
         {entries.map((entry, i) => (
           <motion.div
-            key={`${entry.date}-${entry.operation}-${entry.title || i}`}
+            key={`${entry.date}-${entry.operation}-${entry.title || ''}-${i}`}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: i * 0.05 }}

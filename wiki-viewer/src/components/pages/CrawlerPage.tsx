@@ -465,7 +465,7 @@ export function CrawlerPage() {
 
   const runForTab = async (tab: SourceTab) => {
     const runners: Record<string, () => Promise<CrawlerRunResult>> = {
-      web: () => runCrawler({ use_llm: webSettings.use_llm, use_browser: webSettings.use_browser }),
+      web: () => runCrawler(),
       rss: runRssCrawler,
       github: runGithubCrawler,
       arxiv: runArxivCrawler,

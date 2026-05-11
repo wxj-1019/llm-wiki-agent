@@ -3347,8 +3347,20 @@ async def jarvis_start():
         from tools.jarvis.loop import get_agent_loop
         from tools.jarvis.types import AgentStatus
         loop = get_agent_loop()
-        loop.state.status = AgentStatus.RUNNING
+        if loop.state.status == AgentStatus.PAUSED:
+            loop.resume()
+        else:
+            loop.state.status = AgentStatus.RUNNING
         return {"success": True, "status": loop.get_status()}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/jarvis/pause")
+async def jarvis_pause():
+    try:
+        from tools.jarvis.loop import get_agent_loop
+        get_agent_loop().pause()
+        return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

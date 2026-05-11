@@ -722,6 +722,10 @@ function initNetwork() {{
       barnesHut: {{ gravitationalConstant: gravConst, springLength: springLen, springConstant: 0.02, damping: 0.15 }},
       minVelocity: 0.75,
     }},
+    layout: {{
+      randomSeed: 2,
+      improvedLayout: false,
+    }},
     interaction: {{ hover: true, tooltipDelay: 150, hideEdgesOnDrag: true, hideEdgesOnZoom: true }},
   }});
 
