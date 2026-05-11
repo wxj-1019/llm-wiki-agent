@@ -48,6 +48,13 @@ except ImportError:
     print("Warning: networkx not installed. Community detection disabled. Run: pip install networkx")
 
 try:
+    import igraph as ig
+    import leidenalg
+    HAS_LEIDEN = True
+except ImportError:
+    HAS_LEIDEN = False
+
+try:
     from tools.shared.logging_config import get_logger
     logger = get_logger("build_graph")
 except ImportError:
@@ -113,6 +120,9 @@ except ImportError:
         "concept": "#FF9800",
         "synthesis": "#9C27B0",
         "unknown": "#9E9E9E",
+        "code_module": "#607D8B",
+        "code_func": "#795548",
+        "code_class": "#3F51B5",
     }
     EDGE_COLORS = {
         "EXTRACTED": "#555555",
@@ -542,8 +552,8 @@ def deduplicate_edges(edges: list[dict]) -> list[dict]:
     return deduped
 
 
-def detect_communities(nodes: list[dict], edges: list[dict]) -> dict[str, int]:
-    """Assign community IDs to nodes using Louvain algorithm."""
+def detect_communities(nodes: list[dict], edges: list[dict], use_leiden: bool = False) -> dict[str, int]:
+    """Assign community IDs to nodes using Louvain or Leiden algorithm."""
     if not HAS_NETWORKX:
         return {}
 
@@ -555,6 +565,23 @@ def detect_communities(nodes: list[dict], edges: list[dict]) -> dict[str, int]:
 
     if G.number_of_edges() == 0:
         return {}
+
+    if use_leiden and HAS_LEIDEN:
+        try:
+            # Convert NetworkX → igraph
+            ig_G = ig.Graph.TupleList(G.edges(), directed=False)
+            # Map nx node names to igraph indices
+            nx_to_ig = {name: idx for idx, name in enumerate(G.nodes())}
+            partition = leidenalg.find_partition(ig_G, leidenalg.ModularityVertexPartition, seed=42)
+            node_to_community = {}
+            ig_to_nx = {v: k for k, v in nx_to_ig.items() if v < ig_G.vcount()}
+            for comm_id, comm in enumerate(partition):
+                for v_idx in comm:
+                    if v_idx in ig_to_nx:
+                        node_to_community[ig_to_nx[v_idx]] = comm_id
+            return node_to_community
+        except Exception as exc:
+            print(f"  [WARN] Leiden failed ({exc}), falling back to Louvain...")
 
     try:
         communities = nx_community.louvain_communities(G, seed=42)
@@ -850,7 +877,9 @@ def prioritize_inference(pages: list[str], graph: dict, max_infer: int = 20) -> 
 
 def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = False,
                 report: bool = False, save: bool = False,
-                show_diff: bool = False, max_infer: int = 0):
+                show_diff: bool = False, max_infer: int = 0,
+                include_code: bool = False, use_leiden: bool = False,
+                incremental: bool = False):
     pages = list(all_wiki_pages())
     today = date.today().isoformat()
 
@@ -868,11 +897,41 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
 
     cache = load_cache()
 
+    # Pass 0: code graph (optional)
+    code_nodes: list[dict] = []
+    code_edges: list[dict] = []
+    code_hashes: dict[str, str] = cache.get("_code_hashes", {})
+    if include_code:
+        try:
+            if incremental and GRAPH_JSON.exists():
+                from tools.shared.code_graph.builder import build_code_graph_incremental
+                print("  Pass 0: incremental code-level graph update...")
+                existing_data = json.loads(GRAPH_JSON.read_text(encoding="utf-8"))
+                existing_nodes = existing_data.get("nodes", [])
+                existing_edges = existing_data.get("edges", [])
+                code_nodes, code_edges, code_hashes = build_code_graph_incremental(
+                    REPO_ROOT, existing_nodes, existing_edges, code_hashes
+                )
+                print(f"  → {len(code_nodes)} code nodes, {len(code_edges)} code edges (incremental)")
+            else:
+                from tools.shared.code_graph.builder import build_code_graph as build_code_graph_v2
+                print("  Pass 0: extracting code-level graph (Graphify Phase 1)...")
+                code_nodes, code_edges = build_code_graph_v2(REPO_ROOT)
+                print(f"  → {len(code_nodes)} code nodes, {len(code_edges)} code edges")
+        except Exception as e:
+            print(f"  [WARN] Code graph extraction failed: {e}")
+
     # Pass 1: extracted edges
     print("  Pass 1: extracting wikilinks...")
     nodes = build_nodes(pages)
     edges = build_extracted_edges(pages)
     print(f"  → {len(edges)} extracted edges")
+
+    # Merge code graph
+    if code_nodes:
+        nodes.extend(code_nodes)
+    if code_edges:
+        edges.extend(code_edges)
 
     # Pass 2: inferred edges
     if infer:
@@ -888,7 +947,8 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
         inferred = build_inferred_edges(infer_pages, edges, cache, resume=not clean)
         edges.extend(inferred)
         print(f"  → {len(inferred)} inferred edges")
-        save_cache(cache)
+    cache["_code_hashes"] = code_hashes
+    save_cache(cache)
 
     # Deduplicate edges
     before_dedup = len(edges)
@@ -897,8 +957,9 @@ def build_graph(infer: bool = True, open_browser: bool = False, clean: bool = Fa
         print(f"  dedup: {before_dedup} → {len(edges)} edges")
 
     # Community detection
-    print("  Running Louvain community detection...")
-    communities = detect_communities(nodes, edges)
+    algo_name = "Leiden" if use_leiden and HAS_LEIDEN else "Louvain"
+    print(f"  Running {algo_name} community detection...")
+    communities = detect_communities(nodes, edges, use_leiden=use_leiden)
     for node in nodes:
         comm_id = communities.get(node["id"], -1)
         if comm_id >= 0:
@@ -973,7 +1034,11 @@ if __name__ == "__main__":
     parser.add_argument("--save", action="store_true", help="Save report to graph/graph-report.md")
     parser.add_argument("--diff", action="store_true", help="Show incremental changes from last build")
     parser.add_argument("--max-infer", type=int, default=0, help="Limit inference to N pages (0=no limit)")
+    parser.add_argument("--code", action="store_true", help="Include project source code in the graph (Python + TypeScript)")
+    parser.add_argument("--leiden", action="store_true", help="Use Leiden algorithm instead of Louvain for community detection (requires python-igraph + leidenalg)")
+    parser.add_argument("--incremental", action="store_true", help="Incremental build: only re-parse changed code files (requires --code)")
     args = parser.parse_args()
     build_graph(infer=not args.no_infer, open_browser=args.open, clean=args.clean,
-                report=args.report, save=args.save,
-                show_diff=args.diff, max_infer=args.max_infer)
+                report=args.report, save=args.save, use_leiden=args.leiden,
+                show_diff=args.diff, max_infer=args.max_infer,
+                include_code=args.code, incremental=args.incremental)

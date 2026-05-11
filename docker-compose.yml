@@ -6,7 +6,7 @@ services:
     image: llm-wiki-agent:latest
     container_name: llm-wiki-api
     ports:
-      - "${WIKI_PORT:-8000}:8000"
+      - "${WIKI_PORT:-8666}:8666"
     volumes:
       # Live data directories — changes persist on host
       - ./wiki:/app/wiki
@@ -21,7 +21,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8666/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

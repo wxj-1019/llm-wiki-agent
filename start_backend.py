@@ -4,7 +4,7 @@ LLM Wiki Agent -- Backend Startup Script with Health Checks
 
 Usage:
     python start_backend.py              # start backend with default checks
-    python start_backend.py --port 8000  # custom port
+    python start_backend.py --port 8666  # custom port
     python start_backend.py --skip-checks # skip pre-flight dependency checks
     python start_backend.py --no-infer    # do not run post-startup API checks
 
@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).parent
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 8666
 DEFAULT_HOST = "127.0.0.1"
 
 # -- Terminal colours --

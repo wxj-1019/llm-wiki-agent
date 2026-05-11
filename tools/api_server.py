@@ -65,6 +65,21 @@ try:
 except ImportError:
     WEB_SEARCH_AVAILABLE = False
 
+# Graphify query engine
+try:
+    from tools.shared.graph_query_engine import GraphQueryEngine
+    GRAPH_QUERY_AVAILABLE = True
+except ImportError:
+    GraphQueryEngine = None
+    GRAPH_QUERY_AVAILABLE = False
+
+try:
+    from tools.shared.graph_export import export_all
+    GRAPH_EXPORT_AVAILABLE = True
+except ImportError:
+    export_all = None
+    GRAPH_EXPORT_AVAILABLE = False
+
 REPO = Path(__file__).parent.parent
 WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
@@ -193,6 +208,12 @@ class AgentKitGeneratePayload(BaseModel):
 class DownloadZipPayload(BaseModel):
     paths: list[str] = Field(..., min_length=1, description="List of file paths to include in ZIP")
 
+class GraphQueryPayload(BaseModel):
+    query: str = Field(..., min_length=1, description="Graph query string")
+
+class GraphExportPayload(BaseModel):
+    format: str = Field(default="all", pattern="^(all|graphml|csv|cypher)$")
+
 class SaveFilePayload(BaseModel):
     path: str = Field(..., min_length=1)
     content: str = Field(default="")
@@ -315,6 +336,81 @@ def get_graph():
     except UnicodeDecodeError:
         data = graph_path.read_text(encoding="utf-8", errors="replace")
     return json.loads(data)
+
+@app.post("/api/graph/query")
+def graph_query(payload: GraphQueryPayload):
+    if not GRAPH_QUERY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph query engine not available")
+    try:
+        engine = GraphQueryEngine()
+        result = engine.execute(payload.query)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post("/api/graph/export")
+def graph_export(payload: GraphExportPayload):
+    if not GRAPH_EXPORT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph export not available")
+    try:
+        if payload.format == "all":
+            results = export_all()
+        elif payload.format == "graphml":
+            from tools.shared.graph_export import export_graphml
+            results = {"graphml": export_graphml()}
+        elif payload.format == "csv":
+            from tools.shared.graph_export import export_csv
+            results = export_csv()
+        elif payload.format == "cypher":
+            from tools.shared.graph_export import export_cypher
+            cypher = export_cypher()
+            cypher_path = GRAPH / "graph.cypher"
+            cypher_path.write_text(cypher, encoding="utf-8")
+            results = {"cypher": str(cypher_path)}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format")
+        return {"format": payload.format, "files": results}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/graph/stats")
+def graph_stats():
+    graph_path = GRAPH / "graph.json"
+    if not graph_path.exists():
+        raise HTTPException(status_code=404, detail="Graph not found. Run build_graph first.")
+    try:
+        data = json.loads(graph_path.read_text(encoding="utf-8"))
+        nodes = data.get("nodes", [])
+        edges = data.get("edges", [])
+        type_counts = {}
+        for n in nodes:
+            t = n.get("type", "unknown")
+            type_counts[t] = type_counts.get(t, 0) + 1
+        comms = set(n.get("group", -1) for n in nodes)
+        return {
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "community_count": len(comms) - (1 if -1 in comms else 0),
+            "type_distribution": type_counts,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/graph/node/{node_id:path}")
+def graph_node(node_id: str):
+    if not GRAPH_QUERY_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Graph query engine not available")
+    try:
+        engine = GraphQueryEngine()
+        engine.load()
+        result = engine.execute(f"explain {node_id}")
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 @app.get("/api/pages/{page_type}/{slug}")
 def get_page(page_type: str, slug: str):

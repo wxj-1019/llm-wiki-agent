@@ -70,7 +70,7 @@ python tools/build_graph.py --open
 # Or use the unified CLI
 python tools/cli.py ingest raw/my-article.md
 python tools/cli.py search "transformer models"
-python tools/cli.py server --port 8000
+python tools/cli.py server --port 8666
 ```
 
 ### Using the Web Frontend
@@ -78,12 +78,12 @@ python tools/cli.py server --port 8000
 ```bash
 # Start both servers (API + frontend)
 python start_servers.py
-# API → http://127.0.0.1:8000
-# Frontend → http://localhost:3000
+# API → http://127.0.0.1:8666
+# Frontend → http://localhost:3666
 
 # Or start them separately
-python tools/api_server.py &          # API on port 8000
-cd wiki-viewer && npm run dev         # Dev server with HMR on port 3000
+python tools/api_server.py &          # API on port 8666
+cd wiki-viewer && npm run dev         # Dev server with HMR on port 3666
 ```
 
 The frontend provides: wiki browsing with `[[wikilink]]` navigation, full-text search, interactive knowledge graph, Shiki syntax-highlighted markdown, i18n (en/zh-CN), and PWA offline support.
@@ -195,7 +195,7 @@ python tools/cli.py lint --save
 python tools/cli.py build-graph --open
 python tools/cli.py memory start "<goal>"
 python tools/cli.py context build "<goal>"
-python tools/cli.py server --port 8000
+python tools/cli.py server --port 8666
 python tools/cli.py watch --daemon
 ```
 

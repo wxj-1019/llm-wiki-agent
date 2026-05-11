@@ -1,66 +1,28 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Search, FileText, Users, Lightbulb, Layers, Loader2, BrainCircuit, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, Loader2, BrainCircuit, RefreshCw, MessageSquare, Sparkles, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hybridSearch, getAllNodes } from '@/lib/search';
 import type { FuseResult } from 'fuse.js';
 import type { GraphNode } from '@/types/graph';
 import { motion } from 'framer-motion';
-import { typeLabelKey } from '@/i18n';
-import { getPagePath } from '@/lib/wikilink';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
 import { reindexEmbeddings } from '@/services/dataService';
 import { useNotificationStore } from '@/stores/notificationStore';
-
-const typeIcons: Record<string, React.ElementType> = {
-  source: FileText,
-  entity: Users,
-  concept: Lightbulb,
-  synthesis: Layers,
-};
-
-const typeColors: Record<string, string> = {
-  source: 'text-apple-blue bg-apple-blue/10',
-  entity: 'text-apple-green bg-apple-green/10',
-  concept: 'text-apple-purple bg-apple-purple/10',
-  synthesis: 'text-apple-orange bg-apple-orange/10',
-};
-
-const typeTagColors: Record<string, string> = {
-  source: 'text-apple-blue bg-apple-blue/10 border-apple-blue/20',
-  entity: 'text-apple-green bg-apple-green/10 border-apple-green/20',
-  concept: 'text-apple-purple bg-apple-purple/10 border-apple-purple/20',
-  synthesis: 'text-apple-orange bg-apple-orange/10 border-apple-orange/20',
-};
-
-function HighlightText({ text, matches }: { text: string; matches?: ReadonlyArray<[number, number]> }) {
-  if (!matches || matches.length === 0) return <>{text}</>;
-  const elements: React.ReactNode[] = [];
-  let lastIndex = 0;
-  matches.forEach(([start, end], i) => {
-    if (start > lastIndex) {
-      elements.push(<span key={`t-${i}`}>{text.slice(lastIndex, start)}</span>);
-    }
-    elements.push(
-      <mark key={`h-${i}`} className="bg-apple-blue/10 text-[var(--text-primary)] px-0.5 rounded">
-        {text.slice(start, end + 1)}
-      </mark>
-    );
-    lastIndex = end + 1;
-  });
-  if (lastIndex < text.length) {
-    elements.push(<span key="tail">{text.slice(lastIndex)}</span>);
-  }
-  return <>{elements}</>;
-}
+import { chatWithWikiStream } from '@/services/chatService';
+import { SearchResultsTab } from '@/components/search/SearchResultsTab';
+import { ChatTab } from '@/components/search/ChatTab';
+import { GenerateTab } from '@/components/search/GenerateTab';
+import type { Tab, ChatEntry } from '@/components/search/types';
 
 export function SearchPage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
   const userEditedRef = useRef(false);
+  const addNotification = useNotificationStore(s => s.addNotification);
 
   const debouncedQuery = useDebounce(query, 200);
   const [results, setResults] = useState<FuseResult<GraphNode>[]>([]);
@@ -69,32 +31,53 @@ export function SearchPage() {
     try { return localStorage.getItem('wiki-semantic-search') === 'true'; } catch { return false; }
   });
   const [reindexing, setReindexing] = useState(false);
-  const addNotification = useNotificationStore((s) => s.addNotification);
+
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'chat' || tab === 'generate' ? tab : 'search';
+  });
+
+  const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatStreaming, setChatStreaming] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!userEditedRef.current) setQuery(initialQuery);
+  }, [initialQuery]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'chat' || tab === 'generate') setActiveTab(tab);
+    else if (tab === null) setActiveTab('search');
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!debouncedQuery.trim()) { setResults([]); return; }
     setSearching(true);
     let cancelled = false;
     hybridSearch(debouncedQuery, getAllNodes(), semantic)
-      .then((res) => {
-        if (!cancelled) setResults(res.slice(0, 50));
-      })
-      .catch(() => {
-        if (!cancelled) setResults([]);
-      })
-      .finally(() => {
-        if (!cancelled) setSearching(false);
-      });
+      .then(r => { if (!cancelled) setResults(r.slice(0, 50)); })
+      .catch(() => { if (!cancelled) setResults([]); })
+      .finally(() => { if (!cancelled) setSearching(false); });
     return () => { cancelled = true; };
   }, [debouncedQuery, semantic]);
 
+  const handleTabChange = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'search') next.delete('tab');
+      else next.set('tab', tab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   const handleToggleSemantic = useCallback(() => {
-    setSemantic((prev) => {
+    setSemantic(prev => {
       const next = !prev;
-      try { localStorage.setItem('wiki-semantic-search', String(next)); } catch { /* ignore */ }
+      try { localStorage.setItem('wiki-semantic-search', String(next)); } catch { /* noop */ }
       return next;
     });
   }, []);
@@ -102,8 +85,8 @@ export function SearchPage() {
   const handleReindex = useCallback(async () => {
     setReindexing(true);
     try {
-      const result = await reindexEmbeddings();
-      addNotification(result.message || t('search.reindexSuccess'), 'success');
+      const r = await reindexEmbeddings();
+      addNotification(r.message || t('search.reindexSuccess'), 'success');
     } catch (e) {
       addNotification(String(e), 'error');
     } finally {
@@ -111,116 +94,160 @@ export function SearchPage() {
     }
   }, [addNotification, t]);
 
-  useDocumentTitle(t('search.title'));
+  const handleChatSend = useCallback(async () => {
+    const msg = chatInput.trim() || query.trim();
+    if (!msg || chatStreaming) return;
+    const userEntry: ChatEntry = { role: 'user', content: msg };
+    const newEntries = [...chatEntries, userEntry];
+    setChatEntries(newEntries);
+    setChatInput('');
+    setChatLoading(true);
+    setChatStreaming(true);
+    const assistantEntry: ChatEntry = { role: 'assistant', content: '', sources: [] };
+    setChatEntries([...newEntries, assistantEntry]);
+    const abort = new AbortController();
+    abortRef.current = abort;
+    try {
+      const contextPages = chatEntries.length === 0 && query
+        ? results.slice(0, 5).map(r => r.item.path)
+        : [];
+      const history = newEntries.map(e => ({ role: e.role, content: e.content }));
+      for await (const chunk of chatWithWikiStream(msg, history, contextPages, abort.signal)) {
+        if (chunk.chunk) assistantEntry.content += chunk.chunk;
+        if (chunk.sources) assistantEntry.sources = chunk.sources;
+        if (chunk.done) break;
+        setChatEntries([...newEntries, { ...assistantEntry }]);
+      }
+      setChatEntries([...newEntries, { ...assistantEntry }]);
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') {
+        assistantEntry.content = t('chat.error.title', 'An error occurred. Please try again.');
+        setChatEntries([...newEntries, { ...assistantEntry }]);
+      }
+    } finally {
+      setChatLoading(false);
+      setChatStreaming(false);
+      abortRef.current = null;
+    }
+  }, [chatInput, chatEntries, chatStreaming, query, results, t]);
+
+  const handleChatStop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const handleChatClear = useCallback(() => {
+    if (chatStreaming) return;
+    setChatEntries([]);
+    setChatInput('');
+  }, [chatStreaming]);
 
   useEffect(() => {
-    if (!userEditedRef.current) {
-      setQuery(initialQuery);
-    }
-  }, [initialQuery]);
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  useDocumentTitle(t('search.title'));
+
+  const handleOnGenerate = useCallback(() => handleTabChange('generate'), [handleTabChange]);
+
+  const tabs = useMemo<{ id: Tab; icon: React.ElementType; label: string }[]>(
+    () => [
+      { id: 'search', icon: Search, label: t('search.tab.results', 'Results') },
+      { id: 'chat', icon: MessageSquare, label: t('search.tab.chat', 'AI Chat') },
+      { id: 'generate', icon: Sparkles, label: t('search.tab.generate', 'Generate') },
+    ],
+    [t],
+  );
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-heading-1 mb-6">{t('search.title')}</h1>
 
-      <div className="relative mb-8 max-w-2xl">
+      <div className="relative mb-4 max-w-2xl">
         <div className="flex items-center gap-3 w-full px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:border-apple-blue focus-within:border-apple-blue focus-within:shadow-[0_0_0_4px_rgba(10,132,255,0.08)] transition-all duration-200 rounded-2xl">
           <Search size={20} className="text-[var(--text-tertiary)] shrink-0" />
           <input
             autoFocus
             value={query}
-            onChange={(e) => { setQuery(e.target.value); userEditedRef.current = true; }}
+            onChange={e => { setQuery(e.target.value); userEditedRef.current = true; }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && activeTab === 'chat') handleChatSend();
+              if (e.key === 'Escape' && chatStreaming) handleChatStop();
+            }}
             placeholder={t('search.placeholder')}
-            aria-label={t('search.placeholder')}
             className="flex-1 bg-transparent outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] text-lg"
           />
+          {activeTab === 'chat' && chatStreaming && (
+            <button onClick={handleChatStop} className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
+              <X size={16} />
+            </button>
+          )}
+          {!chatStreaming && query && (
+            <button onClick={() => { setQuery(''); userEditedRef.current = true; }} className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors">
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3 select-none">
-          <button
-            onClick={handleToggleSemantic}
-            className={`relative w-10 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-apple-blue/30 ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`}
-            aria-pressed={semantic}
-            aria-label={t('search.semantic')}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-[var(--bg-primary)] rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`}
-            />
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="flex items-center gap-1 bg-[var(--bg-secondary)] rounded-xl p-1 border border-[var(--border-default)]">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-apple-blue text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)]'
+              }`}
+            >
+              <tab.icon size={13} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={handleToggleSemantic} className={`relative w-9 h-5 rounded-full transition-colors ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`} aria-label={t('search.semantic')}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-[var(--bg-primary)] rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`} />
           </button>
-          <span className="text-sm text-[var(--text-secondary)] flex items-center gap-1.5">
-            <BrainCircuit size={16} />
-            {t('search.semantic')}
-          </span>
+          <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1"><BrainCircuit size={13} />{t('search.semantic')}</span>
+          <button onClick={handleReindex} disabled={reindexing} className="flex items-center gap-1 px-2 py-1 text-[10px] text-[var(--text-tertiary)] hover:text-apple-blue hover:bg-apple-blue/10 rounded-lg transition-all disabled:opacity-50">
+            {reindexing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+            {t('search.reindex')}
+          </button>
         </div>
-        <button
-          onClick={handleReindex}
-          disabled={reindexing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-tertiary)] hover:text-apple-blue hover:bg-apple-blue/10 rounded-xl transition-all active:scale-[0.97] disabled:opacity-50"
-          title={t('search.reindex')}
-        >
-          {reindexing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-          {t('search.reindex')}
-        </button>
       </div>
 
-      {query && (
-        <div className="mb-4 text-sm text-[var(--text-secondary)] flex items-center gap-2" aria-live="polite">
-          {searching && <Loader2 size={14} className="animate-spin" />}
-          {t('search.resultCount', { count: results.length, query })}
-        </div>
+      {activeTab === 'search' && (
+        <SearchResultsTab
+          query={query}
+          results={results}
+          searching={searching}
+          onGenerate={handleOnGenerate}
+        />
       )}
 
-      <div className="space-y-3">
-        {results.map((result, i) => {
-          const node = result.item;
-          const Icon = typeIcons[node.type] || FileText;
+      {activeTab === 'chat' && (
+        <ChatTab
+          chatEntries={chatEntries}
+          chatInput={chatInput}
+          chatStreaming={chatStreaming}
+          chatLoading={chatLoading}
+          query={query}
+          onInputChange={setChatInput}
+          onSend={handleChatSend}
+          onStop={handleChatStop}
+          onClear={handleChatClear}
+        />
+      )}
 
-          const labelMatches = result.matches?.find((m) => m.key === 'label');
-          const previewMatches = result.matches?.find((m) => m.key === 'preview');
-
-          return (
-            <motion.div
-              key={node.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.03 }}
-            >
-              <Link
-                to={getPagePath(node)}
-                className="apple-card p-4 flex items-start gap-4 block group"
-              >
-                <div className={`p-2.5 rounded-xl shrink-0 ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>
-                  <Icon size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold group-hover:text-apple-blue transition-colors">
-                      <HighlightText text={node.label} matches={labelMatches?.indices} />
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-lg border ${typeTagColors[node.type] || 'text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-[var(--border-default)]'}`}>
-                      {t(typeLabelKey(node.type) as string)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                    <HighlightText text={node.preview} matches={previewMatches?.indices} />
-                  </p>
-                </div>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {query && results.length === 0 && (
-        <div className="empty-state-warm mt-12">
-          <div className="flex justify-center mb-3">
-            <Search size={40} className="text-apple-blue" />
-          </div>
-          <h3 className="text-lg font-semibold mb-1">{t('search.empty.title')}</h3>
-          <p className="text-sm text-[var(--text-secondary)]">{t('search.empty.description')}</p>
-        </div>
+      {activeTab === 'generate' && (
+        <GenerateTab
+          query={query}
+          chatEntries={chatEntries}
+          onSwitchToGenerate={() => handleTabChange('generate')}
+        />
       )}
     </motion.div>
   );

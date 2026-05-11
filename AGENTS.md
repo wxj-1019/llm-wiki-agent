@@ -87,7 +87,7 @@ All scripts in `tools/` are standalone and can be run directly. They require `li
 | `refresh.py` | Refresh stale source pages | Yes (via ingest) | `python tools/refresh.py [--force] [--page sources/X]` — hash-based change detection |
 | `pdf2md.py` | PDF/arXiv → Markdown conversion | No | `python tools/pdf2md.py <arxiv-id/url/pdf> [--backend marker\|pymupdf4llm]` |
 | `file_to_md.py` | Batch directory conversion | No | `python tools/file_to_md.py --input_dir <dir> [--delete_source]` |
-| `api_server.py` | Optional local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8000]` |
+| `api_server.py` | Optional local FastAPI server for wiki viewer | No | `python tools/api_server.py [--host 127.0.0.1] [--port 8666]` |
 | `mcp_server.py` | MCP stdio server for Claude/Cursor/VS Code | No | `python tools/mcp_server.py` — exposes `wiki_search`, `wiki_read`, `wiki_write`, `wiki_list`, `wiki_ingest` |
 | `search_engine.py` | SQLite FTS5 full-text search engine | No | Imported by `api_server.py` and `mcp_server.py`; auto-indexes `wiki/**/*.md` |
 | `watcher.py` | File system watcher for `raw/` auto-ingest | No | `python tools/watcher.py [--poll]` — watchdog + polling fallback, 5s debounce |

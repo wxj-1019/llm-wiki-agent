@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from '@/components/layout/RootLayout';
 import { HomePage } from '@/components/pages/HomePage';
 import { BrowsePage } from '@/components/pages/BrowsePage';
@@ -12,7 +12,6 @@ import { lazy } from 'react';
 
 // Lazy-load heavy / less frequently visited pages
 const GraphPage = lazy(() => import('@/components/pages/GraphPage').then((m) => ({ default: m.GraphPage })));
-const ChatPage = lazy(() => import('@/components/pages/ChatPage').then((m) => ({ default: m.ChatPage })));
 const SettingsPage = lazy(() => import('@/components/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const UploadPage = lazy(() => import('@/components/pages/UploadPage').then((m) => ({ default: m.UploadPage })));
 const DashboardPage = lazy(() => import('@/components/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -40,11 +39,11 @@ export const router = createBrowserRouter([
       { path: '/c/:name', element: <PageDetailPage type='concept' />, errorElement: <ErrorBoundary /> },
       { path: '/y/:slug', element: <PageDetailPage type='synthesis' />, errorElement: <ErrorBoundary /> },
       { path: '/graph', element: <LazyPage><GraphPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/chat', element: <Navigate to="/search" replace /> },
       { path: '/search', element: <SearchPage />, errorElement: <ErrorBoundary /> },
       { path: '/log', element: <LogPage />, errorElement: <ErrorBoundary /> },
       { path: '/upload', element: <LazyPage><UploadPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/settings', element: <LazyPage><SettingsPage /></LazyPage>, errorElement: <ErrorBoundary /> },
-      { path: '/chat', element: <LazyPage><ChatPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/status', element: <StatusPage />, errorElement: <ErrorBoundary /> },
       { path: '/mcp', element: <LazyPage><MCPPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/skills', element: <LazyPage><SkillsPage /></LazyPage>, errorElement: <ErrorBoundary /> },

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, MessageCircle, Server, Wrench, Network, Clock, Search, ChevronDown, Globe, Bot, ShieldCheck, FileText } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, Server, Wrench, Network, Clock, Search, ChevronDown, Globe, Bot, ShieldCheck, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,7 +34,6 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
       { icon: Globe, translationKey: 'nav.crawler', path: '/crawler', matchPath: '/crawler' },
-      { icon: MessageCircle, translationKey: 'nav.chat', path: '/chat', matchPath: '/chat' },
     ],
   },
   {

@@ -58,16 +58,21 @@ def write_file(path: Path, content: str) -> None:
 def extract_wikilinks(content: str) -> list[str]:
     """Extract all [[WikiLink]] targets from page content.
 
-    Handles both ``[[PageName]]`` and ``[[PageName|display alias]]`` formats.
-    Returns the raw link text (including alias if present).
+    Handles ``[[PageName]]``, ``[[PageName|display alias]]``,
+    and ``[[PageName#heading]]`` formats.
+    Returns the raw link text (including alias / anchor if present).
     """
-    # [^\[\]]+ excludes nested [[ inside wikilinks to avoid false matches
-    return re.findall(r'\[\[([^\[\]]+(?:\|[^\[\]]+)?)\]\]', content)
+    # Non-greedy match for link body; exclude nested [[ to avoid false matches
+    return re.findall(r'\[\[([^\[\]]+?)\]\]', content)
 
 
 def resolve_wikilink_target(link: str) -> str:
-    """Return the page name portion of a wikilink, stripping any display alias."""
-    return link.split("|")[0].strip()
+    """Return the page name portion of a wikilink, stripping alias and heading anchor."""
+    # [[PageName|alias]] -> PageName
+    # [[PageName#heading|alias]] -> PageName
+    target = link.split("|")[0].strip()
+    # Strip heading anchor: PageName#heading -> PageName
+    return target.split("#")[0].strip()
 
 
 _pages_cache: list[Path] | None = None

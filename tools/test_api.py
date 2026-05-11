@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 REPO = Path(__file__).parent.parent
-BASE = "http://127.0.0.1:8000"
+BASE = "http://127.0.0.1:8666"
 
 
 def _get(path: str) -> dict:
