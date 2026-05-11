@@ -58,6 +58,8 @@ interface AgentChatState {
   currentExecution: AgentExecutionState | null;
   isConnected: boolean;
   pendingApprovals: PendingApproval[];
+  history: AgentExecutionState[];
+  historyLoading: boolean;
   startExecution: (goal: string, strategy: string) => AgentExecutionState;
   updateExecution: (sessionId: string, partial: Partial<AgentExecutionState>) => void;
   addStep: (sessionId: string, step: AgentStep) => void;
@@ -72,6 +74,8 @@ interface AgentChatState {
   clearCurrent: () => void;
   addPendingApproval: (approval: PendingApproval) => void;
   removePendingApproval: (reqId: string) => void;
+  loadHistory: () => Promise<void>;
+  setHistory: (history: AgentExecutionState[]) => void;
 }
 
 export const useAgentChatStore = create<AgentChatState>((set, get) => ({
@@ -79,6 +83,8 @@ export const useAgentChatStore = create<AgentChatState>((set, get) => ({
   currentExecution: null,
   isConnected: false,
   pendingApprovals: [],
+  history: [],
+  historyLoading: false,
 
   startExecution: (goal, strategy) => {
     const session_id = `goal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;

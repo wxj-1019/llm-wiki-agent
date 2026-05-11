@@ -14,6 +14,7 @@ from tools.jarvis.safety import get_safety_engine
 from tools.jarvis.approval import get_approval_manager
 from tools.jarvis.state import get_state_store, AgentStateStore
 from tools.jarvis.audit import get_audit_store, AuditStore
+from tools.jarvis.execution_store import get_execution_store
 from tools.jarvis.types import (
     AgentState,
     AgentStatus,
@@ -82,6 +83,8 @@ class AgentLoop:
     ) -> str:
         """Run a single user-defined goal and stream progress via SSE."""
         session_id = goal_request.session_id
+        execution_store = get_execution_store()
+        execution_store.create(goal_request)
 
         async def _emit(event_type: str, data: dict) -> None:
             if sse_callback:
@@ -167,21 +170,28 @@ class AgentLoop:
                     "error": result.error,
                     "duration_ms": result.duration_ms,
                 })
+                execution_store.update_steps(session_id, plan.steps)
 
             # 3. Reflection every 3 steps
             if len(plan.steps) >= 3:
                 reflection = await self._reflect_on_results(plan, results)
                 await _emit("reflection", {"session_id": session_id, "text": reflection})
+                execution_store.update_reflections(session_id, [{"text": reflection, "timestamp": datetime.now().isoformat()}])
 
             # 4. Final content/summary
             summary = await self._summarize_results(plan, results)
             await _emit("content", {"session_id": session_id, "text": summary})
             await _emit("done", {"session_id": session_id, "step_count": len(plan.steps), "success_count": sum(1 for r in results if r.success)})
+            execution_store.finish(session_id, "done", summary, "")
+
+            # Phase 5: Auto-extract skill from execution trajectory
+            await self._extract_skill_from_execution(goal_request, plan, results, summary)
 
             return summary
 
         except Exception as exc:
             await _emit("error", {"session_id": session_id, "error": str(exc)})
+            execution_store.finish(session_id, "error", "", str(exc))
             raise
 
     async def _build_plan_for_goal(self, goal_request: GoalRequest) -> Plan:
@@ -267,6 +277,87 @@ class AgentLoop:
             return call_llm(prompt=prompt, system="You are Jarvis summarizing task results.", max_tokens=1024)
         except Exception:
             return f"Task completed with {success_count}/{len(results)} successful steps."
+
+    async def _extract_skill_from_execution(
+        self,
+        goal_request: GoalRequest,
+        plan: Plan,
+        results: list[ToolResult],
+        summary: str,
+    ) -> None:
+        """Phase 5: Auto-extract a reusable skill from execution trajectory.
+
+        Only extract if success rate >= 50% and at least 2 steps were executed.
+        """
+        success_count = sum(1 for r in results if r.success)
+        if len(results) < 2 or success_count / len(results) < 0.5:
+            return
+
+        steps_desc = []
+        for step, result in zip(plan.steps, results):
+            status = "success" if result.success else "failed"
+            steps_desc.append(f"- {step.tool_name}: {status} — params: {json.dumps(step.params)}")
+
+        prompt = (
+            f"The following task was successfully executed by an AI agent.\n\n"
+            f"Goal: {goal_request.description}\n"
+            f"Summary: {summary}\n\n"
+            f"Execution steps:\n" + "\n".join(steps_desc) + "\n\n"
+            f"Extract a reusable skill from this execution. Return ONLY a YAML frontmatter block followed by markdown content, using this exact format:\n\n"
+            f"---\n"
+            f"name: <kebab-case-skill-name>\n"
+            f"version: 1.0.0\n"
+            f"author: jarvis-auto\n"
+            f"description: <one-line description>\n"
+            f"tags: [<tag1>, <tag2>]\n"
+            f"priority: 10\n"
+            f"requires: []\n"
+            f"---\n\n"
+            f"# <Skill Title>\n\n"
+            f"## Description\n"
+            f"<description>\n\n"
+            f"## Usage\n"
+            f"- Trigger: <when to use>\n"
+            f"- Input: <expected input>\n"
+            f"- Output: <expected output>\n\n"
+            f"## Workflow\n"
+            f"<numbered steps>\n\n"
+            f"## Example Prompts\n"
+            f"- <example 1>\n"
+            f"- <example 2>\n\n"
+            f"Return ONLY the skill markdown, no other text."
+        )
+        try:
+            raw = call_llm(
+                prompt=prompt,
+                system="You are a skill extraction assistant for Jarvis.",
+                max_tokens=2048,
+            )
+            cleaned = raw.strip()
+            if cleaned.startswith("```"):
+                first_newline = cleaned.index("\n")
+                last_backtick = cleaned.rindex("```")
+                cleaned = cleaned[first_newline + 1 : last_backtick].strip()
+
+            # Parse name from frontmatter
+            name_match = __import__("re").search(r"^name:\s*(.+)$", cleaned, __import__("re").MULTILINE)
+            skill_name = name_match.group(1).strip() if name_match else f"auto-skill-{__import__('uuid').uuid4().hex[:8]}"
+            skill_name = skill_name.replace(" ", "-").lower()
+
+            from tools.skill_engine import SkillEngine
+            engine = SkillEngine()
+            engine.install(skill_name, source="generated", code=cleaned)
+
+            self.event_bus.publish(
+                Event(
+                    name="agent.skill.extracted",
+                    category=EventCategory.AGENT,
+                    payload={"skill_name": skill_name, "goal": goal_request.description},
+                    source="loop",
+                )
+            )
+        except Exception:
+            pass
 
     async def perceive(self) -> list[Event]:
         events: list[Event] = []

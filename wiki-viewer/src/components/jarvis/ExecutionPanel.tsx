@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react';
-import { useAgentChatStore } from '@/stores/agentChatStore';
-import { CheckCircle, XCircle, Loader2, AlertTriangle, Clock, Brain, MessageSquare, Shield } from 'lucide-react';
+import { useAgentChatStore, type AgentExecutionState } from '@/stores/agentChatStore';
+import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
+import { CheckCircle, XCircle, Loader2, AlertTriangle, Clock, Brain, MessageSquare, Shield, History } from 'lucide-react';
+
+interface ExecutionPanelProps {
+  execution?: AgentExecutionState | null;
+}
 
 function riskColor(level: string): string {
   switch (level) {
@@ -24,11 +29,14 @@ function riskDot(level: string): string {
   }
 }
 
-export function ExecutionPanel() {
-  const current = useAgentChatStore((s) => s.currentExecution);
-  const pendingApprovals = useAgentChatStore((s) => s.pendingApprovals);
+export function ExecutionPanel({ execution }: ExecutionPanelProps = {}) {
+  const storeCurrent = useAgentChatStore((s) => s.currentExecution);
+  const storePending = useAgentChatStore((s) => s.pendingApprovals);
   const removePendingApproval = useAgentChatStore((s) => s.removePendingApproval);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const current = execution ?? storeCurrent;
+  const pendingApprovals = execution ? [] : storePending;
 
   const resolveApproval = useCallback(async (reqId: string, action: 'approve' | 'reject') => {
     setActionLoading(reqId);
@@ -46,12 +54,15 @@ export function ExecutionPanel() {
   if (!current) return null;
 
   const isRunning = current.status === 'executing' || current.status === 'planning' || current.status === 'reflecting' || current.status === 'summarizing';
+  const isHistorical = !!execution;
 
   return (
     <div className="apple-card p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {isRunning ? (
+          {isHistorical ? (
+            <History size={18} className="text-[var(--text-tertiary)]" />
+          ) : isRunning ? (
             <Loader2 size={18} className="animate-spin text-apple-blue" />
           ) : current.status === 'done' ? (
             <CheckCircle size={18} className="text-apple-green" />
@@ -61,7 +72,7 @@ export function ExecutionPanel() {
             <Clock size={18} className="text-[var(--text-tertiary)]" />
           )}
           <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-            Execution
+            {isHistorical ? 'Execution Replay' : 'Execution'}
           </h3>
         </div>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -74,8 +85,15 @@ export function ExecutionPanel() {
         </span>
       </div>
 
+      {/* Goal info for historical executions */}
+      {isHistorical && current.goal && (
+        <div className="text-sm text-[var(--text-secondary)]">
+          <span className="text-[var(--text-tertiary)]">Goal:</span> {current.goal}
+        </div>
+      )}
+
       {/* Approval Dialogs */}
-      {pendingApprovals.length > 0 && (
+      {!isHistorical && pendingApprovals.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Shield size={14} className="text-amber-500" />
@@ -144,7 +162,7 @@ export function ExecutionPanel() {
                 {step.status === 'awaiting_approval' && <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
                 {step.status === 'pending' && <span className="w-3 h-3 rounded-full border-2 border-[var(--border-default)] shrink-0" />}
                 <span className="flex-1 truncate">{step.tool_name}</span>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${riskDot(step.result ? 'L0' : (typeof step.risk_level === 'string' ? step.risk_level : 'L1'))}`} />
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${riskDot(typeof step.risk_level === 'string' ? step.risk_level : 'L1')}`} />
                 {step.result?.duration_ms && (
                   <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{step.result.duration_ms}ms</span>
                 )}
@@ -201,15 +219,15 @@ export function ExecutionPanel() {
         </div>
       )}
 
-      {/* Final Content */}
+      {/* Final Content with Markdown */}
       {current.content && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <MessageSquare size={12} className="text-apple-green" />
             <span className="text-xs text-[var(--text-tertiary)]">Summary</span>
           </div>
-          <div className="p-3 rounded-lg bg-apple-green/5 text-sm text-[var(--text-primary)] whitespace-pre-wrap">
-            {current.content}
+          <div className="p-3 rounded-lg bg-apple-green/5 text-sm text-[var(--text-primary)]">
+            <MarkdownRenderer content={current.content} />
           </div>
         </div>
       )}

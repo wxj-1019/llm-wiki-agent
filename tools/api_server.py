@@ -3450,6 +3450,30 @@ async def agent_chat(request: AgentChatRequest):
     )
 
 
+@app.get("/api/jarvis/executions")
+async def jarvis_executions(limit: int = 50):
+    """Return recent goal execution history."""
+    try:
+        from tools.jarvis.execution_store import get_execution_store
+        rows = get_execution_store().list_recent(limit=limit)
+        return {"success": True, "executions": rows, "total": len(rows)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/jarvis/executions/{session_id}")
+async def jarvis_execution_detail(session_id: str):
+    """Return a single execution by session_id."""
+    try:
+        from tools.jarvis.execution_store import get_execution_store
+        row = get_execution_store().get_by_id(session_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Execution not found")
+        return {"success": True, "execution": row}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # Serve frontend static files if dist exists
 if FRONTEND_DIST.exists():
     for _sub in ("assets", "fonts", "locales", "data"):
