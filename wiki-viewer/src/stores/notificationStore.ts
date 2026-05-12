@@ -161,9 +161,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       action,
       isAlert: true,
     };
-    // Deduplicate: replace existing alert from same source
+    // P1: deduplicate by source — replace existing alert from same source
     set((state) => ({
-      notifications: [alert, ...state.notifications].slice(0, 50),
+      notifications: [
+        alert,
+        ...state.notifications.filter((n) => !(n.isAlert && n.source === source)),
+      ].slice(0, 50),
       toasts: state.toasts,  // alerts do NOT appear as toasts
     }));
     return id;
