@@ -93,6 +93,16 @@ WIKI = REPO / "wiki"
 GRAPH = REPO / "graph"
 FRONTEND_DIST = REPO / "wiki-viewer" / "dist"
 
+# ── Event bus for SSE streaming ──
+try:
+    from tools.shared.event_bus import event_bus
+except ImportError:
+    event_bus = None
+try:
+    from tools.shared.state_monitor import monitor_state_changes
+except ImportError:
+    monitor_state_changes = None
+
 # Prefer .venv python so subprocesses find installed deps (litellm, markitdown, etc.)
 _VENV_PY = REPO / ".venv" / "Scripts" / "python.exe"
 PYTHON_EXE = str(_VENV_PY) if _VENV_PY.exists() else sys.executable
@@ -181,8 +191,18 @@ logger = logging.getLogger("wiki_api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: launch state monitor background task
+    _monitor_task = None
+    if monitor_state_changes is not None:
+        _monitor_task = asyncio.create_task(monitor_state_changes())
     yield
-    # Shutdown: close search backend connection
+    # Shutdown: cancel monitor task and close search backend connection
+    if _monitor_task:
+        _monitor_task.cancel()
+        try:
+            await _monitor_task
+        except asyncio.CancelledError:
+            pass
     global _search_backend
     if _search_backend:
         _search_backend.close()
@@ -631,6 +651,41 @@ def pipeline_health():
         health["status"] = "degraded"
 
     return health
+
+
+# ── SSE Event Stream ──
+
+@app.get("/api/events")
+async def sse_events(request: Request):
+    """Server-Sent Events endpoint for real-time alert streaming.
+
+    Streams system events (pipeline degradations, network errors,
+    wiki quality issues) to the frontend for AlertBanner / Toast display.
+    """
+
+    async def event_generator():
+        if event_bus is None:
+            yield "event: error\ndata: {\"message\":\"EventBus not available\"}\n\n"
+            return
+        try:
+            async for event in event_bus.subscribe():
+                # Check if client disconnected
+                if await request.is_disconnected():
+                    break
+                payload = json.dumps(event.data, ensure_ascii=False)
+                yield f"event: {event.type}\ndata: {payload}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _fallback_search(query: str, limit: int) -> list[dict]:
