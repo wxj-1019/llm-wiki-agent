@@ -9,8 +9,9 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAgentChatStore } from '@/stores/agentChatStore';
 import { useAgentChat } from '@/hooks/useAgentChat';
 import { GoalInput } from '@/components/jarvis/GoalInput';
-import { JarvisAvatar } from '@/components/jarvis/JarvisAvatar';
-import { JarvisChatMessage, type ChatMessage } from '@/components/jarvis/JarvisChatMessage';
+import { useJarvisMood } from '@/hooks/useJarvisMood';
+import { JarvisPersonaCore } from '@/components/jarvis/JarvisPersonaCore';
+import type { ChatMessage } from '@/components/jarvis/JarvisChatMessage';
 import { NeuralPulseBar } from '@/components/jarvis/NeuralPulseBar';
 import { KanbanBoard, type KanbanTask } from '@/components/jarvis/KanbanBoard';
 import { EvolutionTimeline } from '@/components/jarvis/EvolutionTimeline';
@@ -102,10 +103,11 @@ export function JarvisPage() {
   const [viewMode, setViewMode] = useState<'chat' | 'kanban' | 'evolution' | 'insights'>('chat');
 
   const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const API_BASE = '/api/jarvis';
+
+  const { mood, setMood, isDockedLeft, dockLeft, dockCenter } = useJarvisMood();
 
   /* Auto-switch to dark mode */
   useEffect(() => {
@@ -117,11 +119,6 @@ export function JarvisPage() {
       else html.removeAttribute('data-theme');
     };
   }, []);
-
-  /* Scroll to bottom on new messages */
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [executions, currentExecution, pendingApprovals]);
 
   function unpack<T>(res: Response): Promise<T | null> {
     return res.ok
@@ -203,8 +200,10 @@ export function JarvisPage() {
   }, [fetchAll]);
 
   const handleSubmit = useCallback((description: string, strategy: string) => {
+    dockLeft();
+    setMood('thinking');
     connect({ description, strategy });
-  }, [connect]);
+  }, [connect, dockLeft, setMood]);
 
   const resolveApproval = useCallback(async (reqId: string, action: 'approve' | 'reject') => {
     setApprovalLoading(reqId);
@@ -301,6 +300,9 @@ export function JarvisPage() {
     return msgs;
   }, [executions, pendingApprovals]);
 
+  /* Only keep last 3 messages to avoid scrolling */
+  const visibleMessages = useMemo(() => messages.slice(-3), [messages]);
+
   const agentState = status?.status ?? 'stopped';
   const isRunning = agentState === 'running';
   const isPaused = agentState === 'paused';
@@ -354,6 +356,29 @@ export function JarvisPage() {
     ? 'How can I help you today?'
     : 'Ready for your next task.';
 
+  /* Drive mood from execution status */
+  useEffect(() => {
+    if (!currentExecution) {
+      if (messages.length > 0) {
+        setMood('idle');
+      }
+      return;
+    }
+    if (currentExecution.status === 'done') {
+      setMood('success');
+      const t = setTimeout(() => setMood('idle'), 2000);
+      return () => clearTimeout(t);
+    }
+    if (currentExecution.status === 'error') {
+      setMood('error');
+      const t = setTimeout(() => setMood('idle'), 3000);
+      return () => clearTimeout(t);
+    }
+    if (['planning', 'executing', 'reflecting', 'summarizing'].includes(currentExecution.status)) {
+      setMood('thinking');
+    }
+  }, [currentExecution, messages.length, setMood]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
@@ -374,10 +399,10 @@ export function JarvisPage() {
       <NeuralPulseBar tools={tools} isRunning={isRunning || hasActiveExecution} />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-1 py-1 shrink-0">
-        <div className="flex items-center gap-3">
-          <Bot size={20} className="text-[var(--apple-teal)]" />
-          <h1 className="text-lg font-bold tracking-widest uppercase font-mono-data text-[var(--text-primary)]">
+      <div className="flex items-center justify-between px-1 py-0.5 shrink-0">
+        <div className="flex items-center gap-2">
+          <Bot size={16} className="text-[var(--apple-teal)]" />
+          <h1 className="text-sm font-bold tracking-widest uppercase font-mono-data text-[var(--text-primary)]">
             JARVIS
           </h1>
           <span className="text-[10px] font-mono-data text-[var(--text-tertiary)] border border-[var(--border-default)] px-1.5 py-0.5 rounded">
@@ -464,82 +489,82 @@ export function JarvisPage() {
 
       {/* ── Chat View ── */}
       {viewMode === 'chat' && (
-        <>
-          {/* ── Chat Messages ── */}
-          <div className="flex-1 overflow-y-auto px-1 space-y-4 min-h-0">
-            {messages.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center justify-center h-full gap-5"
-              >
-                <JarvisAvatar size={120} isActive={hasActiveExecution} />
-                <p className="text-sm text-[var(--text-secondary)] font-mono-data text-center">
-                  {avatarStatusText}
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {['Run health check', 'List orphan pages', 'Build knowledge graph', 'Find broken links'].map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => handleSubmit(q, 'balanced')}
-                      className="text-[11px] font-mono-data px-3 py-1.5 rounded-full border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--apple-teal)]/40 hover:text-[var(--apple-teal)] transition-colors"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-            {messages.map((msg) => (
-              <JarvisChatMessage
-                key={msg.id}
-                message={msg}
-                onApprove={(reqId) => resolveApproval(reqId, 'approve')}
-                onReject={(reqId) => resolveApproval(reqId, 'reject')}
-                isLoading={approvalLoading === msg.metadata?.req_id}
-              />
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-        </>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <JarvisPersonaCore
+            mood={mood}
+            isDockedLeft={isDockedLeft}
+            visibleMessages={visibleMessages}
+            avatarStatusText={avatarStatusText}
+            hasActiveExecution={hasActiveExecution}
+            isLoading={hasActiveExecution}
+            onSubmit={handleSubmit}
+            onFocus={() => setMood('attentive')}
+            onBlur={() => {
+              if (!hasActiveExecution) setMood('idle');
+            }}
+            onChange={() => {
+              if (mood === 'idle') setMood('attentive');
+            }}
+            onReplyComplete={() => {
+              if (!hasActiveExecution) setMood('idle');
+            }}
+          />
+        </div>
       )}
 
       {/* ── Kanban View ── */}
       {viewMode === 'kanban' && (
-        <div className="flex-1 overflow-y-auto px-1 py-3 space-y-4 min-h-0">
-          <KanbanBoard tasks={kanbanTasks} />
+        <div className="flex-1 overflow-hidden px-1 py-0.5 min-h-0 flex flex-col items-center justify-center">
+          <div className="w-full">
+            <KanbanBoard tasks={kanbanTasks} />
+          </div>
         </div>
       )}
 
       {/* ── Evolution View ── */}
       {viewMode === 'evolution' && (
-        <div className="flex-1 overflow-y-auto px-1 py-3 space-y-4 min-h-0">
-          <EvolutionTimeline />
-          <EvolutionHistoryPanel />
+        <div className="flex-1 overflow-hidden px-1 py-0.5 min-h-0 flex flex-col gap-1">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <EvolutionTimeline />
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <EvolutionHistoryPanel />
+          </div>
         </div>
       )}
 
       {/* ── Insights View ── */}
       {viewMode === 'insights' && (
-        <div className="flex-1 overflow-y-auto px-1 py-3 min-h-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <RealTimeMonitor />
-              <LearningInsights />
+        <div className="flex-1 overflow-hidden px-1 py-0.5 min-h-0 flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 flex-1">
+            <div className="space-y-2 flex flex-col">
+              <div className="flex-1 min-h-0"><RealTimeMonitor /></div>
+              <div className="flex-1 min-h-0"><LearningInsights /></div>
             </div>
-            <div className="space-y-4">
-              <SmartSuggestions />
-              <ToolHeatmap />
+            <div className="space-y-2 flex flex-col">
+              <div className="flex-1 min-h-0"><SmartSuggestions /></div>
+              <div className="flex-1 min-h-0"><ToolHeatmap /></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Bottom: Input (always visible) ── */}
-      <div className="shrink-0 pt-2 pb-0">
-        <GoalInput onSubmit={handleSubmit} isLoading={hasActiveExecution} />
-      </div>
+      {/* ── Bottom: Input (hidden in chat view — PersonaCore has its own) ── */}
+      {viewMode !== 'chat' && (
+        <div className="shrink-0 pt-1 pb-0">
+          <GoalInput
+            onSubmit={handleSubmit}
+            isLoading={hasActiveExecution}
+            onFocus={() => setMood('attentive')}
+            onBlur={() => {
+              if (!hasActiveExecution) setMood('idle');
+            }}
+            onChange={() => {
+              if (mood === 'idle') setMood('attentive');
+            }}
+          />
+        </div>
+      )}
 
       {/* Error toast */}
       {error && (
