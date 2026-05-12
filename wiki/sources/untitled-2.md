@@ -27,14 +27,14 @@ StockCode{border:1px solid #7f9db9;color:#666;height:20px;line-height:18px;paddi
 
 ### Suggested new pages
 
-- [[SimSun]] (concept) — SimSun
+None
 
 ## Connections
 
 - Source: https://stock.eastmoney.com/emresource/main/css/stock_index.css?v=5/9/2026
 - Site: stock.eastmoney.com
 - Entitys: [[Microsoft]] · [[Bun]] · [[Ink]]
-- Suggested pages: SimSun
+- Suggested pages: None
 
 ## Full Content
 

@@ -49,14 +49,14 @@ extractor: "trafilatura"
 
 ### Suggested new pages
 
-- [[沪深股票数据]] (organization) — 沪深股票数据
+None
 
 ## Connections
 
 - Source: https://tushare.pro/document/2
 - Site: Tushare
 - Entitys: [[上市公司]] · [[Tushare]]
-- Suggested pages: 沪深股票数据
+- Suggested pages: None
 
 ## Full Content
 

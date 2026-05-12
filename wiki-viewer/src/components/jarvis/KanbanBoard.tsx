@@ -66,13 +66,13 @@ function TaskCard({ task, onClick }: { task: KanbanTask; onClick?: (task: Kanban
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       onClick={() => onClick?.(task)}
-      className="rounded-lg p-2.5 cursor-pointer transition-all hover:shadow-sm group"
+      className="rounded-lg p-1.5 cursor-pointer transition-all hover:shadow-sm group"
       style={{
         backgroundColor: 'var(--bg-primary)',
         border: `1px solid var(--border-default)`,
       }}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         <StatusIcon status={task.status} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
@@ -122,7 +122,7 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
   const isEmpty = tasks.length === 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="grid grid-cols-5 gap-2">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => col.statuses.includes(t.status));
@@ -156,14 +156,14 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
 
               {/* Cards */}
               <div
-                className="rounded-lg p-1.5 min-h-[60px] space-y-1.5 transition-colors"
+                className="rounded-lg p-1 min-h-[40px] space-y-1 transition-colors"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${col.color} 3%, transparent)`,
                   border: `1px dashed color-mix(in srgb, ${col.color} 15%, transparent)`,
                 }}
               >
                 {colTasks.length === 0 ? (
-                  <div className="text-center py-3">
+                  <div className="text-center py-2">
                     <span className="text-[10px]" style={{ color: 'var(--text-tertiary)', opacity: 0.4 }}>—</span>
                   </div>
                 ) : (
@@ -178,7 +178,7 @@ export function KanbanBoard({ tasks, onTaskClick }: KanbanBoardProps) {
       </div>
 
       {isEmpty && (
-        <div className="text-center py-4">
+        <div className="text-center py-2">
           <span className="text-xs italic" style={{ color: 'var(--text-tertiary)' }}>
             No active tasks — submit a goal to get started
           </span>

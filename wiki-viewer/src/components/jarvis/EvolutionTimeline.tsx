@@ -96,7 +96,7 @@ export function EvolutionTimeline({ events: propEvents }: EvolutionTimelineProps
   const availableSteps = [...new Set(rawEvents.map((e) => e.step))];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Filter chips */}
       {availableSteps.length > 1 && (
         <div className="flex flex-wrap gap-1">
@@ -138,19 +138,19 @@ export function EvolutionTimeline({ events: propEvents }: EvolutionTimelineProps
 
       {/* Timeline */}
       {loading ? (
-        <div className="text-center py-8 text-xs text-[var(--text-tertiary)]">Loading evolution timeline...</div>
+        <div className="text-center py-4 text-xs text-[var(--text-tertiary)]">Loading evolution timeline...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-8">
-          <GitBranch size={24} className="mx-auto mb-2 text-[var(--text-tertiary)] opacity-30" />
+        <div className="text-center py-4">
+          <GitBranch size={20} className="mx-auto mb-1 text-[var(--text-tertiary)] opacity-30" />
           <p className="text-xs text-[var(--text-tertiary)] italic">No evolution events yet</p>
-          <p className="text-[10px] text-[var(--text-tertiary)] mt-1">Events will appear as the agent learns and optimizes</p>
+          <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Events will appear as the agent learns and optimizes</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {[...grouped.entries()].map(([date, events]) => (
             <div key={date}>
               {/* Date header */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-semibold tracking-wider uppercase font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
                   {formatDateLabel(date)}
                 </span>
@@ -158,7 +158,7 @@ export function EvolutionTimeline({ events: propEvents }: EvolutionTimelineProps
               </div>
 
               {/* Events for this date */}
-              <div className="space-y-2 ml-3 pl-4 relative" style={{ borderLeft: '2px solid var(--border-default)' }}>
+              <div className="space-y-1 ml-3 pl-4 relative" style={{ borderLeft: '2px solid var(--border-default)' }}>
                 {events.map((ev, i) => {
                   const cfg = STEP_CONFIG[ev.step] || { icon: Activity, color: 'var(--text-tertiary)' };
                   const Icon = cfg.icon;
@@ -182,10 +182,10 @@ export function EvolutionTimeline({ events: propEvents }: EvolutionTimelineProps
                       />
 
                       <div
-                        className="rounded-lg p-3 transition-colors hover:bg-[var(--bg-secondary)]"
+                        className="rounded-lg p-2 transition-colors hover:bg-[var(--bg-secondary)]"
                         style={{ border: '1px solid var(--border-default)' }}
                       >
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-0.5">
                           <Icon size={13} style={{ color: cfg.color }} />
                           <span className="text-xs font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
                             {ev.step}

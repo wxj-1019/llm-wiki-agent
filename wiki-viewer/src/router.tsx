@@ -32,7 +32,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <ErrorBoundary />,
     children: [
-      { path: '/', element: <HomePage />, errorElement: <ErrorBoundary /> },
+      { path: '/', element: <LazyPage><JarvisPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/browse', element: <BrowsePage />, errorElement: <ErrorBoundary /> },
       { path: '/s/:slug', element: <PageDetailPage type='source' />, errorElement: <ErrorBoundary /> },
       { path: '/e/:name', element: <PageDetailPage type='entity' />, errorElement: <ErrorBoundary /> },

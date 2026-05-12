@@ -120,7 +120,7 @@ export function EvolutionHistoryPanel({ entries: propEntries, maxEntries = 50 }:
     <div className="apple-card overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-[var(--bg-secondary)] transition-colors"
       >
         <div className="flex items-center gap-2">
           <Activity size={15} className="text-apple-teal" style={{ filter: 'drop-shadow(0 0 4px rgba(100,210,255,0.4))' }} />
@@ -143,7 +143,7 @@ export function EvolutionHistoryPanel({ entries: propEntries, maxEntries = 50 }:
           >
             {/* Filter chips */}
             {Object.keys(stepCounts).length > 0 && (
-              <div className="flex flex-wrap gap-1 px-4 pb-2">
+              <div className="flex flex-wrap gap-1 px-3 pb-1">
                 <button
                   onClick={() => setFilter(null)}
                   className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
@@ -181,7 +181,7 @@ export function EvolutionHistoryPanel({ entries: propEntries, maxEntries = 50 }:
             )}
 
             {/* Timeline */}
-            <div className="px-4 pb-4 space-y-0 max-h-80 overflow-y-auto">
+            <div className="px-3 pb-2 space-y-0 max-h-40 overflow-hidden">
               {loading ? (
                 <div className="text-center py-6 text-xs text-[var(--text-tertiary)]">Loading history...</div>
               ) : filtered.length === 0 ? (

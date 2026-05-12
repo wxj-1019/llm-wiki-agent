@@ -75,24 +75,14 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte-claude-code 分支的 AGENTS.md 构建能力分析
 
 - [ETF专区](sources/etf-c6f436.md) — 该文章主要汇集了财经新闻、股市行情、公司动态及市场分析等内容，涵盖A股、港股、美股等市场表现，以及行业趋势、机构观点和个
-- [Test Document 2](sources/test-document-2.md) — 测试文档2
 ## Entities
-- [股大盘指数实时数据](entities/article-9021bd.md) — auto-detected entity
+- [上市公司](entities/上市公司.md) — auto-healed entity
 - [美的集团](entities/article-3e682d.md) — auto-detected entity
-- [沪深股票数据](entities/article-a0309f.md) — auto-detected entity
-- [爬取数据](entities/article-686420.md) — auto-detected entity
-- [拥有丰富的数据](entities/article-788aef.md) — auto-detected entity
-- [SimSun](entities/simsun.md) — auto-detected entity
-- [事件首届香港具身智能](entities/article-76e94a.md) — auto-detected entity
-- [股票是股份有限公司](entities/article-05668d.md) — auto-detected entity
 - [东方证券](entities/article-e4b25c.md) — auto-detected entity
 - [中金公司](entities/article-4c695c.md) — auto-detected entity
 - [嘉晨智能](entities/article-acd429.md) — auto-detected entity
-- [上海界面财联社科技](entities/article-8d07c7.md) — auto-detected entity
-- [上市公司](entities/article-e4f097.md) — auto-detected entity
-- [经成为一家伟大的公司](entities/article-93d8a7.md) — auto-detected entity
-- [如何在市场波动与技术](entities/article-0df44f.md) — auto-detected entity
-- [惠康科技](entities/article-2ab2de.md) — auto-detected entity
+- [上海界面财联社科技](entities/article-8d07c7.md) — 财联社运营主体，上海报业集团主管，新闻订阅系统五大新闻源之一
+- [惠康科技](entities/article-2ab2de.md) — A股IPO公司，股票代码001237，深交所主板，发行价53.26元
 - [Amazon](entities/amazon.md) — auto-detected entity
 - [持仓管理与组合分析](entities/持仓管理与组合分析.md) — auto-healed entity
 - [价格监控与预警系统](entities/价格监控与预警系统.md) — auto-healed entity
@@ -124,7 +114,6 @@ This file is maintained by the LLM. Updated on every ingest.
 - [AsyncClientPool](entities/AsyncClientPool.md) — auto-created entity
 - [AsyncDeepSeekClient](entities/AsyncDeepSeekClient.md) — auto-created entity
 - [DeepSeekClient](entities/DeepSeekClient.md) — auto-created entity
-- [DeepSeek](entities/DeepSeek.md) — auto-created entity
 - [大盘云图双表机制](entities/大盘云图双表机制.md) — auto-created entity
 - [板块策略数据服务](entities/板块策略数据服务.md) — auto-created entity
 - [大盘云图](entities/大盘云图.md) — auto-created entity
@@ -140,7 +129,6 @@ This file is maintained by the LLM. Updated on every ingest.
 - [SectorStrategyService](entities/SectorStrategyService.md) — auto-created entity
 - [SectorDataProvider](entities/SectorDataProvider.md) — auto-created entity
 - [AKShare](entities/AKShare.md) — auto-created entity
-- [Tushare](entities/Tushare.md) — auto-created entity
 - [KDJStrategy](entities/KDJStrategy.md) — auto-created entity
 - [BollingerStrategy](entities/BollingerStrategy.md) — auto-created entity
 - [MAStrategy](entities/MAStrategy.md) — auto-created entity
@@ -176,30 +164,22 @@ This file is maintained by the LLM. Updated on every ingest.
 - [GLM](entities/GLM.md) — auto-created entity
 - [Kimi](entities/Kimi.md) — auto-created entity
 - [UserProfileSystem](entities/UserProfileSystem.md) — auto-created entity
-- [Backtesting](entities/Backtesting.md) — auto-created entity
 - [SQLAlchemy](entities/SQLAlchemy.md) — auto-created entity
 - [PostgreSQL](entities/PostgreSQL.md) — auto-created entity
-- [MainFundSelection](entities/MainFundSelection.md) — auto-created entity
-- [GraphRebuildVerify](entities/GraphRebuildVerify.md) — auto-created entity
-- [ThreadingRebuildTest](entities/ThreadingRebuildTest.md) — auto-created entity
-- [LogVerifyTest](entities/LogVerifyTest.md) — auto-created entity
-- [MainFundSelectionSystem](entities/MainFundSelectionSystem.md) — auto-created entity
-- [HighDividendLowVol](entities/HighDividendLowVol.md) — auto-created entity
 - [QualityStrategy](entities/QualityStrategy.md) — auto-created entity
+- [HighDividendLowVol](entities/HighDividendLowVol.md) — auto-created entity
+- [TrendMomentum](entities/TrendMomentum.md) — 趋势+动量复合策略，结合趋势跟踪和动量筛选
 - [GrowthStrategy](entities/GrowthStrategy.md) — auto-created entity
 - [ValueStrategy](entities/ValueStrategy.md) — auto-created entity
 - [ConvertibleBondArbitrage](entities/ConvertibleBondArbitrage.md) — auto-created entity
 - [StatisticalArbitrage](entities/StatisticalArbitrage.md) — auto-created entity
 - [EventDriven](entities/EventDriven.md) — auto-created entity
-- [SectorRotation](entities/SectorRotation.md) — auto-created entity
 - [VolumePriceBreakout](entities/VolumePriceBreakout.md) — auto-created entity
 - [MeanReversion](entities/MeanReversion.md) — auto-created entity
 - [MomentumStrategy](entities/MomentumStrategy.md) — auto-created entity
 - [TrendTracking](entities/TrendTracking.md) — auto-created entity
 - [MultiFactorSelection](entities/MultiFactorSelection.md) — auto-created entity
-- [TrendMomentum](entities/TrendMomentum.md) — auto-created entity
 - [MoneyFlowStrategy](entities/MoneyFlowStrategy.md) — auto-created entity
-- [A股市场](entities/A股市场.md) — auto-created entity
 - [Claude Code](entities/ClaudeCode.md) — auto-created entity
 - [Ink](entities/Ink.md) — auto-created entity
 - [Latte](entities/Latte.md) — auto-created entity
@@ -208,7 +188,6 @@ This file is maintained by the LLM. Updated on every ingest.
 - [A股市场](entities/A股市场.md) — auto-healed entity
 - [Bitcoin](entities/Bitcoin.md) — auto-healed entity
 - [Claude Artifacts](entities/ClaudeArtifacts.md) — auto-healed entity
-- [ControlledPullback](entities/ControlledPullback.md) — auto-healed entity
 - [Datasette](entities/Datasette.md) — auto-healed entity
 - [DeepSeekR1-Lite-Preview](entities/DeepSeekR1LitePreview.md) — auto-healed entity
 - [Ethereum](entities/Ethereum.md) — auto-healed entity
@@ -216,17 +195,12 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Gemini 2.0 Flash](entities/Gemini2.0Flash.md) — auto-healed entity
 - [Gemini 2.0 Flash Thinking](entities/Gemini2.0FlashThinking.md) — auto-healed entity
 - [GrowthPotential](entities/GrowthPotential.md) — auto-healed entity
-- [LowRiskIncome](entities/LowRiskIncome.md) — auto-healed entity
 - [MLX-vlm](entities/MLXvlm.md) — auto-healed entity
-- [MainForceAccumulation](entities/MainForceAccumulation.md) — auto-healed entity
 - [Microsoft](entities/Microsoft.md) — auto-healed entity
 - [ModelCollapse](entities/ModelCollapse.md) — auto-healed entity
 - [NotebookLM](entities/NotebookLM.md) — auto-healed entity
 - [Phi4](entities/Phi4.md) — auto-healed entity
 - [ScalingLaws](entities/ScalingLaws.md) — auto-healed entity
-- [ShortTermBreakout](entities/ShortTermBreakout.md) — auto-healed entity
-- [TrendMomentum](entities/TrendMomentum.md) — auto-healed entity
-- [ValueStable](entities/ValueStable.md) — auto-healed entity
 - [主力资金流入策略](entities/主力资金流入策略.md) — auto-healed entity
 - [多因子评分策略](entities/多因子评分策略.md) — auto-healed entity
 - [板块轮动策略](entities/板块轮动策略.md) — auto-healed entity
@@ -271,7 +245,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Hyperledger Fabric](entities/HyperledgerFabric.md) — [[慧公寓管理系统]] — 实际应用项目
 - [MainFundSelection](entities/MainFundSelection.md) — 主力选股系统，一个[[AIAgent|AI驱动的]]旗舰智能选股系统，采用六层流水线架构，从全市场主力资金流入股票中每日精选3-10只最优标的。
 - [QuantitativeAnalysis](entities/QuantitativeAnalysis.md) — 系统性量化分析方法论在金融选股中的应用。在[[main-fund-selection-system-analysis|主力选股系统]]中，量化预评分（Qu...
-- [Redis](entities/Redis.md) — [[王信杰]] — 技术栈中间件
+- [Redis](entities/Redis.md) — 高性能内存数据库；平台缓存层、任务队列、限流、验证码存储等基础设施核心组件
 - [RocketMQ](entities/RocketMQ.md) — [[王信杰]] — 技术栈中间件
 - [SpringBoot](entities/SpringBoot.md) — [[王信杰]] — 技术栈核心
 - [SpringCloudAlibaba](entities/SpringCloudAlibaba.md) — [[王信杰]] — 技术栈
@@ -279,7 +253,7 @@ This file is maintained by the LLM. Updated on every ingest.
 - [WencaiAPI](entities/WencaiAPI.md) — 问财API（pywencai）是[[MainFundSelection|主力选股系统]]的主要数据源，提供A股市场的主力资金流向数据。
 - [ZKP](entities/ZKP.md) — [[慧公寓管理系统]] — 实际应用
 - [慧公寓管理系统](entities/慧公寓管理系统.md) — [[王信杰]] — 项目负责人
-- [海康威视](entities/海康威视.md) — 王信杰曾在此公司担任后端开发实习生（2024.09-2025.03），参与Python组件平台开发和Java敏捷项目
+- [海康威视](entities/海康威视.md) — 全球领先的安防与AIoT解决方案提供商；王信杰曾在此担任后端开发实习生
 - [王信杰](entities/王信杰.md) — [[能源大数据平台]] — 微服务架构+Redis集群，支持5000 QPS
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
@@ -315,13 +289,6 @@ This file is maintained by the LLM. Updated on every ingest.
 - [BehavioralCollectorPattern](concepts/BehavioralCollectorPattern.md) — auto-created concept
 - [UserProfiling](concepts/UserProfiling.md) — auto-created concept
 - [NeuralNetworks](concepts/NeuralNetworks.md) — auto-created concept
-- [Attention Mechanism](concepts/AttentionMechanism.md) — auto-created concept
-- [StockSelectionStrategy](concepts/StockSelectionStrategy.md) — auto-created concept
-- [RiskManagement](concepts/RiskManagement.md) — auto-created concept
-- [Backtesting](concepts/Backtesting.md) — auto-created concept
-- [DataPipeline](concepts/DataPipeline.md) — auto-created concept
-- [QuantPreScoring](concepts/QuantPreScoring.md) — auto-created concept
-- [AIMultiAgentStockAnalysis](concepts/AIMultiAgentStockAnalysis.md) — auto-created concept
 - [Platform Subpackage Publishing](concepts/PlatformSubpackagePublishing.md) — auto-created concept
 - [Feature Flag Dead Code Elimination](concepts/FeatureFlagDeadCodeElimination.md) — auto-created concept
 - [Attention Mechanism](concepts/AttentionMechanism.md) — neural network technique for focusing on specific parts of input

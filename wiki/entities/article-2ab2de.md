@@ -1,15 +1,32 @@
 ---
 title: "惠康科技"
 type: entity
-tags: [auto-ingested]
-date: 2026-05-12
-source: "article-0dfb70"
+tags: [a-stock, ipo, 深交所]
+sources: [article-0dfb70, article-c889ca]
+last_updated: 2026-05-12
 ---
 
-## Summary
+# 惠康科技
 
-Auto-detected entity from [[article-0dfb70]].
+惠康科技（股票代码：001237）是一家 A 股上市公司，拟在深交所主板上市。
+
+## IPO 信息
+
+- **股票代码**：001237
+- **申购代码**：001237
+- **拟上市地点**：深交所主板
+- **发行总数**：3,708.79 万股
+- **网上发行**：1,483.50 万股
+- **申购上限**：1.45 万股
+- **发行价格**：53.26 元
+- **发行市盈率**：21.04
+- **申购日期**：2026-05-13（周三）
+- **中签号公布日**：2026-05-15
+- **中签缴款日期**：2026-05-15
 
 ## Connections
 
-- Auto-detected during ingestion of [[article-0dfb70]]
+- [[article-0dfb70]] — 新股频道数据来源
+- [[article-c889ca]] — 股票频道数据来源
+- [[article-acd429|嘉晨智能]] — 同期 IPO 公司
+- [[A股市场]] — 所属市场

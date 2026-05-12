@@ -68,13 +68,13 @@ extractor: "trafilatura"
 
 ### Suggested new pages
 
-- [[上市公司]] (organization) — 上市公司
+None
 
 ## Connections
 
 - Source: https://finance.eastmoney.com/a/czqyw.html
 - Site: finance.eastmoney.com
-- Suggested pages: 上市公司
+- Suggested pages: None
 
 ## Full Content
 

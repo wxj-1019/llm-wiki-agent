@@ -77,6 +77,204 @@
       "updated_at": "2026-05-12T01:29:30",
       "usage_count": 0,
       "last_used": null
+    },
+    {
+      "name": "handle-greeting",
+      "version": "1.0.0",
+      "description": "",
+      "source": "generated",
+      "enabled": true,
+      "installed_at": "2026-05-12T03:22:09",
+      "updated_at": "2026-05-12T03:22:09",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "greet-user",
+      "version": "1.0.0",
+      "description": "",
+      "source": "generated",
+      "enabled": true,
+      "installed_at": "2026-05-12T03:25:32",
+      "updated_at": "2026-05-12T03:25:32",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "say-hello",
+      "version": "1.0.0",
+      "description": "",
+      "source": "generated",
+      "enabled": true,
+      "installed_at": "2026-05-12T03:32:07",
+      "updated_at": "2026-05-12T03:32:07",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "using-superpowers",
+      "version": "1.0.0",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "brainstorming",
+      "version": "1.0.0",
+      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "writing-plans",
+      "version": "1.0.0",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "executing-plans",
+      "version": "1.0.0",
+      "description": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "subagent-driven-development",
+      "version": "1.0.0",
+      "description": "Use when executing implementation plans with independent tasks in the current session",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "version": "1.0.0",
+      "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "test-driven-development",
+      "version": "1.0.0",
+      "description": "Use when implementing any feature or bugfix, before writing implementation code",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "systematic-debugging",
+      "version": "1.0.0",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "requesting-code-review",
+      "version": "1.0.0",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "receiving-code-review",
+      "version": "1.0.0",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "verification-before-completion",
+      "version": "1.0.0",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "version": "1.0.0",
+      "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "using-git-worktrees",
+      "version": "1.0.0",
+      "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "writing-skills",
+      "version": "1.0.0",
+      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "source": "superpowers",
+      "enabled": true,
+      "installed_at": "2026-05-12T04:00:00",
+      "updated_at": "2026-05-12T04:00:00",
+      "usage_count": 0,
+      "last_used": null
+    },
+    {
+      "name": "greeting-response",
+      "version": "1.0.0",
+      "description": "",
+      "source": "generated",
+      "enabled": true,
+      "installed_at": "2026-05-13T00:45:33",
+      "updated_at": "2026-05-13T00:45:33",
+      "usage_count": 0,
+      "last_used": null
     }
   ]
 }

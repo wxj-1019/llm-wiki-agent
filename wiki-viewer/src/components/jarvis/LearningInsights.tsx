@@ -94,7 +94,7 @@ export function LearningInsights() {
 
   if (loading) {
     return (
-      <div className="glass p-4 space-y-3">
+      <div className="glass p-2.5 space-y-2">
         <div className="flex items-center gap-2">
           <Brain size={14} className="animate-pulse" style={{ color: 'var(--marshmallow-lavender)' }} />
           <span className="text-xs font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
@@ -107,14 +107,14 @@ export function LearningInsights() {
 
   if (!data || data.total_lessons === 0) {
     return (
-      <div className="glass p-4">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="glass p-2.5">
+        <div className="flex items-center gap-2 mb-1">
           <Brain size={14} style={{ color: 'var(--marshmallow-lavender)' }} />
           <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
             Learning Insights
           </span>
         </div>
-        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
           No lessons learned yet. Execute tasks to build agent intelligence.
         </p>
       </div>
@@ -131,7 +131,7 @@ export function LearningInsights() {
   const confTotal = Object.values(data.confidence_distribution).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="glass p-4 space-y-4">
+    <div className="glass p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain size={14} style={{ color: 'var(--marshmallow-lavender)' }} />
@@ -147,7 +147,7 @@ export function LearningInsights() {
 
       {/* Confidence Distribution */}
       {confTotal > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <span className="text-[10px] font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
             CONFIDENCE DISTRIBUTION
           </span>
@@ -225,7 +225,7 @@ export function LearningInsights() {
 
       {/* Top Patterns */}
       {data.top_patterns.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <span className="text-[10px] font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
             TOP PATTERNS
           </span>

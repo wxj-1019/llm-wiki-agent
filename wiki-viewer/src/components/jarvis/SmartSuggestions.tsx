@@ -195,7 +195,7 @@ export function SmartSuggestions() {
 
   if (loading) {
     return (
-      <div className="glass p-4 space-y-3">
+      <div className="glass p-2.5 space-y-2">
         <div className="flex items-center gap-2">
           <Lightbulb size={14} className="animate-pulse" style={{ color: 'var(--apple-yellow)' }} />
           <span className="text-xs font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
@@ -207,7 +207,7 @@ export function SmartSuggestions() {
   }
 
   return (
-    <div className="glass p-4 space-y-3">
+    <div className="glass p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb size={14} style={{ color: 'var(--apple-yellow)' }} />
@@ -221,7 +221,7 @@ export function SmartSuggestions() {
         </span>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <AnimatePresence>
           {visibleSuggestions.map((s, i) => {
             const colors = TYPE_COLORS[s.type];
@@ -232,10 +232,10 @@ export function SmartSuggestions() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="rounded-lg p-2.5 transition-colors"
+                className="rounded-lg p-2 transition-colors"
                 style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}
               >
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-1.5">
                   <s.icon size={12} style={{ color: colors.text, flexShrink: 0, marginTop: 2 }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

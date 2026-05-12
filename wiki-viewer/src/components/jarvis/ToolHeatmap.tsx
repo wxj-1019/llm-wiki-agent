@@ -71,7 +71,7 @@ export function ToolHeatmap() {
 
   if (loading) {
     return (
-      <div className="glass p-4 space-y-3">
+      <div className="glass p-2.5 space-y-2">
         <div className="flex items-center gap-2">
           <Grid3X3 size={14} className="animate-pulse" style={{ color: 'var(--apple-teal)' }} />
           <span className="text-xs font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
@@ -86,7 +86,7 @@ export function ToolHeatmap() {
   const activeTools = tools.filter((t) => t.call_count > 0).length;
 
   return (
-    <div className="glass p-4 space-y-3">
+    <div className="glass p-2.5 space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

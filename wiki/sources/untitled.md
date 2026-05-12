@@ -35,14 +35,14 @@ extractor: "trafilatura"
 
 ### Suggested new pages
 
-- [[股票是股份有限公司]] (organization) — 股票是股份有限公司
+None
 
 ## Connections
 
 - Source: https://www.cls.cn/our?nav=our
 - Site: cls.cn
 - Entitys: [[上市公司]]
-- Suggested pages: 股票是股份有限公司
+- Suggested pages: None
 
 ## Full Content
 

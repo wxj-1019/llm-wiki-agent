@@ -6,6 +6,18 @@
 
 ---
 
+## [2026-05-13] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
+## [2026-05-13] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
+## [2026-05-13] lint | Wiki health check
+
+Ran lint. See lint-report.md for details.
+
 ## [2026-05-11] lint | Wiki health check
 
 Ran lint. See lint-report.md for details.
@@ -628,3 +640,27 @@ Auto-ingested from fetched content → [[A股大盘指数实时数据|sources/ar
 ## [2026-05-12] graph | Knowledge graph rebuilt
 
 313 nodes, 2330 edges (1276 extracted, 1054 inferred).
+
+## [2026-05-13]
+
+## [2026-05-13] heal | Auto-healed missing entities
+
+Created entity pages for: 上市公司.
+## [2026-05-13] graph | Knowledge graph rebuilt
+
+313 nodes, 4161 edges (1285 extracted, 2876 inferred).
+## [2026-05-13] report | Graph health report generated
+
+313 nodes analyzed.
+## [2026-05-13] graph | Knowledge graph rebuilt
+
+313 nodes, 4186 edges (1285 extracted, 2901 inferred).
+## [2026-05-13] graph | Knowledge graph rebuilt
+
+300 nodes, 4434 edges (1419 extracted, 3015 inferred).
+## [2026-05-13] report | Graph health report generated
+
+300 nodes analyzed.
+## [2026-05-13] graph | Knowledge graph rebuilt
+
+300 nodes, 1419 edges (1419 extracted, 0 inferred).

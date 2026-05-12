@@ -87,3 +87,10 @@ state/
 vendor/
 
 raw-inbox/
+
+# Qoder
+.qoder/
+PROJECT_OVERVIEW.md
+skills/greet-user/
+skills/handle-greeting/
+skills/say-hello/

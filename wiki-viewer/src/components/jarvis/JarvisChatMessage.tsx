@@ -39,11 +39,11 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
         className="flex justify-end"
       >
         <div className="flex items-start gap-2 max-w-[80%]">
-          <div className="apple-card px-4 py-3 bg-[var(--apple-blue)]/10 border-[var(--apple-blue)]/20">
-            <p className="text-sm text-[var(--text-primary)]">{content}</p>
+          <div className="apple-card px-3 py-2 bg-[var(--apple-blue)]/10 border-[var(--apple-blue)]/20">
+            <p className="text-xs text-[var(--text-primary)]">{content}</p>
           </div>
-          <div className="w-7 h-7 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0 mt-1">
-            <User size={14} className="text-[var(--text-secondary)]" />
+          <div className="w-6 h-6 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0 mt-0.5">
+            <User size={12} className="text-[var(--text-secondary)]" />
           </div>
         </div>
       </motion.div>
@@ -59,10 +59,10 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
         className="flex justify-start"
       >
         <div className="flex items-start gap-2 max-w-[85%]">
-          <div className="w-7 h-7 rounded-full bg-[var(--apple-teal)]/10 flex items-center justify-center shrink-0 mt-1">
-            <Bot size={14} className="text-[var(--apple-teal)]" />
+          <div className="w-6 h-6 rounded-full bg-[var(--apple-teal)]/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Bot size={12} className="text-[var(--apple-teal)]" />
           </div>
-          <div className="apple-card px-4 py-3">
+          <div className="apple-card px-3 py-2">
             <div className="prose prose-sm max-w-none text-[var(--text-primary)]">
               <MarkdownRenderer content={content} />
             </div>
@@ -80,8 +80,8 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
         transition={{ duration: 0.25, ease: 'easeOut' }}
         className="flex justify-center"
       >
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-apple-red/10 border border-apple-red/20 text-apple-red text-xs">
-          <AlertCircle size={14} />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-apple-red/10 border border-apple-red/20 text-apple-red text-xs">
+          <AlertCircle size={12} />
           <span>{content}</span>
         </div>
       </motion.div>
@@ -102,14 +102,14 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
       transition={{ duration: 0.25, ease: 'easeOut' }}
       className="flex justify-start pl-9"
     >
-      <div className={`apple-card px-3 py-2 max-w-[85%] ${
+      <div className={`apple-card px-2.5 py-1.5 max-w-[85%] ${
         isApproval ? 'border-amber-500/20 bg-amber-500/5' :
         isFailed ? 'border-apple-red/20 bg-apple-red/5' :
         isRunning ? 'border-[var(--apple-blue)]/20 bg-[var(--apple-blue)]/5' :
         isDone ? 'border-apple-green/20 bg-apple-green/5' :
         'bg-[var(--bg-tertiary)]/40'
       }`}>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-0.5">
           {isApproval ? (
             <AlertTriangle size={12} className="text-amber-500" />
           ) : isFailed ? (

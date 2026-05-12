@@ -52,14 +52,14 @@ extractor: "trafilatura"
 
 ### Suggested new pages
 
-- [[爬取数据]] (organization) — 爬取数据
+None
 
 ## Connections
 
 - Source: https://blog.csdn.net/m0_73639126/article/details/158320981
 - Site: blog.csdn.net
 - Entitys: [[BackTrader]] · [[Tushare]]
-- Suggested pages: 爬取数据
+- Suggested pages: None
 
 ## Full Content
 

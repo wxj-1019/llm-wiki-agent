@@ -43,22 +43,22 @@ In December 2023 (here’s the Internet Archive for the OpenAI pricing page) Ope
 - [[GitHub Hermes 生态系统综述]] (source)
 - [[GPT]] (entity)
 - [[ReactNative]] (entity)
-- [[Things we learned about LLMs in 2024]] (source)
-- [[Amanda Askell]] (entity)
+- [[things-we-learned-about-llms-in-2024]] (source)
+- [[AmandaAskell]] (entity)
 - [[Bun]] (entity)
 - [[ChatGPT]] (entity)
 
 ### Suggested new pages
 
-- [[Amazon]] (organization) — Amazon
+- [[amazon]] (organization) — Amazon
 
 ## Connections
 
 - Source: https://simonwillison.net/2024/Dec/31/llms-in-2024/
 - Site: Simon Willison’s Weblog
-- Concepts: [[Chain-of-Thought]] · [[Slop]] · [[Synthetic Data]]
+- Concepts: [[ChainOfThought]] · [[Slop]] · [[SyntheticData]]
 - Entitys: [[Apple]] · [[OpenAI]] · [[Google]] · [[Anthropic]] · [[SpringCloudAlibaba]] · [[Meta]]
-- Sources: [[GitHub Hermes 生态系统综述]] · [[Things we learned about LLMs in 2024]]
+- Sources: [[GitHub Hermes 生态系统综述]] · [[things-we-learned-about-llms-in-2024]]
 - Suggested pages: Amazon
 
 ## Full Content

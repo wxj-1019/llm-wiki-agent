@@ -47,7 +47,7 @@ export function NeuralPulseBar({ tools, isRunning }: { tools: ToolItem[]; isRunn
   }, [tools]);
 
   return (
-    <div className="relative h-1 w-full overflow-hidden mb-2">
+    <div className="relative h-0.5 w-full overflow-hidden mb-1">
       <div className="absolute inset-0 flex gap-[2px]" style={{ opacity: isRunning ? 0.7 : 0.5 }}>
         {segments.map((seg, i) => (
           <motion.div

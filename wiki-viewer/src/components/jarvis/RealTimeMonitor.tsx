@@ -69,8 +69,8 @@ function MetricCard({ metric }: { metric: MonitorMetric }) {
   const trendColor = TREND_COLORS[metric.trend];
 
   return (
-    <div className="rounded-lg p-2.5" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-      <div className="flex items-center justify-between mb-1">
+    <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+      <div className="flex items-center justify-between mb-0.5">
         <div className="flex items-center gap-1.5">
           <metric.icon size={10} style={{ color: metric.color }} />
           <span className="text-[9px] font-mono-data" style={{ color: 'var(--text-tertiary)' }}>
@@ -181,7 +181,7 @@ export function RealTimeMonitor() {
   }, [updateMetrics]);
 
   return (
-    <div className="glass p-4 space-y-3">
+    <div className="glass p-2.5 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity size={14} style={{ color: 'var(--apple-teal)' }} />

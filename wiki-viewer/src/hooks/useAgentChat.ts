@@ -45,6 +45,7 @@ export function useAgentChat() {
           description: opts.description,
           strategy,
           options: opts.options ?? {},
+          session_id: sessionId,
         }),
         signal: controller.signal,
       });

@@ -39,13 +39,13 @@ extractor: "trafilatura"
 
 ### Suggested new pages
 
-- [[经成为一家伟大的公司]] (organization) — 经成为一家伟大的公司
+None
 
 ## Connections
 
 - Source: https://finance.sina.com.cn/zt_d/berkshiream2026/
 - Site: finance.sina.com.cn
-- Suggested pages: 经成为一家伟大的公司
+- Suggested pages: None
 
 ## Full Content
 
