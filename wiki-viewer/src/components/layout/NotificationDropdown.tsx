@@ -21,6 +21,18 @@ const colorMap = {
   progress: 'text-apple-purple',
 };
 
+const severityColorMap: Record<string, string> = {
+  critical: 'text-red-500',
+  warning: 'text-amber-500',
+  success: 'text-emerald-500',
+  info: 'text-apple-blue',
+};
+
+const severityBorderMap: Record<string, string> = {
+  critical: 'border-l-2 border-l-red-500',
+  warning: 'border-l-2 border-l-amber-500',
+};
+
 export function NotificationDropdown() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -117,6 +129,14 @@ export function NotificationDropdown() {
                 ) : (
                   notifications.map((n) => {
                     const Icon = iconMap[n.type];
+                    const isAlert = (n as any).isAlert as boolean | undefined;
+                    const severity = (n as any).severity as string | undefined;
+                    const iconColor = isAlert && severity
+                      ? severityColorMap[severity] || colorMap[n.type]
+                      : colorMap[n.type];
+                    const borderClass = isAlert && severity
+                      ? severityBorderMap[severity] || ''
+                      : '';
                     return (
                       <div
                         key={n.id}
@@ -124,9 +144,9 @@ export function NotificationDropdown() {
                         onFocus={() => !n.read && markRead(n.id)}
                         className={`flex items-start gap-3 px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-default)] last:border-b-0 ${
                           !n.read ? 'bg-[var(--bg-secondary)]/40' : ''
-                        }`}
+                        } ${borderClass}`}
                       >
-                        <Icon size={16} className={`shrink-0 mt-0.5 ${colorMap[n.type]}`} />
+                        <Icon size={16} className={`shrink-0 mt-0.5 ${iconColor}`} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm leading-relaxed">{n.message}</p>
                           <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
