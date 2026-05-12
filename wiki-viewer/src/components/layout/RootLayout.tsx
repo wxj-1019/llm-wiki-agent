@@ -1,8 +1,9 @@
-import { useOutlet, useLocation } from 'react-router-dom';
+import { useOutlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
@@ -57,8 +58,15 @@ export function RootLayout() {
   const { updateAvailable, applyUpdate } = useSWUpdate();
   useKeyboardShortcuts();
 
-  // Activate SSE event stream for real-time alerts
-  useEventStream();
+  // B3: subscribe to alert count for ResizeObserver dependency
+  const alertCount = useNotificationStore(
+    (s) => s.notifications.filter((n) => n.isAlert).length,
+  );
+
+  const navigate = useNavigate();
+
+  // P7: pass navigate to useEventStream; P5: receive connectionState
+  const { connectionState } = useEventStream(navigate);
 
   const bannerRef = useRef<HTMLDivElement>(null);
   const [bannerHeight, setBannerHeight] = useState(0);
@@ -78,7 +86,7 @@ export function RootLayout() {
     const observer = new ResizeObserver(measureBanner);
     if (bannerRef.current) observer.observe(bannerRef.current);
     return () => observer.disconnect();
-  }, [measureBanner, isOnline, updateAvailable, canInstall, apiConnected]);
+  }, [measureBanner, isOnline, updateAvailable, canInstall, apiConnected, alertCount]);
 
   // Scroll to top on route change, but skip detail pages (they restore scroll position)
   useEffect(() => {
@@ -96,7 +104,7 @@ export function RootLayout() {
       >
         {t('action.skipToContent', 'Skip to content')}
       </a>
-      <Header />
+      <Header connectionState={connectionState} />
       <ToastContainer />
       <IngestProgress />
       <CommandPalette />
