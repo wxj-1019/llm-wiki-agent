@@ -5,9 +5,12 @@ import { Send, Loader2 } from 'lucide-react';
 interface GoalInputProps {
   onSubmit: (description: string, strategy: string) => void;
   isLoading: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onChange?: (value: string) => void;
 }
 
-export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
+export function GoalInput({ onSubmit, isLoading, onFocus, onBlur, onChange }: GoalInputProps) {
   const { t } = useTranslation();
   const [description, setDescription] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -24,6 +27,7 @@ export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDescription(e.target.value);
+    onChange?.(e.target.value);
     if (e.target.value.length > 0 && !hasTyped) setHasTyped(true);
     if (e.target.value.length === 0) setHasTyped(false);
   };
@@ -33,7 +37,7 @@ export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
   }, [description]);
 
   return (
@@ -55,8 +59,8 @@ export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
               ref={textareaRef}
               value={description}
               onChange={handleChange}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              onFocus={() => { setIsFocused(true); onFocus?.(); }}
+              onBlur={() => { setIsFocused(false); onBlur?.(); }}
               placeholder={t('jarvis.goal_placeholder', 'Describe what you want Jarvis to do...')}
               className="ji-textarea"
               disabled={isLoading}
