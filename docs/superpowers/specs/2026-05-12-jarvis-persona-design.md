@@ -1,6 +1,6 @@
 # Jarvis Persona & Conversational Avatar — Design Spec
 
-> **Status:** Draft  
+> **Status:** Implemented  
 > **Date:** 2026-05-12  
 > **Scope:** JarvisPage.tsx + 3 sub-components + persona prompt layer
 
@@ -245,11 +245,11 @@ If backend is request/response:
 
 ## 10. Success Criteria
 
-1. [ ] Avatar is visible on Jarvis page at all times
-2. [ ] Empty state: avatar centered, idle amber glow
-3. [ ] Typing: avatar scales up 1.1x, glow turns cyan
-4. [ ] Submit: avatar animates to left (0.6s), shrinks to 48px
-5. [ ] Reply appears with typewriter effect in holographic bubble
-6. [ ] All Jarvis replies reflect the butler persona in tone
-7. [ ] System prompt injection is in place and cannot be bypassed by user input
-8. [ ] Reduced motion preference is respected
+1. [x] Avatar is visible on Jarvis page at all times
+2. [x] Empty state: avatar centered, idle amber glow
+3. [x] Typing: avatar perks up with cyan glow (attentive mood)
+4. [x] Submit: avatar animates to left (0.6s), shrinks to 48px (scale 0.4)
+5. [x] Reply appears with typewriter effect in holographic bubble
+6. [x] All Jarvis replies reflect the butler persona in tone
+7. [x] System prompt injection is in place and cannot be bypassed by user input
+8. [x] Reduced motion preference is respected

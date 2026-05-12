@@ -38,7 +38,7 @@ Ensure the dev server is not running during code edits. No build step is require
 
 **Context:** The existing avatar uses `requestAnimationFrame` for blob rotation and an overlay glow. We need to make rotation speed and glow color reactive to a `mood` prop.
 
-- [ ] **Step 1: Add mood type and props**
+- [x] **Step 1: Add mood type and props**
 
 Add above the component:
 
@@ -58,7 +58,7 @@ Change the component signature:
 export function JarvisAvatar({ size = 120, isActive = false, mood = 'idle' }: JarvisAvatarProps) {
 ```
 
-- [ ] **Step 2: Add mood config map**
+- [x] **Step 2: Add mood config map**
 
 Inside the component, above the `useEffect`:
 
@@ -72,7 +72,7 @@ const MOOD_CONFIG: Record<JarvisMood, { speedMult: number; glowColor: string; gl
 };
 ```
 
-- [ ] **Step 3: Drive rotation speed from mood**
+- [x] **Step 3: Drive rotation speed from mood**
 
 In the `animate` function, replace the raw `JA_TIME` usage with a mood-adjusted cycle time:
 
@@ -90,7 +90,7 @@ BLOB_CONFIG.forEach((blobCfg, i) => {
 });
 ```
 
-- [ ] **Step 4: Drive glow color from mood**
+- [x] **Step 4: Drive glow color from mood**
 
 In the `overlayRef` block, replace the hard-coded amber with mood-driven color:
 
@@ -122,7 +122,7 @@ Add `mood` to the `useEffect` dependency array:
 }, [isActive, mood]);
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add wiki-viewer/src/components/jarvis/JarvisAvatar.tsx
@@ -138,7 +138,7 @@ git commit -m "feat(jarvis): add mood-driven glow and rotation speed to avatar"
 
 **Context:** A single hook that manages the mood state machine and provides transition helpers.
 
-- [ ] **Step 1: Create the hook file**
+- [x] **Step 1: Create the hook file**
 
 ```tsx
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -195,7 +195,7 @@ export function useJarvisMood(options: UseJarvisMoodOptions = {}) {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add wiki-viewer/src/hooks/useJarvisMood.ts
@@ -211,7 +211,7 @@ git commit -m "feat(jarvis): add useJarvisMood hook for mood state machine"
 
 **Context:** A self-contained component that renders Jarvis replies with a character-by-character typewriter effect, holographic border, and blinking cursor.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 ```tsx
 import { useState, useEffect, useRef } from 'react';
@@ -276,7 +276,7 @@ export function JarvisReplyBubble({ content, speedMs = 12, onComplete }: JarvisR
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add wiki-viewer/src/components/jarvis/JarvisReplyBubble.tsx
@@ -292,7 +292,7 @@ git commit -m "feat(jarvis): add JarvisReplyBubble with typewriter effect"
 
 **Context:** The parent needs to know when the user focuses the input (trigger `attentive` mood) and when they type vs clear (toggle `attentive` on/off).
 
-- [ ] **Step 1: Extend the interface**
+- [x] **Step 1: Extend the interface**
 
 ```tsx
 interface GoalInputProps {
@@ -304,7 +304,7 @@ interface GoalInputProps {
 }
 ```
 
-- [ ] **Step 2: Wire callbacks in the component**
+- [x] **Step 2: Wire callbacks in the component**
 
 Change the component signature and add callback triggers:
 
@@ -339,7 +339,7 @@ In the textarea, wire focus/blur:
             />
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add wiki-viewer/src/components/jarvis/GoalInput.tsx
@@ -356,7 +356,7 @@ git commit -m "feat(jarvis): expose onFocus/onBlur/onChange callbacks from GoalI
 
 **Context:** This is the orchestration component. It renders the avatar at the correct position, holds the reply zone, and accepts `visibleMessages` + callbacks from the parent.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 ```tsx
 import { useMemo } from 'react';
@@ -521,7 +521,7 @@ export function JarvisPersonaCore({
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add wiki-viewer/src/components/jarvis/JarvisPersonaCore.tsx
@@ -537,7 +537,7 @@ git commit -m "feat(jarvis): add JarvisPersonaCore orchestration component"
 
 **Context:** Replace the existing Chat view fragment with `JarvisPersonaCore`. Wire the `useJarvisMood` hook so that typing → `attentive`, submit → `thinking` + dock left, reply arrives → `idle`.
 
-- [ ] **Step 1: Add imports**
+- [x] **Step 1: Add imports**
 
 ```tsx
 import { useJarvisMood } from '@/hooks/useJarvisMood';
@@ -546,7 +546,7 @@ import { JarvisPersonaCore } from '@/components/jarvis/JarvisPersonaCore';
 
 Remove unused imports: `JarvisAvatar`, `JarvisChatMessage` (if no longer used elsewhere).
 
-- [ ] **Step 2: Initialize hook in component body**
+- [x] **Step 2: Initialize hook in component body**
 
 After the state declarations (around line 95):
 
@@ -554,7 +554,7 @@ After the state declarations (around line 95):
 const { mood, setMood, isDockedLeft, dockLeft, dockCenter } = useJarvisMood({ minThinkingMs: 1500 });
 ```
 
-- [ ] **Step 3: Wire focus/change/submit callbacks**
+- [x] **Step 3: Wire focus/change/submit callbacks**
 
 Add handler functions:
 
@@ -580,7 +580,7 @@ const handlePersonaSubmit = useCallback((description: string, strategy: string) 
 }, [connect, setMood, dockLeft]);
 ```
 
-- [ ] **Step 4: Wire reply completion**
+- [x] **Step 4: Wire reply completion**
 
 When a new assistant message arrives (or when `currentExecution` status changes to `done`), set mood back to `idle`:
 
@@ -592,7 +592,7 @@ useEffect(() => {
 }, [currentExecution?.status, setMood]);
 ```
 
-- [ ] **Step 5: Replace the Chat view block**
+- [x] **Step 5: Replace the Chat view block**
 
 Replace the entire `{viewMode === 'chat' && (...)}` block with:
 
@@ -615,7 +615,7 @@ Replace the entire `{viewMode === 'chat' && (...)}` block with:
       )}
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add wiki-viewer/src/components/pages/JarvisPage.tsx
@@ -632,7 +632,7 @@ git commit -m "feat(jarvis): integrate JarvisPersonaCore into JarvisPage"
 
 **Context:** The persona voice must be applied to all LLM calls made by the Jarvis agent. The cleanest approach is to prepend it inside the shared `call_llm()` gateway so every caller gets it automatically.
 
-- [ ] **Step 1: Define persona constant in `tools/shared/llm.py`**
+- [x] **Step 1: Define persona constant in `tools/shared/llm.py`**
 
 At the top of the file (after imports), add:
 
@@ -655,7 +655,7 @@ _JARVIS_PERSONA = (
 )
 ```
 
-- [ ] **Step 2: Prepend persona to system messages**
+- [x] **Step 2: Prepend persona to system messages**
 
 Inside `call_llm()`, find where `messages` is built (around line 332). Change:
 
@@ -676,13 +676,13 @@ To:
     messages.append({"role": "system", "content": combined_system})
 ```
 
-- [ ] **Step 3: Verify loop.py callers align**
+- [x] **Step 3: Verify loop.py callers align**
 
 Open `tools/jarvis/loop.py` and check the `system="..."` strings at lines ~223, ~259, ~278, ~332, ~431. These should be kept as **task-specific instructions** (e.g., "You are a planning assistant...") because the persona base layer is now injected automatically by `call_llm()`. No code change is required unless a caller overrides the system prompt in a way that conflicts.
 
 Quick sanity check — read lines 220–280 and confirm the strings are short task directives. If any contain full personality instructions, replace them with concise task directives since the persona is now handled centrally.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tools/shared/llm.py
@@ -701,7 +701,7 @@ git commit -m "feat(jarvis): inject JARVIS persona system prompt into all LLM ca
 - [x] Typewriter reply → `JarvisReplyBubble` with RAF-based character stepping
 - [x] Butler persona tone → `_JARVIS_PERSONA` injected in `call_llm()`
 - [x] System prompt injection hard-coded → prepended in `call_llm()`, user-supplied `system` appended after
-- [x] Reduced motion → Not yet implemented; add `prefers-reduced-motion` check in Task 6 follow-up
+- [x] Reduced motion → Implemented via `window.matchMedia('(prefers-reduced-motion: reduce)')` in Avatar, ReplyBubble, and PersonaCore
 
 **Placeholder scan:** None found.
 
@@ -711,7 +711,7 @@ git commit -m "feat(jarvis): inject JARVIS persona system prompt into all LLM ca
 
 ## Execution Handoff
 
-**Plan complete and saved to `docs/superpowers/plans/2026-05-12-jarvis-persona.md`.**
+**Plan COMPLETE — all tasks implemented and committed to main.**
 
 **Two execution options:**
 
