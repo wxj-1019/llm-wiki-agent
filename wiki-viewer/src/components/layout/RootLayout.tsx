@@ -7,13 +7,15 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { ToastContainer } from '@/components/ui/ToastContainer';
+import { AlertBanner } from '@/components/ui/AlertBanner';
 import { IngestProgress } from '@/components/upload/IngestProgress';
-import { AlertTriangle, RefreshCw, WifiOff, Download, Sparkles, ServerOff } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useSWUpdate } from '@/hooks/useSWUpdate';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useEventStream } from '@/hooks/useEventStream';
 
 function getPageAnimation(pathname: string) {
   if (pathname === '/graph' || pathname.startsWith('/mindmap')) {
@@ -29,7 +31,7 @@ function PageTransition({ pathname, isGraphPage, children }: { pathname: string;
   const anim = getPageAnimation(pathname);
   return (
     <motion.div
-      className={isGraphPage ? 'h-full' : ''}
+      className="h-full"
       initial={anim.initial}
       animate={anim.animate}
       exit={anim.exit}
@@ -47,7 +49,6 @@ export function RootLayout() {
   const loading = useWikiStore((s) => s.loading);
   const error = useWikiStore((s) => s.error);
   const apiConnected = useWikiStore((s) => s.apiConnected);
-  const checkApiHealth = useWikiStore((s) => s.checkApiHealth);
   const location = useLocation();
   const element = useOutlet();
   const isGraphPage = location.pathname === '/graph';
@@ -55,6 +56,10 @@ export function RootLayout() {
   const { canInstall, install } = usePWAInstall();
   const { updateAvailable, applyUpdate } = useSWUpdate();
   useKeyboardShortcuts();
+
+  // Activate SSE event stream for real-time alerts
+  useEventStream();
+
   const bannerRef = useRef<HTMLDivElement>(null);
   const [bannerHeight, setBannerHeight] = useState(0);
 
@@ -73,7 +78,7 @@ export function RootLayout() {
     const observer = new ResizeObserver(measureBanner);
     if (bannerRef.current) observer.observe(bannerRef.current);
     return () => observer.disconnect();
-  }, [measureBanner, isOnline, updateAvailable, canInstall]);
+  }, [measureBanner, isOnline, updateAvailable, canInstall, apiConnected]);
 
   // Scroll to top on route change, but skip detail pages (they restore scroll position)
   useEffect(() => {
@@ -84,7 +89,7 @@ export function RootLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
+    <div className="h-screen bg-[var(--bg-primary)] flex flex-col">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-xl focus:bg-apple-blue focus:text-white focus:font-medium"
@@ -96,43 +101,14 @@ export function RootLayout() {
       <IngestProgress />
       <CommandPalette />
       <div ref={bannerRef} className="fixed top-14 left-0 right-0 z-[45]">
-        {!isOnline && (
-          <div className="bg-[var(--bg-secondary)] border-b border-[var(--border-default)] px-4 py-2 flex items-center justify-center gap-2 text-sm text-apple-blue" role="alert">
-            <WifiOff size={14} aria-hidden="true" />
-            <span>{t('error.offline')}</span>
-          </div>
-        )}
-        {isOnline && !apiConnected && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-center gap-3 text-sm text-amber-700 dark:text-amber-400" role="alert">
-            <ServerOff size={14} aria-hidden="true" />
-            <span>{t('error.backendOffline', 'Backend server unreachable')}</span>
-            <button
-              onClick={() => checkApiHealth()}
-              className="font-semibold underline hover:no-underline flex items-center gap-1"
-            >
-              <RefreshCw size={12} />
-              {t('error.retry')}
-            </button>
-          </div>
-        )}
-        {updateAvailable && (
-          <div className="bg-apple-green/10 border-b border-apple-green/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-green" role="alert">
-            <Sparkles size={14} aria-hidden="true" />
-            <span>{t('pwa.updateAvailable')}</span>
-            <button onClick={applyUpdate} className="font-semibold underline hover:no-underline">
-              {t('pwa.updateNow')}
-            </button>
-          </div>
-        )}
-        {canInstall && isOnline && !updateAvailable && (
-          <div className="bg-apple-purple/10 border-b border-apple-purple/30 px-4 py-2 flex items-center justify-center gap-3 text-sm text-apple-purple" role="alert">
-            <Download size={14} aria-hidden="true" />
-            <span>{t('pwa.installPrompt')}</span>
-            <button onClick={install} className="font-semibold underline hover:no-underline">
-              {t('pwa.install')}
-            </button>
-          </div>
-        )}
+        <AlertBanner
+          isOffline={!isOnline}
+          isBackendOffline={isOnline && !apiConnected}
+          hasPwaUpdate={updateAvailable}
+          showPwaInstall={canInstall && isOnline && !updateAvailable}
+          onPwaUpdate={applyUpdate}
+          onPwaInstall={install}
+        />
       </div>
       <div className="flex flex-1 overflow-hidden" style={{ paddingTop: `${56 + bannerHeight}px` }}>
         <Sidebar />
@@ -143,9 +119,9 @@ export function RootLayout() {
         */}
         <main
           id="main-content"
-          className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'} ${isGraphPage ? 'overflow-hidden' : 'overflow-y-auto'}`}
+          className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'} ${isGraphPage ? 'overflow-hidden' : 'overflow-hidden'}`}
         >
-          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-8 h-full flex flex-col'}>
+          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-1 h-full flex flex-col'}>
             {loading ? (
               <div className="min-h-[60vh] py-8">
                 <PageSkeleton />
