@@ -27,11 +27,13 @@ export const queryClient = new QueryClient({
 // ── Global error observer ──
 // Push retry-exhausted events to notificationStore so the user sees
 // something is wrong even without an SSE connection.
+// Only fires when retries are truly exhausted (fetchFailureCount >= 3).
 queryClient.getQueryCache().subscribe((event) => {
   if (
     "query" in event &&
     event.query.state.status === "error" &&
-    event.query.state.error
+    event.query.state.error &&
+    event.query.state.fetchFailureCount >= 3
   ) {
     const err = event.query.state.error as Error;
     const failedQuery = Array.isArray(event.query.queryKey)
