@@ -1,6 +1,7 @@
 # 前端请求重试落地 + 全局告警/通知 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** Implemented  
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 为 LLM Wiki Agent 实现前端请求指数退避重试（@tanstack/react-query）和全系统告警通知（后端 SSE + 前端三通道展示）
 
@@ -36,14 +37,14 @@
 **Files:**
 - Create: `tools/shared/event_bus.py`
 
-- [ ] **Step 1: 创建 `tools/shared/__init__.py`（空文件，确保模块可导入）**
+- [x] **Step 1: 创建 `tools/shared/__init__.py`（空文件，确保模块可导入）**
 
 Run:
 ```powershell
 New-Item -Path "e:\A_Project\llm-wiki-agent\tools\shared\__init__.py" -ItemType File -Force
 ```
 
-- [ ] **Step 2: 编写 `tools/shared/event_bus.py`**
+- [x] **Step 2: 编写 `tools/shared/event_bus.py`**
 
 ```python
 #!/usr/bin/env python3
@@ -99,7 +100,7 @@ class EventBus:
 event_bus = EventBus()
 ```
 
-- [ ] **Step 3: 验证导入正确**
+- [x] **Step 3: 验证导入正确**
 
 Run:
 ```powershell
@@ -108,7 +109,7 @@ cd e:\A_Project\llm-wiki-agent; .\.venv\Scripts\python.exe -c "from tools.shared
 
 Expected: `OK: EventBus`
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```powershell
 git add tools/shared/__init__.py tools/shared/event_bus.py
@@ -122,7 +123,7 @@ git commit -m "feat: add EventBus for SSE alert streaming"
 **Files:**
 - Create: `tools/shared/state_monitor.py`
 
-- [ ] **Step 1: 编写 `tools/shared/state_monitor.py`**
+- [x] **Step 1: 编写 `tools/shared/state_monitor.py`**
 
 ```python
 #!/usr/bin/env python3
@@ -261,7 +262,7 @@ async def monitor_state_changes(interval: float = 10.0) -> None:
         await asyncio.sleep(interval)
 ```
 
-- [ ] **Step 2: 验证导入正确**
+- [x] **Step 2: 验证导入正确**
 
 Run:
 ```powershell
@@ -270,7 +271,7 @@ cd e:\A_Project\llm-wiki-agent; .\.venv\Scripts\python.exe -c "from tools.shared
 
 Expected: `OK`
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add tools/shared/state_monitor.py
@@ -284,7 +285,7 @@ git commit -m "feat: add state_monitor for polling state/ files → EventBus"
 **Files:**
 - Modify: `tools/api_server.py`
 
-- [ ] **Step 1: 添加 imports（在文件顶部 imports 区域追加）**
+- [x] **Step 1: 添加 imports（在文件顶部 imports 区域追加）**
 
 在 `tools/api_server.py` 文件顶部（约第 40 行 `from fastapi import HTTPException` 之后），追加 event bus 导入。读取现有 imports 区域以精确定位：
 
@@ -294,7 +295,7 @@ from tools.shared.event_bus import event_bus
 from tools.shared.state_monitor import monitor_state_changes
 ```
 
-- [ ] **Step 2: 在 app 定义后注册 startup 事件**
+- [x] **Step 2: 在 app 定义后注册 startup 事件**
 
 查找 `app = FastAPI(...)` 定义（约第 290-310 行区域），在其后追加 startup handler：
 
@@ -305,7 +306,7 @@ async def start_state_monitor():
     asyncio.create_task(monitor_state_changes())
 ```
 
-- [ ] **Step 3: 添加 SSE 路由**
+- [x] **Step 3: 添加 SSE 路由**
 
 在文件末尾（最后一个 route 之后，`if __name__ == "__main__"` 之前）添加：
 
@@ -329,7 +330,7 @@ async def event_stream():
     )
 ```
 
-- [ ] **Step 4: 启动后端验证 SSE 端点**
+- [x] **Step 4: 启动后端验证 SSE 端点**
 
 Run:
 ```powershell
@@ -340,7 +341,7 @@ curl -N -m 5 http://localhost:8666/api/events 2>$null
 
 Expected: 连接成功（无事件时静默等待），5 秒后超时断开。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```powershell
 git add tools/api_server.py
@@ -354,7 +355,7 @@ git commit -m "feat: add GET /api/events SSE endpoint with state monitor startup
 **Files:**
 - Modify: `wiki-viewer/package.json`
 
-- [ ] **Step 1: 安装依赖**
+- [x] **Step 1: 安装依赖**
 
 Run:
 ```powershell
@@ -363,7 +364,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npm install @tanstack/react-query
 
 Expected: 安装成功，package.json dependencies 中新增 `"@tanstack/react-query"`。
 
-- [ ] **Step 2: 提交**
+- [x] **Step 2: 提交**
 
 ```powershell
 git add wiki-viewer/package.json wiki-viewer/package-lock.json
@@ -377,7 +378,7 @@ git commit -m "chore: add @tanstack/react-query dependency"
 **Files:**
 - Create: `wiki-viewer/src/lib/queryClient.ts`
 
-- [ ] **Step 1: 编写 `queryClient.ts`**
+- [x] **Step 1: 编写 `queryClient.ts`**
 
 ```typescript
 import { QueryClient } from '@tanstack/react-query';
@@ -411,7 +412,7 @@ queryClient.getQueryCache().subscribe((event) => {
 });
 ```
 
-- [ ] **Step 2: 验证 TypeScript 编译通过**
+- [x] **Step 2: 验证 TypeScript 编译通过**
 
 Run:
 ```powershell
@@ -420,7 +421,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增类型错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/lib/queryClient.ts
@@ -434,7 +435,7 @@ git commit -m "feat: add TanStack Query global client with retry defaults"
 **Files:**
 - Modify: `wiki-viewer/src/main.tsx`
 
-- [ ] **Step 1: 添加 import**
+- [x] **Step 1: 添加 import**
 
 在 `wiki-viewer/src/main.tsx` 顶部 `import React from 'react'` 下方添加：
 
@@ -443,7 +444,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 ```
 
-- [ ] **Step 2: 包裹 RouterProvider**
+- [x] **Step 2: 包裹 RouterProvider**
 
 将 `ReactDOM.createRoot(rootEl).render(...)` 中的 JSX 改为：
 
@@ -459,7 +460,7 @@ ReactDOM.createRoot(rootEl).render(
 );
 ```
 
-- [ ] **Step 3: 验证编译**
+- [x] **Step 3: 验证编译**
 
 Run:
 ```powershell
@@ -468,7 +469,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```powershell
 git add wiki-viewer/src/main.tsx
@@ -482,7 +483,7 @@ git commit -m "feat: wrap app with QueryClientProvider"
 **Files:**
 - Modify: `wiki-viewer/src/stores/notificationStore.ts`
 
-- [ ] **Step 1: 扩展 Notification 接口和 State**
+- [x] **Step 1: 扩展 Notification 接口和 State**
 
 在 `wiki-viewer/src/stores/notificationStore.ts` 中：
 
@@ -542,7 +543,7 @@ export interface Notification {
   },
 ```
 
-- [ ] **Step 2: 更新单元测试**
+- [x] **Step 2: 更新单元测试**
 
 更新 `wiki-viewer/src/stores/notificationStore.test.ts`，添加新方法的测试：
 
@@ -575,7 +576,7 @@ export interface Notification {
   });
 ```
 
-- [ ] **Step 3: 运行测试**
+- [x] **Step 3: 运行测试**
 
 Run:
 ```powershell
@@ -584,7 +585,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vitest run src/stores/notificati
 
 Expected: 所有测试 PASS。
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```powershell
 git add wiki-viewer/src/stores/notificationStore.ts wiki-viewer/src/stores/notificationStore.test.ts
@@ -598,7 +599,7 @@ git commit -m "feat: extend notificationStore with severity/source/action and al
 **Files:**
 - Modify: `wiki-viewer/src/services/dataService.ts`
 
-- [ ] **Step 1: 添加 import 和 useQuery hooks**
+- [x] **Step 1: 添加 import 和 useQuery hooks**
 
 在文件顶部 `import { isValidFilePath } from '@/lib/validation';` 之后追加：
 
@@ -679,7 +680,7 @@ export function useRawFileContent(path: string | null) {
 }
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -688,7 +689,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/services/dataService.ts
@@ -702,7 +703,7 @@ git commit -m "feat: add TanStack Query hooks to dataService for auto-retry"
 **Files:**
 - Modify: `wiki-viewer/src/services/agentKitLLMService.ts`
 
-- [ ] **Step 1: 添加 import 和 useQuery hooks**
+- [x] **Step 1: 添加 import 和 useQuery hooks**
 
 在文件顶部 `import { isValidFilePath } from '@/lib/validation';` 之后追加：
 
@@ -743,7 +744,7 @@ export function useAgentKitFileContent(path: string | null) {
 }
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -752,7 +753,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/services/agentKitLLMService.ts
@@ -766,7 +767,7 @@ git commit -m "feat: add TanStack Query hooks to agentKitLLMService"
 **Files:**
 - Modify: `wiki-viewer/src/stores/wikiStore.ts`
 
-- [ ] **Step 1: 修改 heartbeat 使用 fetchWithRetry**
+- [x] **Step 1: 修改 heartbeat 使用 fetchWithRetry**
 
 将 `startHeartbeat` 方法中的裸 `fetch` 改为 `fetchWithRetry`（第 414 行）：
 
@@ -790,7 +791,7 @@ import { fetchWithRetry } from '@/lib/fetchWithTimeout';
         const resp = await fetchWithRetry('/api/health', { timeoutMs: 5000, retries: 2, retryDelayMs: 1000 });
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -799,7 +800,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/stores/wikiStore.ts
@@ -813,7 +814,7 @@ git commit -m "feat: add fetchWithRetry to wikiStore heartbeat"
 **Files:**
 - Modify: `wiki-viewer/src/stores/configStore.ts`
 
-- [ ] **Step 1: 使用 fetchWithRetry 替代裸 fetch**
+- [x] **Step 1: 使用 fetchWithRetry 替代裸 fetch**
 
 在 `checkApi` 方法中将裸 `fetch` 改为 `fetchWithRetry`（第 142-152 行）：
 
@@ -895,7 +896,7 @@ import { fetchWithRetry } from '@/lib/fetchWithTimeout';
       // ... rest unchanged
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -904,7 +905,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/stores/configStore.ts
@@ -918,7 +919,7 @@ git commit -m "feat: add fetchWithRetry to configStore API calls"
 **Files:**
 - Create: `wiki-viewer/src/hooks/useEventStream.ts`
 
-- [ ] **Step 1: 编写 `useEventStream.ts`**
+- [x] **Step 1: 编写 `useEventStream.ts`**
 
 ```typescript
 import { useEffect } from 'react';
@@ -1031,7 +1032,7 @@ export function useEventStream() {
 }
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -1040,7 +1041,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/hooks/useEventStream.ts
@@ -1054,7 +1055,7 @@ git commit -m "feat: add useEventStream hook for SSE event consumption"
 **Files:**
 - Create: `wiki-viewer/src/components/ui/AlertBanner.tsx`
 
-- [ ] **Step 1: 编写 `AlertBanner.tsx`**
+- [x] **Step 1: 编写 `AlertBanner.tsx`**
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -1183,7 +1184,7 @@ export function AlertBanner() {
 }
 ```
 
-- [ ] **Step 2: 验证编译**
+- [x] **Step 2: 验证编译**
 
 Run:
 ```powershell
@@ -1192,7 +1193,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```powershell
 git add wiki-viewer/src/components/ui/AlertBanner.tsx
@@ -1206,7 +1207,7 @@ git commit -m "feat: add AlertBanner component for persistent system alerts"
 **Files:**
 - Modify: `wiki-viewer/src/components/layout/RootLayout.tsx`
 
-- [ ] **Step 1: 添加 import**
+- [x] **Step 1: 添加 import**
 
 在 `wiki-viewer/src/components/layout/RootLayout.tsx` 顶部追加：
 
@@ -1215,7 +1216,7 @@ import { useEventStream } from '@/hooks/useEventStream';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 ```
 
-- [ ] **Step 2: 调用 useEventStream**
+- [x] **Step 2: 调用 useEventStream**
 
 在 `RootLayout` 函数体内，`useKeyboardShortcuts()` 之后添加：
 
@@ -1223,7 +1224,7 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
   useEventStream();
 ```
 
-- [ ] **Step 3: 用 AlertBanner 替换内联横幅**
+- [x] **Step 3: 用 AlertBanner 替换内联横幅**
 
 将第 98-136 行的 `bannerRef` div 及其内部 4 个条件横幅替换为：
 
@@ -1243,7 +1244,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 // AlertTriangle 和 RefreshCw 仍被 loading/error 状态使用
 ```
 
-- [ ] **Step 4: 验证编译**
+- [x] **Step 4: 验证编译**
 
 Run:
 ```powershell
@@ -1252,7 +1253,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc --noEmit --pretty
 
 Expected: 无新增错误。
 
-- [ ] **Step 5: 启动前端验证无白屏**
+- [x] **Step 5: 启动前端验证无白屏**
 
 Run:
 ```powershell
@@ -1262,7 +1263,7 @@ Start-Sleep -Seconds 5
 
 预期: `npm run dev` 启动成功，访问 http://localhost:5173 页面正常渲染。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```powershell
 git add wiki-viewer/src/components/layout/RootLayout.tsx
@@ -1273,7 +1274,7 @@ git commit -m "feat: integrate useEventStream + AlertBanner into RootLayout"
 
 ### Task 15: 端到端验证
 
-- [ ] **Step 1: 验证后端 SSE 端点可连通**
+- [x] **Step 1: 验证后端 SSE 端点可连通**
 
 ```powershell
 curl -N -m 10 http://localhost:8666/api/events 2>$null
@@ -1281,7 +1282,7 @@ curl -N -m 10 http://localhost:8666/api/events 2>$null
 
 预期: 持续等待（无事件时静默），连接 10 秒后超时断开。不报 404。
 
-- [ ] **Step 2: 验证前端构建**
+- [x] **Step 2: 验证前端构建**
 
 ```powershell
 cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc -b
@@ -1289,7 +1290,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx tsc -b
 
 预期: 无 TypeScript 错误。
 
-- [ ] **Step 3: 验证前端 Vite 构建**
+- [x] **Step 3: 验证前端 Vite 构建**
 
 ```powershell
 cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vite build
@@ -1297,7 +1298,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vite build
 
 预期: build 成功。
 
-- [ ] **Step 4: 验证 TanStack Query retry 机制**
+- [x] **Step 4: 验证 TanStack Query retry 机制**
 
 在 `wiki-viewer/src/stores/notificationStore.test.ts` 所在目录创建测试文件 `wiki-viewer/src/lib/queryClient.test.ts`：
 
@@ -1342,7 +1343,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vitest run src/lib/queryClient.t
 
 预期: 2 tests PASS。
 
-- [ ] **Step 5: 验证 notificationStore 测试仍通过**
+- [x] **Step 5: 验证 notificationStore 测试仍通过**
 
 ```powershell
 cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vitest run src/stores/notificationStore.test.ts
@@ -1350,7 +1351,7 @@ cd e:\A_Project\llm-wiki-agent\wiki-viewer; npx vitest run src/stores/notificati
 
 预期: 6 tests PASS（原有 3 + 新增 3）。
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```powershell
 git add wiki-viewer/src/lib/queryClient.test.ts

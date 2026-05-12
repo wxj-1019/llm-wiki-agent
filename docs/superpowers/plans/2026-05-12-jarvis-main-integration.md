@@ -1,25 +1,27 @@
 # Jarvis → Main Page Integration Plan
 
+> **Status:** Implemented
+
 > **Goal:** 将 JarvisPage 设为首页，压缩高度消除滚动条
 
 **Architecture:** 路由指向 JarvisPage，RootLayout 控高 overflow-hidden，JarvisPage 内部全局压缩纵向空间
 
 ---
 
-### Task 1: 路由 — JarvisPage 设为首页
+### Task 1: 路由 — JarvisPage 设为首页 ✅
 
 **Files:** Modify `wiki-viewer/src/router.tsx:35`
 
 - 将 `{ path: '/', element: <HomePage /> }` 改为 `{ path: '/', element: <LazyPage><JarvisPage /></LazyPage> }`
 
-### Task 2: RootLayout — 消除主区域滚动
+### Task 2: RootLayout — 消除主区域滚动 ✅
 
 **Files:** Modify `wiki-viewer/src/components/layout/RootLayout.tsx:146,148`
 
 - `overflow-y-auto` → `overflow-hidden`
 - `py-8` → `py-1`
 
-### Task 3: JarvisPage — 全局压缩高度
+### Task 3: JarvisPage — 全局压缩高度 ✅
 
 **Files:** Modify `wiki-viewer/src/components/pages/JarvisPage.tsx`
 
