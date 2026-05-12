@@ -9,6 +9,7 @@
 import { AlertTriangle, WifiOff, ServerOff, RefreshCw, Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotificationStore } from "../../stores/notificationStore";
+import { useWikiStore } from "../../stores/wikiStore";
 import type { Severity } from "../../stores/notificationStore";
 
 export interface AlertBannerProps {
@@ -21,11 +22,18 @@ export interface AlertBannerProps {
   onPwaInstall?: () => void;
 }
 
+const SEVERITY_ORDER: Record<Severity, number> = {
+  critical: 0,
+  warning: 1,
+  success: 2,
+  info: 3,
+};
+
 const severityStyles: Record<Severity, string> = {
-  critical: "bg-red-600 text-white",
-  warning: "bg-amber-500 text-white",
-  success: "bg-green-600 text-white",
-  info: "bg-blue-600 text-white",
+  critical: "bg-red-600 dark:bg-red-700 text-white",
+  warning: "bg-amber-500 dark:bg-amber-600 text-white",
+  success: "bg-emerald-600 dark:bg-emerald-700 text-white",
+  info: "bg-blue-600 dark:bg-blue-700 text-white",
 };
 
 export function AlertBanner({
@@ -36,23 +44,31 @@ export function AlertBanner({
   onPwaUpdate,
   onPwaInstall,
 }: AlertBannerProps) {
-  const activeAlerts = useNotificationStore((s) => s.getActiveAlerts());
+  // B1 fix: use zustand selector to react to alert state changes
+  const notifications = useNotificationStore((s) => s.notifications);
+  const activeAlerts = notifications.filter((n) => n.isAlert);
   const dismissAlert = useNotificationStore((s) => s.dismissAlert);
+  const checkApiHealth = useWikiStore((s) => s.checkApiHealth);
 
-  // Build unified alert list: system banners first, then notificationStore alerts
-  const allAlerts: {
+  interface UnifiedAlert {
     id: string;
     message: string;
     severity: Severity;
+    timestamp: number;
     actionLabel?: string;
     onAction?: () => void;
-  }[] = [];
+    isSystem: boolean;
+  }
+
+  const allAlerts: UnifiedAlert[] = [];
 
   if (isOffline) {
     allAlerts.push({
       id: "system-offline",
       message: "网络连接已断开 — 部分功能不可用",
       severity: "warning",
+      timestamp: 0,
+      isSystem: true,
     });
   }
 
@@ -61,6 +77,11 @@ export function AlertBanner({
       id: "system-backend-offline",
       message: "后端服务未响应 — 数据可能不是最新的",
       severity: "critical",
+      timestamp: 0,
+      // P4: add manual retry button
+      actionLabel: "重试",
+      onAction: () => checkApiHealth(),
+      isSystem: true,
     });
   }
 
@@ -69,8 +90,10 @@ export function AlertBanner({
       id: "system-pwa-update",
       message: "新版本可用",
       severity: "info",
+      timestamp: 0,
       actionLabel: "更新",
       onAction: onPwaUpdate,
+      isSystem: true,
     });
   }
 
@@ -79,23 +102,33 @@ export function AlertBanner({
       id: "system-pwa-install",
       message: "安装为本地应用以获得更好体验",
       severity: "info",
+      timestamp: 0,
       actionLabel: "安装",
       onAction: onPwaInstall,
+      isSystem: true,
     });
   }
 
-  // Append notificationStore alerts
   for (const alert of activeAlerts) {
     allAlerts.push({
       id: alert.id,
       message: alert.message,
       severity: alert.severity || "info",
+      timestamp: alert.timestamp,
       actionLabel: alert.action?.label,
       onAction: alert.action?.handler,
+      isSystem: false,
     });
   }
 
   if (allAlerts.length === 0) return null;
+
+  // P2: sort by severity priority then time descending
+  allAlerts.sort((a, b) => {
+    const s = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+    if (s !== 0) return s;
+    return b.timestamp - a.timestamp;
+  });
 
   return (
     <div className="w-full z-[70]" role="alert" aria-live="assertive">
@@ -136,7 +169,7 @@ export function AlertBanner({
                     {alert.actionLabel}
                   </button>
                 )}
-                {!alert.id.startsWith("system-") && (
+                {!alert.isSystem && (
                   <button
                     onClick={() => dismissAlert(alert.id)}
                     className="p-0.5 rounded hover:bg-white/20 transition-colors"
