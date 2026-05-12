@@ -664,3 +664,144 @@ Created entity pages for: 上市公司.
 ## [2026-05-13] graph | Knowledge graph rebuilt
 
 300 nodes, 1419 edges (1419 extracted, 0 inferred).
+## [2026-05-13] graph | Knowledge graph rebuilt
+
+300 nodes, 4456 edges (1422 extracted, 3034 inferred).
+
+## [2026-05-13] ingest | A股常见量化交易策略指南
+Ingested from raw/a-share-quantitative-trading-strategies-guide.md
+
+## [2026-05-13] ingest | 后台管理系统
+Ingested from raw/admin-backend-system.md
+
+## [2026-05-13] ingest | AI智能分析系统 — 多智能体协同分析引擎
+Ingested from raw/ai-intelligent-analysis-system.md
+
+## [2026-05-13] ingest | Auto Graph Test
+Ingested from raw/auto-graph-test.md
+
+## [2026-05-13] ingest | 回测引擎
+Ingested from raw/backtest-engine.md
+
+## [2026-05-13] ingest | Claude Code CLAUDE.md — 项目指南与构建系统
+Ingested from raw/claude-code-claude-md-guide.md
+
+## [2026-05-13] ingest | 数据模型总览
+Ingested from raw/data-model-overview.md
+
+## [2026-05-13] ingest | ETF专区
+Ingested from raw/etf-c6f436.md
+
+## [2026-05-13] ingest | Final Iteration Test
+Ingested from raw/final-iteration-test.md
+
+## [2026-05-13] ingest | Finally Block Test
+Ingested from raw/finally-block-test.md
+
+## [2026-05-13] ingest | Graph Rebuild Verify
+Ingested from raw/graph-rebuild-verify.md
+
+## [2026-05-13] ingest | Iteration Test
+Ingested from raw/iteration-test.md
+
+## [2026-05-13] ingest | Latte — Claude Code 可构建分支 (AGENTS.md)
+Ingested from raw/latte-claude-code-fork.md
+
+## [2026-05-13] ingest | Log File Test
+Ingested from raw/log-file-test.md
+
+## [2026-05-13] ingest | Log Verify Test
+Ingested from raw/log-verify-test.md
+
+## [2026-05-13] ingest | 龙虎榜分析系统 — 游资追踪与主力资金行为分析工具
+Ingested from raw/longhubang-analysis-system.md
+
+## [2026-05-13] ingest | 主力选股系统整体分析文档
+Ingested from raw/main-fund-selection-system-analysis.md
+
+## [2026-05-13] ingest | Main Fund Selection System — 主力选股系统
+Ingested from raw/main-fund-selection-system.md
+
+## [2026-05-13] ingest | 新闻订阅系统 — 舆情监控与AI情感分析
+Ingested from raw/news-feed-system.md
+
+## [2026-05-13] ingest | 通知与消息系统
+Ingested from raw/notification-and-messaging-system.md
+
+## [2026-05-13] ingest | 持仓管理与组合分析
+Ingested from raw/portfolio-management-and-analysis.md
+
+## [2026-05-13] ingest | 价格监控与预警系统
+Ingested from raw/price-monitoring-and-alert-system.md
+
+## [2026-05-13] ingest | 板块策略与大盘分析
+Ingested from raw/sector-strategy-and-market-analysis.md
+
+## [2026-05-13] ingest | 股票数据服务
+Ingested from raw/stock-data-service.md
+
+## [2026-05-13] ingest | 任务调度与基础设施 — 平台底层运行支撑模块
+Ingested from raw/task-scheduler-and-infrastructure.md
+
+## [2026-05-13] ingest | Threading Rebuild Test
+Ingested from raw/threading-rebuild-test.md
+
+## [2026-05-13] ingest | 用户与权限系统
+Ingested from raw/user-auth-and-permission-system.md
+
+## [2026-05-13] ingest | 用户画像系统 — 用户行为分析与个性化服务引擎
+Ingested from raw/user-profile-system.md
+
+## [2026-05-13] ingest | 王信杰 — 后端开发工程师简历
+Ingested from raw/wangxinjie-backend-developer-resume.md
+
+## [2026-05-13] ingest | 新股
+Ingested from raw/article-0dfb70.md
+
+## [2026-05-13] ingest | 世界互联网大会
+Ingested from raw/article-15d035-1.md
+
+## [2026-05-13] ingest | 世界互联网大会
+Ingested from raw/article-15d035.md
+
+## [2026-05-13] ingest | 行情中心
+Ingested from raw/article-656757.md
+
+## [2026-05-13] ingest | a股蓝筹股实时行情
+Ingested from raw/article-82dd45.md
+
+## [2026-05-13] ingest | 新浪新闻
+Ingested from raw/article-b711b0.md
+
+## [2026-05-13] ingest | a股大盘指数实时数据
+Ingested from raw/article-c0bf4f.md
+
+## [2026-05-13] ingest | 财联社-股票
+Ingested from raw/article-c643b1.md
+
+## [2026-05-13] ingest | 股票频道
+Ingested from raw/article-c889ca.md
+
+## [2026-05-13] ingest | 财经导读
+Ingested from raw/article-d20211.md
+
+## [2026-05-13] ingest | 焦点
+Ingested from raw/article-e0096f.md
+
+## [2026-05-13] ingest | tushare大数据开放社区
+Ingested from raw/tushare-819665.md
+
+## [2026-05-13] ingest | 实战｜tushare 量化数据接口入门到实操，a股数据一键获取
+Ingested from raw/tushare-bd35c6.md
+
+## [2026-05-13] ingest | untitled
+Ingested from raw/untitled-1.md
+
+## [2026-05-13] ingest | untitled
+Ingested from raw/untitled-2.md
+
+## [2026-05-13] ingest | untitled
+Ingested from raw/untitled-3.md
+
+## [2026-05-13] ingest | untitled
+Ingested from raw/untitled.md
