@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fetchGraphData, fetchIndexEtag } from '@/services/dataService';
+import { fetchWithRetry } from '@/lib/fetchWithTimeout';
 import { initSearch } from '@/lib/search';
 import type { GraphData, GraphNode } from '@/types/graph';
 
@@ -411,7 +412,7 @@ export const useWikiStore = create<WikiState>((set, get) => ({
     if (_heartbeatTimer) return;
     _heartbeatTimer = setInterval(async () => {
       try {
-        const resp = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+        const resp = await fetchWithRetry('/api/health', { timeoutMs: 5000, retries: 2, retryDelayMs: 1000 });
         if (resp.ok) {
           if (get().heartbeatFailures > 0 || get().isOffline) {
             set({ heartbeatFailures: 0, isOffline: false });
