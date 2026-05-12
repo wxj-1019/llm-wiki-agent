@@ -404,6 +404,113 @@ export function useIndexEtag(enabled = true) {
   });
 }
 
+export async function searchWeb(query: string, limit = 10): Promise<{ results: { title: string; href: string; body: string }[]; count: number }> {
+  const res = await fetchWithTimeout(`/api/search/web?q=${encodeURIComponent(query)}&limit=${limit}`, { timeoutMs: 15000 });
+  if (!res.ok) throw new Error(`Web search failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function searchReindexFts(): Promise<{ success: boolean; message: string }> {
+  const res = await fetchWithTimeout('/api/search/reindex', {
+    method: 'POST',
+    timeoutMs: 300000,
+  });
+  if (!res.ok) throw new Error(`Reindex failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function exportGraph(format: 'all' | 'graphml' | 'csv' | 'cypher' = 'all'): Promise<Record<string, string>> {
+  const res = await fetchWithTimeout('/api/graph/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ format }),
+    timeoutMs: 30000,
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function queryGraph(query: string): Promise<Record<string, unknown>> {
+  const res = await fetchWithTimeout('/api/graph/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+    timeoutMs: 30000,
+  });
+  if (!res.ok) throw new Error(`Query failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export interface PipelineHealth {
+  status: 'ok' | 'degraded';
+  checks: Record<string, { ok: boolean; error?: string; [k: string]: unknown }>;
+  stats: Record<string, unknown>;
+}
+
+export async function fetchPipelineHealth(): Promise<PipelineHealth> {
+  const res = await fetchWithTimeout('/api/pipeline/health', { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Failed to fetch pipeline health: ${res.status}`);
+  return safeJson(res);
+}
+
+export interface IngestJob {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  path?: string;
+  stdout?: string;
+  stderr?: string;
+  returncode?: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export async function fetchIngestJobs(): Promise<{ jobs: IngestJob[] }> {
+  const res = await fetchWithTimeout('/api/ingest/jobs', { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Failed to fetch jobs: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function fetchIngestJob(jobId: string): Promise<IngestJob> {
+  const res = await fetchWithTimeout(`/api/ingest/jobs/${encodeURIComponent(jobId)}`, { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Failed to fetch job: ${res.status}`);
+  return safeJson(res);
+}
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  endpoint: string;
+  method: string;
+}
+
+export async function fetchToolsList(): Promise<{ tools: ToolInfo[] }> {
+  const res = await fetchWithTimeout('/api/tools/list', { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Failed to fetch tools: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function clipUrl(url: string, title = '', tags: string[] = []): Promise<{ success: boolean; saved_file: string | null; stdout: string; stderr: string }> {
+  const res = await fetchWithTimeout('/api/webhook/clip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, title, tags }),
+    timeoutMs: 120000,
+  });
+  if (!res.ok) throw new Error(`Clip failed: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function webhookIngest(path: string): Promise<{ success: boolean; stdout: string; stderr: string; returncode: number }> {
+  const res = await fetchWithTimeout('/api/webhook/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+    timeoutMs: 120000,
+  });
+  if (!res.ok) throw new Error(`Webhook ingest failed: ${res.status}`);
+  return safeJson(res);
+}
+
 export function useRawFileContent(path: string | null) {
   return useQuery({
     queryKey: ['raw-file', path],

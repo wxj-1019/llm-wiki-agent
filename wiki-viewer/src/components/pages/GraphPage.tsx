@@ -43,7 +43,7 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 
-import { Network as NetworkIcon, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers } from 'lucide-react';
+import { Network as NetworkIcon, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers, FileDown, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useNotificationStore } from '@/stores/notificationStore';
@@ -53,6 +53,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { safeGet, safeSet } from '@/lib/safeStorage';
 import { ChipLoader } from '@/components/ChipLoader';
 import { getPagePath } from '@/lib/wikilink';
+import { exportGraph, queryGraph } from '@/services/dataService';
 
 export function GraphPage() {
   const { t } = useTranslation();
@@ -78,6 +79,13 @@ export function GraphPage() {
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(isEditing);
   useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showQueryPanel, setShowQueryPanel] = useState(false);
+  const [queryInput, setQueryInput] = useState('');
+  const [queryResult, setQueryResult] = useState<Record<string, unknown> | null>(null);
+  const [queryLoading, setQueryLoading] = useState(false);
   const [saveLayoutMsg, setSaveLayoutMsg] = useState('');
   const [rebuilding, setRebuilding] = useState(false);
   const [stabilizing, setStabilizing] = useState(false);
@@ -614,35 +622,162 @@ export function GraphPage() {
           <span className="hidden sm:inline">Rebuild</span>
         </button>
         <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
+        <div className="relative">
+          <button
+            onClick={() => setShowExportMenu((v) => !v)}
+            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+            title="Export graph"
+            aria-label="Export graph"
+          >
+            <Download size={14} />
+            <span className="hidden sm:inline">Export</span>
+            <ChevronDown size={12} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+          </button>
+          <AnimatePresence>
+            {showExportMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="absolute bottom-full mb-2 right-0 glass rounded-xl p-1.5 min-w-[160px] z-50 space-y-0.5"
+              >
+                <button
+                  onClick={() => {
+                    if (!graphData) return;
+                    const exportData = {
+                      ...graphData,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      nodes: graphData.nodes.map((n: any) => {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        const { content, markdown, body, description, ...rest } = n;
+                        return rest;
+                      }),
+                    };
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `graph-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    setShowExportMenu(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors text-left"
+                >
+                  <FileDown size={14} /> JSON
+                </button>
+                {(['graphml', 'csv', 'cypher'] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={async () => {
+                      setExporting(true);
+                      try {
+                        const data = await exportGraph(fmt);
+                        const content = data[fmt] || JSON.stringify(data, null, 2);
+                        const blob = new Blob([content], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `graph-${new Date().toISOString().slice(0, 10)}.${fmt === 'cypher' ? 'cql' : fmt}`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        addNotification(`${fmt.toUpperCase()} exported`, 'success');
+                      } catch (e) {
+                        addNotification(String(e), 'error');
+                      } finally {
+                        setExporting(false);
+                        setShowExportMenu(false);
+                      }
+                    }}
+                    disabled={exporting}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors text-left disabled:opacity-50"
+                  >
+                    <FileDown size={14} /> {fmt.toUpperCase()}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <div className="w-px h-4 bg-[var(--border-default)] mx-1" />
         <button
-          onClick={() => {
-            if (!graphData) return;
-            // Strip heavy content fields to avoid OOM on large wikis
-            const exportData = {
-              ...graphData,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              nodes: graphData.nodes.map((n: any) => {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { content, markdown, body, description, ...rest } = n;
-                return rest;
-              }),
-            };
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `graph-${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-          className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-          title="Export graph JSON"
-          aria-label="Export graph JSON"
+          onClick={() => setShowQueryPanel((v) => !v)}
+          className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium transition-all rounded-xl ${
+            showQueryPanel
+              ? 'bg-apple-purple/10 text-apple-purple'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+          title="Graph query"
+          aria-label="Graph query"
         >
-          <Download size={14} />
-          <span className="hidden sm:inline">Export</span>
+          <Terminal size={14} />
+          <span className="hidden sm:inline">Query</span>
         </button>
       </div>
+
+      {/* Query Panel */}
+      <AnimatePresence>
+        {showQueryPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-4 right-4 w-80 glass rounded-2xl p-4 z-40 shadow-xl border border-[var(--border-default)]"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
+                <Terminal size={14} className="text-apple-purple" />
+                Graph Query
+              </h3>
+              <button
+                onClick={() => setShowQueryPanel(false)}
+                className="p-1 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <input
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setQueryLoading(true);
+                    queryGraph(queryInput)
+                      .then((r) => { setQueryResult(r); })
+                      .catch((err) => { addNotification(String(err), 'error'); })
+                      .finally(() => { setQueryLoading(false); });
+                  }
+                }}
+                placeholder="MATCH (n) RETURN n LIMIT 5"
+                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-default)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-apple-purple focus:shadow-[0_0_0_4px_rgba(168,85,247,0.08)] transition-all font-mono"
+              />
+              <button
+                onClick={() => {
+                  setQueryLoading(true);
+                  queryGraph(queryInput)
+                    .then((r) => { setQueryResult(r); })
+                    .catch((err) => { addNotification(String(err), 'error'); })
+                    .finally(() => { setQueryLoading(false); });
+                }}
+                disabled={queryLoading || !queryInput.trim()}
+                className="apple-button flex items-center justify-center gap-1.5 w-full text-xs disabled:opacity-50"
+              >
+                {queryLoading ? <Loader2 size={12} className="animate-spin" /> : <Terminal size={12} />}
+                Run Query
+              </button>
+            </div>
+            {queryResult && (
+              <div className="mt-3">
+                <pre className="bg-[var(--bg-secondary)] rounded-xl p-3 text-[11px] font-mono text-[var(--text-secondary)] whitespace-pre-wrap break-all max-h-64 overflow-auto">
+                  {JSON.stringify(queryResult, null, 2)}
+                </pre>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Node Detail Panel */}
       {selectedNodeData && (

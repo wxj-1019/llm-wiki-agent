@@ -23,6 +23,10 @@ const CrawlerPage = lazy(() => import('@/components/pages/CrawlerPage').then((m)
 const JarvisPage = lazy(() => import('@/components/pages/JarvisPage').then((m) => ({ default: m.JarvisPage })));
 const ApprovalsPage = lazy(() => import('@/components/pages/ApprovalsPage').then((m) => ({ default: m.ApprovalsPage })));
 const AgentLogPage = lazy(() => import('@/components/pages/AgentLogPage').then((m) => ({ default: m.AgentLogPage })));
+const ToolsRegistryPage = lazy(() => import('@/components/pages/ToolsRegistryPage').then((m) => ({ default: m.ToolsRegistryPage })));
+const PipelineHealthPage = lazy(() => import('@/components/pages/PipelineHealthPage').then((m) => ({ default: m.PipelineHealthPage })));
+const IngestJobsPage = lazy(() => import('@/components/pages/IngestJobsPage').then((m) => ({ default: m.IngestJobsPage })));
+const WebhookManagerPage = lazy(() => import('@/components/pages/WebhookManagerPage').then((m) => ({ default: m.WebhookManagerPage })));
 
 import { LazyPage } from '@/components/layout/LazyPage';
 
@@ -54,6 +58,10 @@ export const router = createBrowserRouter([
       { path: '/jarvis', element: <LazyPage><JarvisPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/approvals', element: <LazyPage><ApprovalsPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/agent-log', element: <LazyPage><AgentLogPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/tools', element: <LazyPage><ToolsRegistryPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/pipeline', element: <LazyPage><PipelineHealthPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/jobs', element: <LazyPage><IngestJobsPage /></LazyPage>, errorElement: <ErrorBoundary /> },
+      { path: '/webhooks', element: <LazyPage><WebhookManagerPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '*', element: <NotFoundPage />, errorElement: <ErrorBoundary /> },
     ],
   },

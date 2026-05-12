@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Loader2, BrainCircuit, RefreshCw, MessageSquare, Sparkles, X } from 'lucide-react';
+import { Search, Loader2, BrainCircuit, RefreshCw, MessageSquare, Sparkles, X, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hybridSearch, getAllNodes } from '@/lib/search';
 import type { FuseResult } from 'fuse.js';
@@ -8,7 +8,7 @@ import type { GraphNode } from '@/types/graph';
 import { motion } from 'framer-motion';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
-import { reindexEmbeddings } from '@/services/dataService';
+import { reindexEmbeddings, searchWeb } from '@/services/dataService';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { chatWithWikiStream } from '@/services/chatService';
 import { SearchResultsTab } from '@/components/search/SearchResultsTab';
@@ -32,9 +32,12 @@ export function SearchPage() {
   });
   const [reindexing, setReindexing] = useState(false);
 
+  const [webResults, setWebResults] = useState<{ title: string; href: string; body: string }[]>([]);
+  const [webSearching, setWebSearching] = useState(false);
+
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const tab = searchParams.get('tab');
-    return tab === 'chat' || tab === 'generate' ? tab : 'search';
+    return tab === 'chat' || tab === 'generate' || tab === 'web' ? tab : 'search';
   });
 
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
@@ -58,7 +61,7 @@ export function SearchPage() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'chat' || tab === 'generate') setActiveTab(tab);
+    if (tab === 'chat' || tab === 'generate' || tab === 'web') setActiveTab(tab);
     else if (tab === null) setActiveTab('search');
   }, [searchParams]);
 
@@ -72,6 +75,17 @@ export function SearchPage() {
       .finally(() => { if (!cancelled) setSearching(false); });
     return () => { cancelled = true; };
   }, [debouncedQuery, semantic]);
+
+  useEffect(() => {
+    if (activeTab !== 'web' || !debouncedQuery.trim()) { setWebResults([]); return; }
+    setWebSearching(true);
+    let cancelled = false;
+    searchWeb(debouncedQuery, 10)
+      .then(r => { if (!cancelled) setWebResults(r.results); })
+      .catch(() => { if (!cancelled) setWebResults([]); })
+      .finally(() => { if (!cancelled) setWebSearching(false); });
+    return () => { cancelled = true; };
+  }, [debouncedQuery, activeTab]);
 
   const handleTabChange = useCallback((tab: Tab) => {
     if (activeTabRef.current === 'chat' && tab !== 'chat' && chatStreamingRef.current) {
@@ -208,6 +222,7 @@ export function SearchPage() {
   const tabs = useMemo<{ id: Tab; icon: React.ElementType; label: string }[]>(
     () => [
       { id: 'search', icon: Search, label: t('search.tab.results', 'Results') },
+      { id: 'web', icon: Globe, label: t('search.tab.web', 'Web') },
       { id: 'chat', icon: MessageSquare, label: t('search.tab.chat', 'AI Chat') },
       { id: 'generate', icon: Sparkles, label: t('search.tab.generate', 'Generate') },
     ],
@@ -314,6 +329,59 @@ export function SearchPage() {
           chatEntries={chatEntries}
           onSwitchToGenerate={() => handleTabChange('generate')}
         />
+      )}
+
+      {activeTab === 'web' && (
+        <div>
+          {webSearching && (
+            <div className="space-y-3 mb-4" role="status" aria-busy="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="apple-card p-4 space-y-2">
+                  <div className="w-3/4 h-4 rounded-lg bg-[var(--bg-secondary)] animate-pulse" />
+                  <div className="w-full h-3 rounded-lg bg-[var(--bg-secondary)] animate-pulse" />
+                  <div className="w-5/6 h-3 rounded-lg bg-[var(--bg-secondary)] animate-pulse" />
+                </div>
+              ))}
+            </div>
+          )}
+          {!webSearching && debouncedQuery && (
+            <div className="mb-4 text-sm text-[var(--text-secondary)]">
+              {t('search.webResultCount', { count: webResults.length, query: debouncedQuery })}
+            </div>
+          )}
+          <div className="space-y-3">
+            {webResults.map((r, i) => (
+              <motion.div
+                key={r.href + i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.4) }}
+              >
+                <a
+                  href={r.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="apple-card p-4 block group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe size={14} className="text-apple-blue shrink-0" />
+                    <h3 className="font-medium text-[var(--text-primary)] text-sm group-hover:text-apple-blue transition-colors line-clamp-1">
+                      {r.title}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-apple-blue mb-1 truncate">{r.href}</p>
+                  <p className="text-xs text-[var(--text-secondary)] line-clamp-2">{r.body}</p>
+                </a>
+              </motion.div>
+            ))}
+          </div>
+          {!webSearching && debouncedQuery && webResults.length === 0 && (
+            <div className="empty-state-warm">
+              <Globe size={32} className="text-[var(--text-tertiary)]" />
+              <p className="text-sm text-[var(--text-secondary)]">{t('search.noWebResults')}</p>
+            </div>
+          )}
+        </div>
       )}
     </motion.div>
   );

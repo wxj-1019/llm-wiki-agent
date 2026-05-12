@@ -1,6 +1,6 @@
 import { FileText, Users, Lightbulb, Layers } from 'lucide-react';
 
-export type Tab = 'search' | 'chat' | 'generate';
+export type Tab = 'search' | 'web' | 'chat' | 'generate';
 
 export interface ChatEntry {
   id: string;

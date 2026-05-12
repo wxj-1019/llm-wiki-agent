@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GitBranch, Home, Compass, Upload, Settings, Activity, Server, Wrench, Network, Clock, Search, ChevronDown, Globe, Bot, ShieldCheck, FileText } from 'lucide-react';
+import { GitBranch, Home, Compass, Upload, Settings, Activity, Server, Wrench, Network, Clock, Search, ChevronDown, Globe, Bot, ShieldCheck, FileText, ListTodo, Webhook, HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +34,8 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: Upload, translationKey: 'nav.upload', path: '/upload', matchPath: '/upload' },
       { icon: Globe, translationKey: 'nav.crawler', path: '/crawler', matchPath: '/crawler' },
+      { icon: ListTodo, translationKey: 'nav.jobs', path: '/jobs', matchPath: '/jobs' },
+      { icon: Webhook, translationKey: 'nav.webhooks', path: '/webhooks', matchPath: '/webhooks' },
     ],
   },
   {
@@ -41,6 +43,7 @@ const navGroups: NavGroup[] = [
     items: [
       { icon: Server, translationKey: 'nav.mcp', path: '/mcp', matchPath: '/mcp' },
       { icon: Wrench, translationKey: 'nav.skills', path: '/skills', matchPath: '/skills' },
+      { icon: Wrench, translationKey: 'nav.tools', path: '/tools', matchPath: '/tools' },
       { icon: Clock, translationKey: 'nav.timeline', path: '/timeline', matchPath: '/timeline' },
       { icon: Network, translationKey: 'nav.mindmap', path: '/mindmap/overview', matchPath: '/mindmap' },
     ],
@@ -52,6 +55,7 @@ const navGroups: NavGroup[] = [
       { icon: Bot, translationKey: 'nav.jarvis', path: '/jarvis', matchPath: '/jarvis' },
       { icon: ShieldCheck, translationKey: 'nav.approvals', path: '/approvals', matchPath: '/approvals' },
       { icon: FileText, translationKey: 'nav.agentLog', path: '/agent-log', matchPath: '/agent-log' },
+      { icon: HeartPulse, translationKey: 'nav.pipeline', path: '/pipeline', matchPath: '/pipeline' },
       { icon: Activity, translationKey: 'nav.status', path: '/status', matchPath: '/status' },
       { icon: Settings, translationKey: 'nav.settings', path: '/settings', matchPath: '/settings' },
     ],
