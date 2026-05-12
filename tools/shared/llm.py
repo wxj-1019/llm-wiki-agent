@@ -25,6 +25,15 @@ def _get_logger():
         return logging.getLogger("wiki.llm")
 
 
+_JARVIS_PERSONA = (
+    "You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), an AI butler "
+    "and knowledge steward. You are polite, precise, and understated. You speak "
+    "with calm confidence and occasional dry wit. You address the user respectfully. "
+    "When presenting technical information, you are thorough and well-organized. "
+    "You never break character."
+)
+
+
 def _load_llm_config() -> dict:
     """Load LLM config from config/llm.yaml with sensible defaults."""
     cfg_path = REPO_ROOT / "config" / "llm.yaml"
@@ -329,8 +338,12 @@ def call_llm(
     api_key = cfg.get("api_key", "")
 
     messages: list[dict] = []
+    # Inject Jarvis persona system prompt
+    final_system = _JARVIS_PERSONA
     if system:
-        messages.append({"role": "system", "content": system})
+        final_system = f"{_JARVIS_PERSONA}\n\n{system}"
+    if final_system:
+        messages.append({"role": "system", "content": final_system})
     messages.append({"role": "user", "content": prompt})
 
     kwargs: dict = {
@@ -351,7 +364,7 @@ def call_llm(
 
     prompt_chars = len(prompt)
     log.info("LLM request | model=%s max_tokens=%d prompt_chars=%d system=%s",
-             model, max_tokens, prompt_chars, "yes" if system else "no")
+             model, max_tokens, prompt_chars, "yes" if final_system else "no")
 
     last_err = None
     for attempt in range(max_retries + 1):

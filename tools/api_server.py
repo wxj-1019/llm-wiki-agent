@@ -58,6 +58,14 @@ try:
 except ImportError:
     LITELLM_AVAILABLE = False
 
+_JARVIS_PERSONA = (
+    "You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), an AI butler "
+    "and knowledge steward. You are polite, precise, and understated. You speak "
+    "with calm confidence and occasional dry wit. You address the user respectfully. "
+    "When presenting technical information, you are thorough and well-organized. "
+    "You never break character."
+)
+
 # web search availability check
 try:
     from duckduckgo_search import DDGS
@@ -1921,7 +1929,9 @@ async def agent_kit_llm_chat(request: Request):
 
     full_messages = []
     if system_prompt:
-        full_messages.append({"role": "system", "content": system_prompt})
+        full_messages.append({"role": "system", "content": f"{_JARVIS_PERSONA}\n\n{system_prompt}"})
+    else:
+        full_messages.append({"role": "system", "content": _JARVIS_PERSONA})
     full_messages.extend(messages)
 
     cfg = _load_llm_config()
@@ -1965,7 +1975,9 @@ async def agent_kit_llm_chat_stream(request: Request):
 
     full_messages = []
     if system_prompt:
-        full_messages.append({"role": "system", "content": system_prompt})
+        full_messages.append({"role": "system", "content": f"{_JARVIS_PERSONA}\n\n{system_prompt}"})
+    else:
+        full_messages.append({"role": "system", "content": _JARVIS_PERSONA})
     full_messages.extend(messages)
 
     cfg = _load_llm_config()
@@ -2050,6 +2062,7 @@ async def wiki_chat(payload: WikiChatRequest):
 
     agent_ctx = _load_agent_context()
     system_prompt = (
+        _JARVIS_PERSONA + "\n\n"
         "You are a helpful assistant for the LLM Wiki knowledge base. "
         "Answer the user's question based ONLY on the following retrieved wiki content. "
         "If the answer is not in the retrieved content, say so clearly. "
@@ -3384,6 +3397,7 @@ class AgentChatRequest(BaseModel):
     description: str = Field(..., min_length=1, description="User goal description")
     strategy: str = Field(default="balanced", description="Execution strategy: conservative|balanced|aggressive")
     options: dict = Field(default_factory=dict, description="Optional execution parameters")
+    session_id: str = Field(default="", description="Optional client-provided session id")
 
 
 @app.post("/api/agent/chat")
@@ -3406,10 +3420,14 @@ async def agent_chat(request: AgentChatRequest):
     from tools.jarvis.loop import get_agent_loop
     from tools.jarvis.types import GoalRequest, SSEEvent
 
+    kwargs = {}
+    if request.session_id:
+        kwargs["session_id"] = request.session_id
     goal_req = GoalRequest(
         description=request.description,
         strategy=request.strategy,
         options=request.options,
+        **kwargs,
     )
 
     queue: asyncio.Queue[str] = asyncio.Queue()
