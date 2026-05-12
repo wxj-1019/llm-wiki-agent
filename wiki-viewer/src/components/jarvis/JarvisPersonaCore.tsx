@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { JarvisAvatar, type JarvisMood } from '@/components/jarvis/JarvisAvatar';
 import { JarvisReplyBubble } from '@/components/jarvis/JarvisReplyBubble';
 import { GoalInput } from '@/components/jarvis/GoalInput';
@@ -17,6 +18,9 @@ interface JarvisPersonaCoreProps {
   onBlur: () => void;
   onChange: (value: string) => void;
   onReplyComplete?: () => void;
+  onApprove?: (reqId: string) => void;
+  onReject?: (reqId: string) => void;
+  approvalLoading?: string | null;
 }
 
 const QUICK_ACTIONS = [
@@ -38,6 +42,9 @@ export function JarvisPersonaCore({
   onBlur,
   onChange,
   onReplyComplete,
+  onApprove,
+  onReject,
+  approvalLoading,
 }: JarvisPersonaCoreProps) {
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lastAssistantIndex = useMemo(() => {
@@ -160,7 +167,47 @@ export function JarvisPersonaCore({
                       );
                     }
 
-                    // system
+                    // system — includes execution status + pending approvals
+                    if (msg.metadata?.status === 'awaiting_approval' && onApprove && onReject) {
+                      const rid = msg.metadata.req_id as string;
+                      const risk = msg.metadata.risk_level as string;
+                      const isLoading = approvalLoading === rid;
+                      return (
+                        <div key={msg.id} className="flex justify-start pl-12">
+                          <div className="apple-card px-3 py-2 bg-[var(--bg-tertiary)]/40 border-amber-500/20 max-w-[85%]">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <ShieldAlert size={10} className="text-amber-400" />
+                              <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Approval Required</p>
+                            </div>
+                            <p className="text-xs text-[var(--text-primary)] mb-2">{msg.content}</p>
+                            {msg.metadata.params && (
+                              <pre className="text-[9px] bg-black/20 rounded p-1.5 mb-2 overflow-auto max-h-[80px] text-[var(--text-secondary)] font-mono-data">
+                                {JSON.stringify(msg.metadata.params, null, 2)}
+                              </pre>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => onApprove(rid)}
+                                disabled={isLoading}
+                                className="apple-button flex items-center gap-1 px-2.5 py-1 text-[10px] bg-apple-green/10 text-apple-green hover:bg-apple-green/20 disabled:opacity-40"
+                              >
+                                {isLoading ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => onReject(rid)}
+                                disabled={isLoading}
+                                className="apple-button flex items-center gap-1 px-2.5 py-1 text-[10px] bg-apple-red/10 text-apple-red hover:bg-apple-red/20 disabled:opacity-40"
+                              >
+                                <XCircle size={10} />
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={msg.id} className="flex justify-start pl-12">
                         <div className="apple-card px-3 py-2 bg-[var(--bg-tertiary)]/40 max-w-[85%]">

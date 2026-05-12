@@ -508,6 +508,9 @@ export function JarvisPage() {
             onReplyComplete={() => {
               if (!hasActiveExecution) setMood('idle');
             }}
+            onApprove={(reqId) => resolveApproval(reqId, 'approve')}
+            onReject={(reqId) => resolveApproval(reqId, 'reject')}
+            approvalLoading={approvalLoading}
           />
         </div>
       )}
