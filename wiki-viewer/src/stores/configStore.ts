@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { fetchWithRetry } from '@/lib/fetchWithTimeout';
 
 export interface RSSFeed {
   name: string;
@@ -141,10 +142,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   checkApi: async () => {
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 3000);
-      const res = await fetch('/api/health', { signal: ctrl.signal });
-      clearTimeout(timer);
+      const res = await fetchWithRetry('/api/health', { timeoutMs: 3000, retries: 1, retryDelayMs: 500 });
       set({ apiAvailable: res.ok });
     } catch {
       set({ apiAvailable: false });
@@ -158,20 +156,26 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       const rssYaml = buildRssYaml(cfg);
       const arxivYaml = buildArxivYaml(cfg);
       const [g1, g2, g3] = await Promise.all([
-        fetch('/api/config/github_sources', {
+        fetchWithRetry('/api/config/github_sources', {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: githubYaml,
+          timeoutMs: 10000,
+          retries: 1,
         }),
-        fetch('/api/config/rss_sources', {
+        fetchWithRetry('/api/config/rss_sources', {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: rssYaml,
+          timeoutMs: 10000,
+          retries: 1,
         }),
-        fetch('/api/config/arxiv_sources', {
+        fetchWithRetry('/api/config/arxiv_sources', {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: arxivYaml,
+          timeoutMs: 10000,
+          retries: 1,
         }),
       ]);
       return g1.ok && g2.ok && g3.ok;
@@ -182,10 +186,14 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
 
   loadFromServer: async () => {
     try {
+      const _fetch = (url: string) =>
+        fetchWithRetry(url, { timeoutMs: 10000, retries: 1 }).then((r) =>
+          r.ok ? r.json().then((d: { content: string }) => d.content) : null
+        );
       const [g1, g2, g3] = await Promise.all([
-        fetch('/api/config/github_sources').then((r) => (r.ok ? r.json().then((d: { content: string }) => d.content) : null)),
-        fetch('/api/config/rss_sources').then((r) => (r.ok ? r.json().then((d: { content: string }) => d.content) : null)),
-        fetch('/api/config/arxiv_sources').then((r) => (r.ok ? r.json().then((d: { content: string }) => d.content) : null)),
+        _fetch('/api/config/github_sources'),
+        _fetch('/api/config/rss_sources'),
+        _fetch('/api/config/arxiv_sources'),
       ]);
       let updated = false;
       if (g1) {
