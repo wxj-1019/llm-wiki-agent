@@ -40,7 +40,7 @@ In December 2023 (here’s the Internet Archive for the OpenAI pricing page) Ope
 - [[Meta]] (entity)
 - [[Microsoft]] (entity)
 - [[DeepSeek]] (entity)
-- [[GitHub Hermes 生态系统综述]] (source)
+- [[github-hermes-ecosystem|GitHub Hermes 生态系统综述]] (source)
 - [[GPT]] (entity)
 - [[ReactNative]] (entity)
 - [[things-we-learned-about-llms-in-2024]] (source)
@@ -58,7 +58,7 @@ In December 2023 (here’s the Internet Archive for the OpenAI pricing page) Ope
 - Site: Simon Willison’s Weblog
 - Concepts: [[ChainOfThought]] · [[Slop]] · [[SyntheticData]]
 - Entitys: [[Apple]] · [[OpenAI]] · [[Google]] · [[Anthropic]] · [[SpringCloudAlibaba]] · [[Meta]]
-- Sources: [[GitHub Hermes 生态系统综述]] · [[things-we-learned-about-llms-in-2024]]
+- Sources: [[github-hermes-ecosystem|GitHub Hermes 生态系统综述]] · [[things-we-learned-about-llms-in-2024]]
 - Suggested pages: Amazon
 
 ## Full Content

@@ -77,12 +77,12 @@ This file is maintained by the LLM. Updated on every ingest.
 - [ETF专区](sources/etf-c6f436.md) — 该文章主要汇集了财经新闻、股市行情、公司动态及市场分析等内容，涵盖A股、港股、美股等市场表现，以及行业趋势、机构观点和个
 ## Entities
 - [上市公司](entities/上市公司.md) — auto-healed entity
-- [美的集团](entities/article-3e682d.md) — auto-detected entity
-- [东方证券](entities/article-e4b25c.md) — auto-detected entity
-- [中金公司](entities/article-4c695c.md) — auto-detected entity
-- [嘉晨智能](entities/article-acd429.md) — auto-detected entity
-- [上海界面财联社科技](entities/article-8d07c7.md) — 财联社运营主体，上海报业集团主管，新闻订阅系统五大新闻源之一
-- [惠康科技](entities/article-2ab2de.md) — A股IPO公司，股票代码001237，深交所主板，发行价53.26元
+- [美的集团](entities/美的集团.md) — auto-detected entity
+- [东方证券](entities/东方证券.md) — auto-detected entity
+- [中金公司](entities/中金公司.md) — auto-detected entity
+- [嘉晨智能](entities/嘉晨智能.md) — auto-detected entity
+- [上海界面财联社科技](entities/上海界面财联社科技.md) — 财联社运营主体，上海报业集团主管，新闻订阅系统五大新闻源之一
+- [惠康科技](entities/惠康科技.md) — A股IPO公司，股票代码001237，深交所主板，发行价53.26元
 - [Amazon](entities/amazon.md) — auto-detected entity
 - [持仓管理与组合分析](entities/持仓管理与组合分析.md) — auto-healed entity
 - [价格监控与预警系统](entities/价格监控与预警系统.md) — auto-healed entity

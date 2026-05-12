@@ -166,7 +166,7 @@ print(f"共获取到{len(df)}条数据")
 
 需求：获取最近30个交易日的北向资金净流入/流出数据，包含沪股通、深股通，用于判断市场资金流向。
 
-```
+```python
 # 场景3：获取北向资金流向数据（市场热点参考）
 import tushare as ts
 import pandas as pd

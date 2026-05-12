@@ -81,7 +81,9 @@ except ImportError:
         return match.group(1).strip() if match else ""
 
     def extract_wikilinks(content: str) -> list[str]:
-        return re.findall(r'\[\[([^\]]+)\]\]', content)
+        # Strip out fenced code blocks to avoid matching Python list literals like [['col1', 'col2']]
+        no_code = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
+        return re.findall(r'\[\[([^\]]+)\]\]', no_code)
 
 
 try:
