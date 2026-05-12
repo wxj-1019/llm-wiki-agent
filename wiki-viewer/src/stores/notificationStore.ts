@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 
 export type NotificationType = 'success' | 'error' | 'info' | 'progress';
+export type Severity = 'info' | 'success' | 'warning' | 'critical';
+
+export interface NotificationAction {
+  label: string;
+  handler: () => void;
+}
 
 export interface Notification {
   id: string;
@@ -9,18 +15,25 @@ export interface Notification {
   timestamp: number;
   read: boolean;
   progress?: number; // 0-100 for progress notifications
+  severity?: Severity; // alert severity (maps from SSE event)
+  source?: string; // event source identifier
+  action?: NotificationAction; // optional action button
+  isAlert?: boolean; // true → persistent banner, not auto-dismissed
 }
 
 interface NotificationState {
   notifications: Notification[];
   toasts: Notification[];
   addNotification: (message: string, type?: NotificationType, progress?: number) => void;
+  addAlert: (message: string, severity: Severity, source: string, action?: NotificationAction) => string;
   updateProgress: (id: string, progress: number) => void;
   removeNotification: (id: string) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   clearNotifications: () => void;
   dismissToast: (id: string) => void;
+  dismissAlert: (id: string) => void;
+  getActiveAlerts: () => Notification[];
   unreadCount: () => number;
 }
 
@@ -132,6 +145,37 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     }));
   },
+
+  // ── Persistent alert banner ──
+
+  addAlert: (message, severity, source, action) => {
+    const id = `alert-${Date.now()}-${++toastIdCounter}`;
+    const alert: Notification = {
+      id,
+      message,
+      type: severity === 'critical' ? 'error' : severity === 'warning' ? 'info' : severity as NotificationType,
+      timestamp: Date.now(),
+      read: false,
+      severity,
+      source,
+      action,
+      isAlert: true,
+    };
+    // Deduplicate: replace existing alert from same source
+    set((state) => ({
+      notifications: [alert, ...state.notifications].slice(0, 50),
+      toasts: state.toasts,  // alerts do NOT appear as toasts
+    }));
+    return id;
+  },
+
+  dismissAlert: (id) => {
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id || !n.isAlert),
+    }));
+  },
+
+  getActiveAlerts: () => get().notifications.filter((n) => n.isAlert),
 
   unreadCount: () => get().notifications.filter((n) => !n.read).length,
 }));
