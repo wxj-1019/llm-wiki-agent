@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Sun, Moon, Monitor, Network, Menu, X, Globe } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropdown';
+import type { ConnectionState } from '@/hooks/useEventStream';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { searchNodes } from '@/lib/search';
@@ -29,7 +30,7 @@ function LanguageSwitcher() {
   );
 }
 
-export function Header() {
+export function Header({ connectionState }: { connectionState?: ConnectionState }) {
   const { t } = useTranslation();
   const theme = useWikiStore((s) => s.theme);
   const setTheme = useWikiStore((s) => s.setTheme);
@@ -192,7 +193,26 @@ export function Header() {
         <Network size={16} aria-hidden="true" />
       </Link>
 
-      <NotificationDropdown />
+      <div className="flex items-center gap-1">
+        {/* P5: SSE connection status indicator dot */}
+        <span
+          className={`w-2 h-2 rounded-full ${
+            connectionState === "connected"
+              ? "bg-emerald-500"
+              : connectionState === "connecting"
+                ? "bg-amber-400"
+                : "bg-red-500"
+          }`}
+          title={
+            connectionState === "connected"
+              ? "SSE 已连接"
+              : connectionState === "connecting"
+                ? "SSE 连接中..."
+                : "SSE 已断开"
+          }
+        />
+        <NotificationDropdown />
+      </div>
 
       <LanguageSwitcher />
 
