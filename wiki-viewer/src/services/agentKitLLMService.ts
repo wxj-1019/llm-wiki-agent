@@ -1,5 +1,7 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { isValidFilePath } from '@/lib/validation';
+import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 async function safeJson<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -187,4 +189,15 @@ export async function generateFromKnowledge(
     throw new Error(err || `Generation failed: ${res.status}`);
   }
   return safeJson(res);
+}
+
+// ── React Query hooks (TanStack Query with auto-retry) ──
+
+export function useAgentKitFile(path: string | null) {
+  return useQuery({
+    queryKey: ['agent-kit', 'file', path],
+    queryFn: () => readAgentKitFile(path!),
+    enabled: path !== null && path.length > 0,
+    staleTime: 30_000,
+  });
 }
