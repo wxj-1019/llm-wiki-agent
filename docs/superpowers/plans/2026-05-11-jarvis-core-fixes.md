@@ -1,3 +1,5 @@
+> **Status:** Implemented
+
 # Jarvis Core Fixes Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -147,7 +149,7 @@ Replace the JSON parsing block inside `reason()` (~lines 149-156) with:
             return []
 ```
 
-Remove the old `cleaned = raw.strip()` â†’ `parsed = json.loads(cleaned)` block.
+Remove the old `cleaned = raw.strip()` â†?`parsed = json.loads(cleaned)` block.
 
 - [ ] **Step 5: Replace duplication in `planner.py`**
 
@@ -166,7 +168,7 @@ Replace the JSON parsing block inside `create_plan_from_goal()` (~lines 88-93) w
             return plan
 ```
 
-Remove the old `start = raw.index("{")` â†’ `data = json.loads(...)` block.
+Remove the old `start = raw.index("{")` â†?`data = json.loads(...)` block.
 
 - [ ] **Step 6: Replace duplication in `goals.py`**
 
@@ -223,7 +225,7 @@ def test_loop_uses_planner():
 
 Run: `python -m pytest tests/jarvis/test_loop_planner.py -v`
 
-Expected: FAIL â€” `plan.estimated_cost` is None because loop never calls planner.
+Expected: FAIL â€?`plan.estimated_cost` is None because loop never calls planner.
 
 - [ ] **Step 2: Import Planner in loop**
 
@@ -344,7 +346,7 @@ def test_loop_calls_learner():
 
 Run: `python -m pytest tests/jarvis/test_loop_learner.py -v`
 
-Expected: FAIL â€” `loop.learner` is None because learner is not initialized.
+Expected: FAIL â€?`loop.learner` is None because learner is not initialized.
 
 - [ ] **Step 2: Import and initialize Learner**
 
@@ -561,7 +563,7 @@ Replace `auto_approve_check()` with:
 
 ```python
     def auto_approve_check(self, step: PlanStep) -> bool:
-        # 1. Deny-list check â€” never auto-approve these
+        # 1. Deny-list check â€?never auto-approve these
         for deny in self._never_auto:
             if "(" in deny:
                 # Pattern like "terminal_exec(command=rm *)"
@@ -665,7 +667,7 @@ def test_task_lifecycle():
 
 Run: `python -m pytest tests/jarvis/test_multi_agent.py -v`
 
-Expected: FAIL â€” `AttributeError: 'MultiAgentManager' object has no attribute 'start_task'`.
+Expected: FAIL â€?`AttributeError: 'MultiAgentManager' object has no attribute 'start_task'`.
 
 - [ ] **Step 2: Add task lifecycle methods**
 
@@ -932,23 +934,23 @@ git commit -m "test(jarvis): add integration smoke tests for wired components"
 ## Self-Review Checklist
 
 **1. Spec coverage:**
-- âœ… Planner connected to loop (Task 2)
-- âœ… Learner connected to loop (Task 3)
-- âœ… Approval YAML parsing fixed (Task 4)
-- âœ… `never_auto_approve` enforced (Task 4)
-- âœ… MultiAgent task lifecycle added (Task 5)
-- âœ… Shared utilities extracted (Task 1)
-- âœ… Config loading unified (Task 6)
-- âœ… Tests for all changes (every task has tests)
+- âœ?Planner connected to loop (Task 2)
+- âœ?Learner connected to loop (Task 3)
+- âœ?Approval YAML parsing fixed (Task 4)
+- âœ?`never_auto_approve` enforced (Task 4)
+- âœ?MultiAgent task lifecycle added (Task 5)
+- âœ?Shared utilities extracted (Task 1)
+- âœ?Config loading unified (Task 6)
+- âœ?Tests for all changes (every task has tests)
 
 **2. Placeholder scan:**
-- âœ… No "TBD", "TODO", "implement later"
-- âœ… Every step shows exact code
-- âœ… Every step shows exact commands and expected output
-- âœ… No "Similar to Task N" shortcuts
+- âœ?No "TBD", "TODO", "implement later"
+- âœ?Every step shows exact code
+- âœ?Every step shows exact commands and expected output
+- âœ?No "Similar to Task N" shortcuts
 
 **3. Type consistency:**
-- âœ… `parse_llm_json` returns `list | dict | None` consistently across all call sites
-- âœ… `load_yaml_config` signature matches all usage sites
-- âœ… `ApprovalManager._never_auto` is `list[str]` throughout
-- âœ… MultiAgent lifecycle methods return `bool` consistently
+- âœ?`parse_llm_json` returns `list | dict | None` consistently across all call sites
+- âœ?`load_yaml_config` signature matches all usage sites
+- âœ?`ApprovalManager._never_auto` is `list[str]` throughout
+- âœ?MultiAgent lifecycle methods return `bool` consistently

@@ -1,3 +1,5 @@
+> **Status:** Implemented
+
 # Jarvis Cleanup + Test Coverage Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
@@ -196,7 +198,7 @@ Find `terminal_exec` or any `subprocess.run`/`subprocess.Popen` calls. Replace w
 
 - [ ] **Step 2: Replace in `dev_tools.py`**
 
-Find `_run_git` or any subprocess calls. Replace with `safe_subprocess`. Preserve git-specific logic (parsing output, checking return codes) â€” only replace the subprocess invocation itself.
+Find `_run_git` or any subprocess calls. Replace with `safe_subprocess`. Preserve git-specific logic (parsing output, checking return codes) â€?only replace the subprocess invocation itself.
 
 - [ ] **Step 3: Replace in `knowledge_tools.py`**
 
@@ -523,21 +525,21 @@ Expected: 30+ tests, all PASS.
 ## Self-Review Checklist
 
 **1. Spec coverage:**
-- âœ… safe_subprocess extracted (Task 2)
-- âœ… normalize_path extracted (Task 3)
-- âœ… EventSource enum (Task 4)
-- âœ… iso_now() normalized (Task 5)
-- âœ… event_bus tests (Task 6)
-- âœ… state tests (Task 7)
-- âœ… tool_registry tests (Task 8)
-- âœ… audit tests (Task 9)
-- âœ… Full OODA mock test (Task 10)
+- âœ?safe_subprocess extracted (Task 2)
+- âœ?normalize_path extracted (Task 3)
+- âœ?EventSource enum (Task 4)
+- âœ?iso_now() normalized (Task 5)
+- âœ?event_bus tests (Task 6)
+- âœ?state tests (Task 7)
+- âœ?tool_registry tests (Task 8)
+- âœ?audit tests (Task 9)
+- âœ?Full OODA mock test (Task 10)
 
 **2. Placeholder scan:**
-- âœ… No TBD/TODO/"implement later"
-- âœ… All steps have exact code and commands
+- âœ?No TBD/TODO/"implement later"
+- âœ?All steps have exact code and commands
 
 **3. Type consistency:**
-- âœ… `EventSource` used consistently across all modules
-- âœ… `iso_now()` returns `str` everywhere
-- âœ… `safe_subprocess()` returns `dict` with consistent keys
+- âœ?`EventSource` used consistently across all modules
+- âœ?`iso_now()` returns `str` everywhere
+- âœ?`safe_subprocess()` returns `dict` with consistent keys
