@@ -145,7 +145,7 @@ export function RootLayout() {
           id="main-content"
           className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'} ${isGraphPage ? 'overflow-hidden' : 'overflow-y-auto'}`}
         >
-          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-8'}>
+          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-8 h-full flex flex-col'}>
             {loading ? (
               <div className="min-h-[60vh] py-8">
                 <PageSkeleton />

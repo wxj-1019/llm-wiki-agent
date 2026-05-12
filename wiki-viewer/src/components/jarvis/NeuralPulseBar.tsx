@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 
 interface ToolItem {
   name: string;
@@ -9,7 +10,6 @@ const RISK_ORDER: Record<string, number> = {
   L0: 0, L1: 1, L2: 2, L3: 3, L4: 4,
 };
 
-/* Subtle accent colours that blend with global dark palette */
 const RISK_COLOR: Record<string, string> = {
   L0: '#30d158',
   L1: '#64d2ff',
@@ -48,17 +48,24 @@ export function NeuralPulseBar({ tools, isRunning }: { tools: ToolItem[]; isRunn
 
   return (
     <div className="relative h-1 w-full overflow-hidden mb-2">
-      <div className="absolute inset-0 flex gap-[2px] opacity-60">
+      <div className="absolute inset-0 flex gap-[2px]" style={{ opacity: isRunning ? 0.7 : 0.5 }}>
         {segments.map((seg, i) => (
-          <div
+          <motion.div
             key={i}
-            className="h-full rounded-full animate-pulse-bar"
+            className="h-full rounded-full"
             style={{
               width: `${seg.width}px`,
               backgroundColor: seg.color,
-              animationDelay: `${seg.delay}s`,
-              animationDuration: `${seg.duration}s`,
-              opacity: isRunning ? undefined : 0.2,
+            }}
+            animate={{
+              opacity: [0.4, 1, 0.4],
+              scaleX: [1, 1.08, 1],
+            }}
+            transition={{
+              duration: seg.duration,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: seg.delay,
             }}
           />
         ))}

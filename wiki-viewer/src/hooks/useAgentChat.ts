@@ -24,7 +24,6 @@ export function useAgentChat() {
   const setDone = useAgentChatStore((s) => s.setDone);
   const setConnected = useAgentChatStore((s) => s.setConnected);
   const addPendingApproval = useAgentChatStore((s) => s.addPendingApproval);
-  const removePendingApproval = useAgentChatStore((s) => s.removePendingApproval);
 
   const connect = useCallback(async (opts: AgentChatOptions) => {
     if (abortRef.current) {
@@ -67,6 +66,7 @@ export function useAgentChat() {
       const decoder = new TextDecoder();
       let buffer = '';
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -186,7 +186,7 @@ export function useAgentChat() {
       setError(sessionId, (err as Error).message || 'Connection failed');
       setConnected(false);
     }
-  }, [startExecution, updateExecution, addStep, updateStep, addToolCall, updateToolCall, addReflection, setContent, setError, setDone, setConnected, addPendingApproval, removePendingApproval]);
+  }, [startExecution, updateExecution, addStep, updateStep, addToolCall, updateToolCall, addReflection, setContent, setError, setDone, setConnected, addPendingApproval]);
 
   const disconnect = useCallback(() => {
     if (abortRef.current) {

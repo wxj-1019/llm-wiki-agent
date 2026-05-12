@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Brain, Lightbulb, ChevronDown, ChevronRight,
-  TrendingUp, BarChart3, Sparkles, AlertTriangle,
+  Brain, ChevronDown, ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 interface TopPattern {

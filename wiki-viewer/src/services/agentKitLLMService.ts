@@ -44,6 +44,8 @@ export async function chatWithLLM(
   return data.content;
 }
 
+const STREAM_TIMEOUT_MS = 60_000;
+
 export async function* chatWithLLMStream(
   messages: ChatMessage[],
   systemPrompt?: string,
@@ -65,48 +67,70 @@ export async function* chatWithLLMStream(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-      if (data === '[DONE]') {
-        yield { done: true };
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const resetTimeout = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => { reader.cancel(); }, STREAM_TIMEOUT_MS);
+  };
+  const abortHandler = () => reader.cancel();
+  signal?.addEventListener('abort', abortHandler, { once: true });
+  try {
+    while (true) {
+      resetTimeout();
+      let readResult: ReadableStreamReadResult<Uint8Array>;
+      try {
+        readResult = await reader.read();
+      } catch {
+        if (signal?.aborted) return;
+        yield { error: 'Response timed out. The server may be overloaded.' };
         return;
       }
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.error) {
-          yield { error: parsed.error };
+      const { done, value } = readResult;
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') {
+          yield { done: true };
           return;
         }
-        if (parsed.chunk) {
-          yield { chunk: parsed.chunk };
-        }
-      } catch {
-        // ignore malformed lines
-      }
-    }
-  }
-  if (buffer.trim()) {
-    const trimmed = buffer.trim();
-    if (trimmed.startsWith('data: ')) {
-      const data = trimmed.slice(6);
-      if (data !== '[DONE]') {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.chunk) yield { chunk: parsed.chunk };
-          if (parsed.error) yield { error: parsed.error };
+          if (parsed.error) {
+            yield { error: parsed.error };
+            return;
+          }
+          if (parsed.chunk) {
+            yield { chunk: parsed.chunk };
+          }
         } catch {
-          // ignore
+          // ignore malformed lines
         }
       }
     }
+    if (buffer.trim()) {
+      const trimmed = buffer.trim();
+      if (trimmed.startsWith('data: ')) {
+        const data = trimmed.slice(6);
+        if (data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.chunk) yield { chunk: parsed.chunk };
+            if (parsed.error) yield { error: parsed.error };
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortHandler);
+    reader.releaseLock();
   }
 }
 

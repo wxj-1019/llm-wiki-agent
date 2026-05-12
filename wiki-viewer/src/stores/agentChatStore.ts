@@ -93,6 +93,7 @@ interface AgentChatState {
   setHistory: (history: AgentExecutionState[]) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useAgentChatStore = create<AgentChatState>((set, get) => ({
   executions: [],
   currentExecution: null,

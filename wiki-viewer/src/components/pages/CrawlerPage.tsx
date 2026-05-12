@@ -5,12 +5,11 @@ import {
   Globe, Plus, Trash2, Play, Zap, Save, Terminal, X, CheckCircle,
   AlertCircle, Loader2, RefreshCw, ChevronDown, ChevronRight,
   Rss, GitBranch, BookOpen, ArrowRight, Bug, Radio, TrendingUp,
-  FileText, Layers, Info, HelpCircle, BookMarked, Sparkles, Lightbulb,
+  FileText, Layers, Info, HelpCircle, Sparkles,
 } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import {
-  fetchWebSourcesConfig, saveWebSourcesConfig,
   runCrawler, runBatchPipeline, fetchUrlArticle,
   runRssCrawler, runGithubCrawler, runArxivCrawler,
   type CrawlerRunResult, type BatchResult,
@@ -168,7 +167,7 @@ function parseWebYaml(raw: string): { urls: WebUrl[]; settings: WebSettings } {
       if (trimmed.startsWith('name:')) name = trimmed.slice(5).trim().replace(/^["']|["']$/g, '');
       if (trimmed.startsWith('tags:')) {
         const tagStr = trimmed.slice(5).trim();
-        tags = tagStr.replace(/[\[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+        tags = tagStr.replace(/[[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       }
     }
     if (url) urls.push({ url, name, tags });
@@ -187,7 +186,7 @@ function parseWebYaml(raw: string): { urls: WebUrl[]; settings: WebSettings } {
         } else if (key === 'user_agent') {
           settings.user_agent = val;
         } else if (key === 'include_patterns' || key === 'exclude_patterns') {
-          (settings as unknown as Record<string, unknown>)[key] = val.replace(/[\[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+          (settings as unknown as Record<string, unknown>)[key] = val.replace(/[[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
         }
       }
     }
@@ -261,7 +260,7 @@ function parseGithubYaml(raw: string): { repos: GithubRepo[]; trending: GithubTr
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('- repo:') || trimmed.startsWith('trending:')) break;
       if (trimmed.startsWith('kinds:')) {
-        kinds = trimmed.slice(6).trim().replace(/[\[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+        kinds = trimmed.slice(6).trim().replace(/[[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       }
     }
     if (repo) repos.push({ repo, kinds: kinds.length ? kinds : ['info'] });
@@ -277,7 +276,7 @@ function parseGithubYaml(raw: string): { repos: GithubRepo[]; trending: GithubTr
       if (key === 'since_days') trending.since_days = parseInt(val, 10) || 7;
       if (key === 'per_language') trending.per_language = parseInt(val, 10) || 5;
       if (key === 'languages') {
-        trending.languages = val.replace(/[\[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+        trending.languages = val.replace(/[[\]]/g, '').split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       }
     }
   }

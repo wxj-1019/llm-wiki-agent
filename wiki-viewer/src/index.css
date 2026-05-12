@@ -577,9 +577,10 @@
 }
 
 /* ─────────────────────────────────────────
-   JARVIS AVATAR — 1:1 from uiverse.io
+   JARVIS AVATAR 🤖 1:1 from uiverse.io
    andrew-manzyk / young-walrus-64
    Pure CSS div approach: blur+contrast at container level
+   Animations driven by JS requestAnimationFrame
    ───────────────────────────────────────── */
 .jarvis-avatar {
   --ja-c1: #ffbf48;
@@ -596,14 +597,14 @@
   box-shadow:
     0 0 12px 0 var(--ja-c3),
     0 8px 24px 0 var(--ja-c4);
-  animation: ja-colorize calc(var(--ja-time) * 3) ease-in-out infinite;
   transition: box-shadow 0.6s ease;
 }
 
 /* Active state: pulsing glow when Jarvis is responding */
-.jarvis-avatar.ja-active {
-  animation: ja-colorize calc(var(--ja-time) * 3) ease-in-out infinite,
-             ja-pulse-glow 1.2s ease-in-out infinite;
+.jarvis-avatar[data-active="true"] {
+  box-shadow:
+    0 0 15px 2px var(--ja-c3),
+    0 10px 35px 2px var(--ja-c4);
 }
 
 /* Circular clip layer */
@@ -634,47 +635,36 @@
 .jarvis-avatar .ja-blob:nth-child(1) {
   clip-path: polygon(25% 25%, 75% 25%, 50% 75%);
   transform-origin: 50% 50%;
-  animation: ja-rotation var(--ja-time) linear infinite reverse;
 }
 /* Large triangle — bottom */
 .jarvis-avatar .ja-blob:nth-child(2) {
   clip-path: polygon(50% 25%, 75% 75%, 25% 75%);
   transform-origin: 50% 60%;
-  animation: ja-rotation var(--ja-time) linear infinite;
-  animation-delay: calc(var(--ja-time) / -3);
 }
 /* Small triangle — upper-left */
 .jarvis-avatar .ja-blob:nth-child(3) {
   clip-path: polygon(35% 35%, 65% 35%, 50% 65%);
   transform-origin: 40% 40%;
-  animation: ja-rotation var(--ja-time) linear infinite reverse;
 }
 /* Small triangle — upper-left offset */
 .jarvis-avatar .ja-blob:nth-child(4) {
   clip-path: polygon(35% 35%, 65% 35%, 50% 65%);
   transform-origin: 40% 40%;
-  animation: ja-rotation var(--ja-time) linear infinite reverse;
-  animation-delay: calc(var(--ja-time) / -2);
 }
 /* Small triangle — upper-right */
 .jarvis-avatar .ja-blob:nth-child(5) {
   clip-path: polygon(35% 35%, 65% 35%, 50% 65%);
   transform-origin: 60% 40%;
-  animation: ja-rotation var(--ja-time) linear infinite;
 }
 /* Small triangle — upper-right offset */
 .jarvis-avatar .ja-blob:nth-child(6) {
   clip-path: polygon(35% 35%, 65% 35%, 50% 65%);
   transform-origin: 60% 40%;
-  animation: ja-rotation var(--ja-time) linear infinite;
-  animation-delay: calc(var(--ja-time) / -1.5);
 }
 /* Extra small triangle — center */
 .jarvis-avatar .ja-blob:nth-child(7) {
   clip-path: polygon(40% 40%, 60% 40%, 50% 60%);
   transform-origin: 50% 50%;
-  animation: ja-rotation calc(var(--ja-time) * 0.8) linear infinite;
-  animation-delay: calc(var(--ja-time) / -4);
 }
 
 /* Glass overlay: borders + subtle inset shadow */
@@ -691,54 +681,46 @@
   transition: box-shadow 0.6s ease, opacity 0.5s ease;
 }
 
-.jarvis-avatar.ja-active .ja-overlay {
+.jarvis-avatar[data-active="true"] .ja-overlay {
   box-shadow:
     inset 0 10px 15px 0 var(--ja-c3),
     inset 0 -10px 15px 0 var(--ja-c4);
 }
 
-@keyframes ja-rotation {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes ja-colorize {
-  0%   { filter: hue-rotate(0deg); }
-  25%  { filter: hue-rotate(-20deg); }
-  50%  { filter: hue-rotate(-40deg); }
-  75%  { filter: hue-rotate(-20deg); }
-  100% { filter: hue-rotate(0deg); }
-}
-
-@keyframes ja-pulse-glow {
-  0%, 100% {
-    box-shadow:
-      0 0 15px 2px var(--ja-c3),
-      0 10px 35px 2px var(--ja-c4);
-  }
-  50% {
-    box-shadow:
-      0 0 35px 8px var(--ja-c3),
-      0 20px 60px 8px var(--ja-c4);
-  }
-}
-
 /* ─────────────────────────────────────────
-   JARVIS INPUT — adapted from uiverse.io
-   chase2k25 / horrible-husky-56
-   Dark theme + gold accent
+   JARVIS INPUT — Apple-style liquid glass
+   Soft, subtle, breathing animations
    ───────────────────────────────────────── */
 .ji-wrapper {
   width: 100%;
   position: relative;
 }
 
-/* Main input container — Liquid Glass (Apple-style) */
+/* Entrance animation */
+.ji-entrance {
+  animation: ji-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+@keyframes ji-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Main input container — Liquid Glass */
 .ji-container {
   position: relative;
   display: flex;
   flex-direction: column;
-  /* Liquid glass: translucent layer with blur */
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.07) 0%,
@@ -749,18 +731,41 @@
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
   border: 1px solid rgba(255, 245, 235, 0.1);
   border-radius: 1.25rem;
-  padding: 14px 16px;
+  padding: 12px 14px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 6px 24px rgba(0, 0, 0, 0.2),
     inset 0 1px 1px rgba(255, 255, 255, 0.08),
     inset 0 -1px 1px rgba(0, 0, 0, 0.15);
-  transition: all 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+  transition:
+    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
-/* Liquid specular highlight — top curved reflection */
-.ji-container::before {
-  content: "";
+/* Ambient glow — always-on subtle pulse */
+.ji-ambient {
+  position: absolute;
+  inset: -1px;
+  border-radius: 1.3rem;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 100%,
+    rgba(255, 191, 72, 0.06) 0%,
+    transparent 70%
+  );
+  opacity: 0.6;
+  animation: ji-ambient-breathe 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes ji-ambient-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+/* Top sheen line — static with focus enhancement */
+.ji-sheen {
   position: absolute;
   top: 0;
   left: 8%;
@@ -769,37 +774,68 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.25) 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(255, 255, 255, 0.25) 70%,
+    rgba(255, 255, 255, 0.2) 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.2) 70%,
     transparent 100%
   );
   border-radius: 100px;
   pointer-events: none;
   z-index: 1;
+  transition: opacity 0.4s ease;
 }
 
-/* Liquid surface sheen — soft radial glow */
-.ji-container::after {
-  content: "";
+/* Bottom accent bar — subtle golden line */
+.ji-accent-bar {
   position: absolute;
-  top: -40%;
-  left: -20%;
-  width: 140%;
-  height: 100%;
-  background: radial-gradient(
-    ellipse 80% 50% at 50% 0%,
-    rgba(255, 255, 255, 0.1) 0%,
-    transparent 60%
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--ja-c1), var(--ja-c2), transparent);
+  transform: translateX(-50%);
+  border-radius: 100px;
+  opacity: 0;
+  transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+  z-index: 1;
+}
+
+/* Typing shimmer — sweep across when typing */
+.ji-typing-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.25rem;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 191, 72, 0.04) 45%,
+    rgba(255, 191, 72, 0.07) 50%,
+    rgba(255, 191, 72, 0.04) 55%,
+    transparent 70%
   );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  opacity: 0;
   pointer-events: none;
   z-index: 0;
+  transition: opacity 0.4s ease;
+}
+.ji-typing-shimmer.ji-typing-active {
+  opacity: 1;
+  animation: ji-shimmer-sweep 2.5s ease-in-out infinite;
+}
+
+@keyframes ji-shimmer-sweep {
+  0% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
 }
 
 /* Content layout */
 .ji-content {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  align-items: flex-end;
   position: relative;
   z-index: 2;
 }
@@ -815,41 +851,17 @@
   color: var(--text-primary);
   line-height: 1.5;
   resize: none;
-  min-height: 60px;
-  transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 24px;
+  max-height: 160px;
+  padding: 4px 0;
+  transition: color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ji-textarea::placeholder {
   color: var(--text-tertiary);
-  font-style: italic;
+  transition: color 0.3s ease;
 }
-.ji-textarea:focus {
-  color: var(--ja-c1);
-}
-
-/* Controls column */
-.ji-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 110px;
-  align-items: stretch;
-}
-
-/* Strategy select */
-.ji-select {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  border-radius: 0.625rem;
-  padding: 6px 10px;
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-.ji-select:focus {
-  border-color: var(--ja-c1);
-  box-shadow: 0 0 0 2px rgba(255, 191, 72, 0.15);
+.ji-container.ji-focused .ji-textarea::placeholder {
+  color: rgba(255, 191, 72, 0.35);
 }
 
 /* Submit button */
@@ -857,143 +869,90 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 14px;
+  width: 36px;
+  height: 36px;
   border-radius: 0.625rem;
   border: none;
   background: linear-gradient(180deg, var(--ja-c1), var(--ja-c2));
   color: #1a0f05;
-  font-size: 0.8125rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+    box-shadow 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+    filter 0.35s ease;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
-.ji-submit:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 6px 20px rgba(255, 191, 72, 0.35);
-}
-.ji-submit:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
-}
-.ji-submit:disabled {
-  opacity: 0.35;
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-}
-
-/* SVG icon inside submit */
-.ji-icon {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Subtle underline effect */
-.ji-underline {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--ja-c1), var(--ja-c2));
-  transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
-  z-index: 1;
-}
-
-/* Ripple circle */
-.ji-ripple {
-  position: absolute;
-  top: 50%;
-  left: 85%;
-  width: 0;
-  height: 0;
-  background: rgba(255, 191, 72, 0.06);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 0;
-}
-
-/* Floating dots */
-.ji-dots {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.ji-dots span {
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  background: var(--ja-c1);
-  border-radius: 50%;
-  opacity: 0;
-  transition:
-    opacity 0.3s ease,
-    transform 0.6s cubic-bezier(0.7, -0.5, 0.3, 1.5);
-}
-
-/* Background fade gradient */
-.ji-bg-fade {
+.ji-submit::before {
+  content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    90deg,
-    rgba(255, 191, 72, 0.04),
-    rgba(190, 74, 29, 0.06)
+    180deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 50%
   );
-  opacity: 0;
-  transition: opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-  z-index: 0;
+  pointer-events: none;
+}
+.ji-submit:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(255, 191, 72, 0.4);
+  filter: brightness(1.1);
+}
+.ji-submit:active:not(:disabled) {
+  transform: scale(0.94);
+  transition-duration: 0.1s;
+}
+.ji-submit:disabled {
+  opacity: 0.3;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  filter: grayscale(0.6);
 }
 
-/* Hover / Focus states — liquid glass glow */
-.ji-container:hover,
-.ji-container:focus-within {
-  border-color: rgba(255, 191, 72, 0.45);
+/* SVG icon */
+.ji-icon {
+  transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.ji-submit:hover:not(:disabled) .ji-icon {
+  transform: translateX(1px) translateY(-1px);
+}
+
+/* ── Focus state — soft golden glow ── */
+.ji-container.ji-focused {
+  border-color: rgba(255, 191, 72, 0.35);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 191, 72, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 191, 72, 0.1),
+    0 0 24px rgba(255, 191, 72, 0.08),
     inset 0 1px 1px rgba(255, 255, 255, 0.12),
     inset 0 -1px 1px rgba(0, 0, 0, 0.1);
-  transform: translateY(-3px);
+  transform: translateY(-1px);
 }
-
-.ji-container:hover .ji-submit:not(:disabled) .ji-icon,
-.ji-container:focus-within .ji-submit:not(:disabled) .ji-icon {
-  transform: scale(1.1) rotate(5deg);
-  animation: ji-gentle-bounce 0.5s infinite alternate
-    cubic-bezier(0.7, -0.5, 0.3, 1.5);
+.ji-container.ji-focused .ji-sheen {
+  opacity: 1.3;
 }
-
-.ji-container:hover .ji-underline,
-.ji-container:focus-within .ji-underline {
-  width: 100%;
-}
-
-.ji-container:hover .ji-ripple,
-.ji-container:focus-within .ji-ripple {
-  width: 180px;
-  height: 180px;
-}
-
-.ji-container:hover .ji-dots span,
-.ji-container:focus-within .ji-dots span {
-  opacity: 1;
-  animation: ji-float-up 1.2s infinite cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.ji-container:hover .ji-bg-fade,
-.ji-container:focus-within .ji-bg-fade {
+.ji-container.ji-focused .ji-accent-bar {
+  width: 60%;
   opacity: 1;
 }
 
-/* Dot positions */
-.ji-dots span:nth-child(1) { --x: 12px;  --y: 12px;  animation-delay: 0s; }
-.ji-dots span:nth-child(2) { --x: -6px;  --y: 6px;   animation-delay: 0.2s; }
-.ji-dots span:nth-child(3) { --x: 18px;  --y: 0px;   animation-delay: 0.4s; }
-.ji-dots span:nth-child(4) { --x: -12px; --y: 18px;  animation-delay: 0.6s; }
+/* ── Typed state (not focused, has content) ── */
+.ji-container.ji-typed {
+  border-color: rgba(255, 191, 72, 0.15);
+}
+
+/* ── Hover state (only when not focused) ── */
+.ji-container:not(.ji-focused):hover {
+  border-color: rgba(255, 245, 235, 0.2);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.12);
+  transform: translateY(-0.5px);
+}
 
 /* Quick goals row */
 .ji-quick {
@@ -1001,7 +960,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
   padding-left: 4px;
 }
 .ji-quick-label {
@@ -1026,27 +985,6 @@
 .ji-quick-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-/* Animations */
-@keyframes ji-gentle-bounce {
-  0%   { transform: scale(1.1) translateY(1px); }
-  100% { transform: scale(1.1) translateY(-1px); }
-}
-
-@keyframes ji-float-up {
-  0% {
-    transform: translate(var(--x), var(--y)) scale(1);
-    opacity: 0;
-  }
-  50% {
-    transform: translate(var(--x), calc(var(--y) - 15px)) scale(1.3);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--x), calc(var(--y) - 30px)) scale(1);
-    opacity: 0;
-  }
 }
 
 @media print {

@@ -44,7 +44,6 @@ function persist(jobs: IngestJob[]) {
   } catch { /* localStorage unavailable */ }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useIngestStore = create<IngestState>((set, get) => ({
   jobs: loadJobs(),
 

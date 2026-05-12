@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { User, Bot, Wrench, AlertCircle, CheckCircle, XCircle, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
+import { User, Bot, Wrench, AlertCircle, CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
-import type { AgentStep, AgentToolCall, PendingApproval } from '@/stores/agentChatStore';
+import type { AgentStep, AgentToolCall } from '@/stores/agentChatStore';
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system' | 'error';
 
@@ -35,6 +35,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
         className="flex justify-end"
       >
         <div className="flex items-start gap-2 max-w-[80%]">
@@ -54,6 +55,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
         className="flex justify-start"
       >
         <div className="flex items-start gap-2 max-w-[85%]">
@@ -75,6 +77,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
         className="flex justify-center"
       >
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-apple-red/10 border border-apple-red/20 text-apple-red text-xs">
@@ -96,6 +99,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
     <motion.div
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
       className="flex justify-start pl-9"
     >
       <div className={`apple-card px-3 py-2 max-w-[85%] ${
@@ -136,7 +140,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
             )}
             <div className="flex gap-2">
               <button
-                onClick={() => onApprove?.(metadata?.req_id!)}
+                onClick={() => { const rid = metadata?.req_id; if (rid) onApprove?.(rid); }}
                 disabled={isLoading}
                 className="apple-button flex items-center gap-1 px-2.5 py-1 text-[10px] bg-apple-green/10 text-apple-green hover:bg-apple-green/20 disabled:opacity-40"
               >
@@ -144,7 +148,7 @@ export function JarvisChatMessage({ message, onApprove, onReject, isLoading }: J
                 Approve
               </button>
               <button
-                onClick={() => onReject?.(metadata?.req_id!)}
+                onClick={() => { const rid = metadata?.req_id; if (rid) onReject?.(rid); }}
                 disabled={isLoading}
                 className="apple-button flex items-center gap-1 px-2.5 py-1 text-[10px] bg-apple-red/10 text-apple-red hover:bg-apple-red/20 disabled:opacity-40"
               >

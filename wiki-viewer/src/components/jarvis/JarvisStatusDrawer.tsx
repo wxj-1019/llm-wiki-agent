@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity, X, Wrench, Zap, TrendingUp, XCircle, Target,
-  Brain, Clock, Lock, Shield, CheckCircle, AlertCircle,
+  Activity, X, Wrench, Target,
+  Brain, CheckCircle, AlertCircle, Lock,
 } from 'lucide-react';
 
 interface ToolItem {

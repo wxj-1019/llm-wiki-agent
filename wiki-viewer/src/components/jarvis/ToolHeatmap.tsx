@@ -11,14 +11,6 @@ interface ToolStat {
   category?: string;
 }
 
-const RISK_COLORS: Record<string, string> = {
-  'L0': 'var(--apple-green)',
-  'L1': 'var(--apple-blue)',
-  'L2': 'var(--apple-orange)',
-  'L3': 'var(--apple-red)',
-  'L4': 'var(--risk-deep)',
-};
-
 const HEAT_LEVELS = [
   { min: 0, max: 0, bg: 'var(--bg-secondary)', text: 'var(--text-tertiary)', label: 'Unused' },
   { min: 1, max: 3, bg: 'rgba(100,210,255,0.08)', text: 'var(--text-tertiary)', label: 'Low' },

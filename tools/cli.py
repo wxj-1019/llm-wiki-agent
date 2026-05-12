@@ -85,7 +85,7 @@ def main() -> int:
     # server
     p_server = sub.add_parser("server", help="Start API server")
     p_server.add_argument("--host", default="127.0.0.1")
-    p_server.add_argument("--port", type=int, default=8000)
+    p_server.add_argument("--port", type=int, default=8666)
 
     # watch
     p_watch = sub.add_parser("watch", help="Watch raw/ for changes")

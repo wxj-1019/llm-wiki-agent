@@ -1,7 +1,16 @@
 urls:
-  - url: "https://news.sina.com.cn/"
-    name: "新浪新闻"
-    tags: [ai, llm, agent]
+  - url: "https://finance.sina.com.cn/stock/"
+    name: "新浪财经-A股"
+    tags: [finance, a-stock, market]
+  - url: "https://stock.eastmoney.com/"
+    name: "东方财富-股票"
+    tags: [finance, a-stock, market]
+  - url: "https://finance.eastmoney.com/a/czqyw.html"
+    name: "东方财富-证券要闻"
+    tags: [finance, a-stock, news]
+  - url: "https://www.cls.cn/stock"
+    name: "财联社-股票"
+    tags: [finance, a-stock, news]
 
 settings:
   timeout: 30
@@ -11,3 +20,5 @@ settings:
   request_delay: 1
   max_retries: 3
   content_min_length: 200
+  max_depth: 1
+  max_pages_per_source: 3

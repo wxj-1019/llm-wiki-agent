@@ -541,3 +541,90 @@ Auto-ingested from https://finance.sina.com.cn/stock/
 ## [2026-05-11] graph | Knowledge graph rebuilt
 
 1959 nodes, 3000 edges (1235 extracted, 0 inferred).
+
+## [2026-05-12]
+
+## [2026-05-12] graph | Knowledge graph rebuilt
+
+278 nodes, 1235 edges (1235 extracted, 0 inferred).
+
+## [2026-05-12] auto-ingest | Things we learned about LLMs in 2024
+
+Auto-ingested from fetched content → [[Things we learned about LLMs in 2024|sources/things-we-learned-about-llms-in-2024-1]]. Quality: C.
+
+## [2026-05-12] auto-ingest | 新浪新闻
+
+Auto-ingested from fetched content → [[新浪新闻|sources/article-b711b0]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 新股
+
+Auto-ingested from fetched content → [[新股|sources/article-0dfb70]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 世界互联网大会
+
+Auto-ingested from fetched content → [[世界互联网大会|sources/article-15d035]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 世界互联网大会
+
+Auto-ingested from fetched content → [[世界互联网大会|sources/article-15d035-1]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 行情中心
+
+Auto-ingested from fetched content → [[行情中心|sources/article-656757]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 财联社-股票
+
+Auto-ingested from fetched content → [[财联社-股票|sources/article-c643b1]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 股票频道
+
+Auto-ingested from fetched content → [[股票频道|sources/article-c889ca]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 财经导读
+
+Auto-ingested from fetched content → [[财经导读|sources/article-d20211]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 焦点
+
+Auto-ingested from fetched content → [[焦点|sources/article-e0096f]]. Quality: A.
+
+## [2026-05-12] auto-ingest | Untitled
+
+Auto-ingested from fetched content → [[Untitled|sources/untitled]]. Quality: A.
+
+## [2026-05-12] auto-ingest | Untitled
+
+Auto-ingested from fetched content → [[Untitled|sources/untitled-1]]. Quality: A.
+
+## [2026-05-12] auto-ingest | Untitled
+
+Auto-ingested from fetched content → [[Untitled|sources/untitled-2]]. Quality: A.
+## [2026-05-12] graph | Knowledge graph rebuilt
+
+303 nodes, 2322 edges (1268 extracted, 1054 inferred).
+
+## [2026-05-12] auto-ingest | Tushare大数据开放社区
+
+Auto-ingested from fetched content → [[Tushare大数据开放社区|sources/tushare-819665]]. Quality: A.
+
+## [2026-05-12] auto-ingest | 实战｜Tushare 量化数据接口入门到实操，A股数据一键获取
+
+Auto-ingested from fetched content → [[实战｜Tushare 量化数据接口入门到实操，A股数据一键获取|sources/tushare-bd35c6]]. Quality: A.
+
+## [2026-05-12] auto-ingest | Untitled
+
+Auto-ingested from fetched content → [[Untitled|sources/untitled-3]]. Quality: A.
+## [2026-05-12] graph | Knowledge graph rebuilt
+
+309 nodes, 2328 edges (1274 extracted, 1054 inferred).
+
+## [2026-05-12] auto-ingest | A股蓝筹股实时行情
+
+Auto-ingested from fetched content → [[A股蓝筹股实时行情|sources/article-82dd45]]. Quality: A.
+
+## [2026-05-12] auto-ingest | A股大盘指数实时数据
+
+Auto-ingested from fetched content → [[A股大盘指数实时数据|sources/article-c0bf4f]]. Quality: A.
+## [2026-05-12] graph | Knowledge graph rebuilt
+
+313 nodes, 2330 edges (1276 extracted, 1054 inferred).

@@ -321,7 +321,7 @@ async def spa_fallback_handler(request: Request, exc: StarletteHTTPException):
 # Restrict CORS to localhost for security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:3666", "http://127.0.0.1:3666"],
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -2061,7 +2061,9 @@ async def wiki_chat(payload: WikiChatRequest):
     full_messages = [{"role": "system", "content": system_prompt}]
     for m in payload.messages:
         full_messages.append({"role": m.role, "content": m.content})
-    full_messages.append({"role": "user", "content": query})
+    last_user_msg = next((m.content for m in reversed(payload.messages) if m.role == "user"), None)
+    if last_user_msg != query:
+        full_messages.append({"role": "user", "content": query})
 
     cfg = _load_llm_config()
     model = _resolve_model(cfg, "LLM_MODEL", "anthropic/claude-3-5-sonnet-latest")
@@ -3347,20 +3349,8 @@ async def jarvis_start():
         from tools.jarvis.loop import get_agent_loop
         from tools.jarvis.types import AgentStatus
         loop = get_agent_loop()
-        if loop.state.status == AgentStatus.PAUSED:
-            loop.resume()
-        else:
-            loop.state.status = AgentStatus.RUNNING
+        loop.state.status = AgentStatus.RUNNING
         return {"success": True, "status": loop.get_status()}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-@app.post("/api/jarvis/pause")
-async def jarvis_pause():
-    try:
-        from tools.jarvis.loop import get_agent_loop
-        get_agent_loop().pause()
-        return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -3510,7 +3500,7 @@ if __name__ == "__main__":
     import argparse
     cli = argparse.ArgumentParser(description="LLM Wiki API Server")
     cli.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
-    cli.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    cli.add_argument("--port", type=int, default=8666, help="Bind port (default: 8666)")
     cli_args = cli.parse_args()
 
     if not _check_port_available(cli_args.host, cli_args.port):

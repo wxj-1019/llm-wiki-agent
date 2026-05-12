@@ -97,9 +97,30 @@ def save_pipeline_state(state: dict[str, Any]) -> None:
     _save_pipeline_state_json(state)
 
 
+def _ensure_pipeline_columns(conn: Any) -> None:
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'pipeline_state'"
+    )
+    existing = {row[0] for row in cur.fetchall()}
+    migrations = [
+        ("extra_meta", "JSONB DEFAULT '{}'"),
+        ("error_message", "TEXT DEFAULT ''"),
+        ("retry_count", "INTEGER DEFAULT 0"),
+        ("next_retry_at", "TIMESTAMP"),
+    ]
+    for col_name, col_type in migrations:
+        if col_name not in existing:
+            cur.execute(f"ALTER TABLE pipeline_state ADD COLUMN {col_name} {col_type}")
+    conn.commit()
+    cur.close()
+
+
 def _get_pipeline_state_pg() -> dict[str, Any]:
     conn = _pg_connection()
     try:
+        _ensure_pipeline_columns(conn)
         cur = conn.cursor()
         cur.execute(
             "SELECT url, etag, last_modified, content_hash, status, fetched_at, ingested_at, source_type, error_message, retry_count, next_retry_at, extra_meta FROM pipeline_state"

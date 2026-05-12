@@ -3,9 +3,12 @@ import { FileText, Users, Lightbulb, Layers } from 'lucide-react';
 export type Tab = 'search' | 'chat' | 'generate';
 
 export interface ChatEntry {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: { path: string; preview: string }[];
+  error?: boolean;
+  timestamp?: number;
 }
 
 export const typeIcons: Record<string, React.ElementType> = {

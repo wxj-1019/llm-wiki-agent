@@ -419,7 +419,7 @@ export function ChatPage() {
       const deduper = new StreamDeduplicator();
 
       for await (const chunk of stream) {
-        if (chunk.sources) {
+        if (chunk.type === 'sources') {
           sources = chunk.sources;
           setEntries((prev) => {
             const next = [...prev];
@@ -430,8 +430,8 @@ export function ChatPage() {
             return next;
           });
         }
-        if (chunk.chunk) {
-          const result = deduper.process(chunk.chunk);
+        if (chunk.type === 'chunk') {
+          const result = deduper.process(chunk.content);
           if (!result) continue;
 
           setEntries((prev) => {
@@ -448,7 +448,7 @@ export function ChatPage() {
             return next;
           });
         }
-        if (chunk.error) {
+        if (chunk.type === 'error') {
           setEntries((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
@@ -459,7 +459,7 @@ export function ChatPage() {
           });
           break;
         }
-        if (chunk.done) break;
+        if (chunk.type === 'done') break;
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
@@ -579,7 +579,7 @@ export function ChatPage() {
       const deduper = new StreamDeduplicator();
 
       for await (const chunk of stream) {
-        if (chunk.sources) {
+        if (chunk.type === 'sources') {
           sources = chunk.sources;
           setEntries((prev) => {
             const next = [...prev];
@@ -590,8 +590,8 @@ export function ChatPage() {
             return next;
           });
         }
-        if (chunk.chunk) {
-          const result = deduper.process(chunk.chunk);
+        if (chunk.type === 'chunk') {
+          const result = deduper.process(chunk.content);
           if (!result) continue;
           setEntries((prev) => {
             const next = [...prev];
@@ -606,7 +606,7 @@ export function ChatPage() {
             return next;
           });
         }
-        if (chunk.error) {
+        if (chunk.type === 'error') {
           setEntries((prev) => {
             const next = [...prev];
             const item = next[index];
@@ -617,7 +617,7 @@ export function ChatPage() {
           });
           break;
         }
-        if (chunk.done) break;
+        if (chunk.type === 'done') break;
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
@@ -1018,8 +1018,8 @@ export function ChatPage() {
       const deduper = new StreamDeduplicator();
 
       for await (const chunk of stream) {
-        if (chunk.chunk) {
-          const result = deduper.process(chunk.chunk);
+        if (chunk.type === 'chunk') {
+          const result = deduper.process(chunk.content);
           if (!result) continue;
           setEntries((prev) => {
             const next = [...prev];
@@ -1031,7 +1031,7 @@ export function ChatPage() {
             return next;
           });
         }
-        if (chunk.error) {
+        if (chunk.type === 'error') {
           setEntries((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
@@ -1042,7 +1042,7 @@ export function ChatPage() {
           });
           break;
         }
-        if (chunk.done) break;
+        if (chunk.type === 'done') break;
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {

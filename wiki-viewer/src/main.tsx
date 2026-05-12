@@ -9,7 +9,8 @@ import './i18n';
 import './index.css';
 
 let swUpdateInterval: ReturnType<typeof setInterval> | null = null;
-if ('serviceWorker' in navigator) {
+/* Only register SW in production build — dev mode should never cache */
+if ('serviceWorker' in navigator && !location.port.includes('3666') && !location.port.includes('5173') && !location.port.includes('3000')) {
   registerSW({
     immediate: true,
     onRegisteredSW(_swUrl, registration) {

@@ -42,6 +42,15 @@ export function SearchPage() {
   const [chatStreaming, setChatStreaming] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const chatStreamingRef = useRef(false);
+  const resultsRef = useRef<FuseResult<GraphNode>[]>([]);
+  const activeTabRef = useRef<Tab>(activeTab);
+  const chatEntriesRef = useRef<ChatEntry[]>([]);
+
+  useEffect(() => { chatStreamingRef.current = chatStreaming; }, [chatStreaming]);
+  useEffect(() => { resultsRef.current = results; }, [results]);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { chatEntriesRef.current = chatEntries; }, [chatEntries]);
 
   useEffect(() => {
     if (!userEditedRef.current) setQuery(initialQuery);
@@ -65,6 +74,9 @@ export function SearchPage() {
   }, [debouncedQuery, semantic]);
 
   const handleTabChange = useCallback((tab: Tab) => {
+    if (activeTabRef.current === 'chat' && tab !== 'chat' && chatStreamingRef.current) {
+      abortRef.current?.abort();
+    }
     setActiveTab(tab);
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
@@ -96,50 +108,94 @@ export function SearchPage() {
 
   const handleChatSend = useCallback(async () => {
     const msg = chatInput.trim() || query.trim();
-    if (!msg || chatStreaming) return;
-    const userEntry: ChatEntry = { role: 'user', content: msg };
-    const newEntries = [...chatEntries, userEntry];
-    setChatEntries(newEntries);
+    if (!msg || chatStreamingRef.current) return;
+
+    const userId = crypto.randomUUID();
+    const assistantId = crypto.randomUUID();
+    const userEntry: ChatEntry = { id: userId, role: 'user', content: msg, timestamp: Date.now() };
+
+    setChatEntries(prev => [...prev, userEntry]);
     setChatInput('');
     setChatLoading(true);
     setChatStreaming(true);
-    const assistantEntry: ChatEntry = { role: 'assistant', content: '', sources: [] };
-    setChatEntries([...newEntries, assistantEntry]);
+    chatStreamingRef.current = true;
+
     const abort = new AbortController();
     abortRef.current = abort;
+
+    let content = '';
+    let sources: ChatEntry['sources'] = [];
+    let error = false;
+
     try {
-      const contextPages = chatEntries.length === 0 && query
-        ? results.slice(0, 5).map(r => r.item.path)
-        : [];
-      const history = newEntries.map(e => ({ role: e.role, content: e.content }));
+      const currentResults = resultsRef.current;
+      const contextPages = currentResults.slice(0, 5).map(r => r.item.path);
+      const history = [...chatEntriesRef.current, userEntry].map(e => ({ role: e.role, content: e.content }));
+
+      setChatEntries(prev => [...prev, { id: assistantId, role: 'assistant', content: '', sources: [], timestamp: Date.now() }]);
+
       for await (const chunk of chatWithWikiStream(msg, history, contextPages, abort.signal)) {
-        if (chunk.chunk) assistantEntry.content += chunk.chunk;
-        if (chunk.sources) assistantEntry.sources = chunk.sources;
-        if (chunk.done) break;
-        setChatEntries([...newEntries, { ...assistantEntry }]);
+        if (chunk.type === 'chunk') {
+          content += chunk.content;
+        } else if (chunk.type === 'sources') {
+          sources = chunk.sources;
+        } else if (chunk.type === 'error') {
+          content = chunk.error;
+          error = true;
+          break;
+        } else if (chunk.type === 'done') {
+          break;
+        }
+        setChatEntries(prev => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (updated[lastIdx]?.id === assistantId) {
+            updated[lastIdx] = { ...updated[lastIdx], content, sources };
+          }
+          return updated;
+        });
       }
-      setChatEntries([...newEntries, { ...assistantEntry }]);
+
+      setChatEntries(prev => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (updated[lastIdx]?.id === assistantId) {
+          updated[lastIdx] = { ...updated[lastIdx], content, sources, error };
+        }
+        return updated;
+      });
     } catch (e) {
       if ((e as Error).name !== 'AbortError') {
-        assistantEntry.content = t('chat.error.title', 'An error occurred. Please try again.');
-        setChatEntries([...newEntries, { ...assistantEntry }]);
+        setChatEntries(prev => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (updated[lastIdx]?.id === assistantId) {
+            updated[lastIdx] = {
+              ...updated[lastIdx],
+              content: t('chat.error.title', 'An error occurred. Please try again.'),
+              error: true,
+            };
+          }
+          return updated;
+        });
       }
     } finally {
       setChatLoading(false);
       setChatStreaming(false);
+      chatStreamingRef.current = false;
       abortRef.current = null;
     }
-  }, [chatInput, chatEntries, chatStreaming, query, results, t]);
+  }, [chatInput, query, t]);
 
   const handleChatStop = useCallback(() => {
     abortRef.current?.abort();
   }, []);
 
   const handleChatClear = useCallback(() => {
-    if (chatStreaming) return;
+    if (chatStreamingRef.current) return;
     setChatEntries([]);
     setChatInput('');
-  }, [chatStreaming]);
+  }, []);
 
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
@@ -177,12 +233,12 @@ export function SearchPage() {
             className="flex-1 bg-transparent outline-none text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] text-lg"
           />
           {activeTab === 'chat' && chatStreaming && (
-            <button onClick={handleChatStop} className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
+            <button onClick={handleChatStop} aria-label={t('search.stopGenerating', 'Stop generating')} className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
               <X size={16} />
             </button>
           )}
           {!chatStreaming && query && (
-            <button onClick={() => { setQuery(''); userEditedRef.current = true; }} className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors">
+            <button onClick={() => { setQuery(''); userEditedRef.current = true; }} aria-label={t('search.clearSearch', 'Clear search')} className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors">
               <X size={16} />
             </button>
           )}
@@ -195,25 +251,35 @@ export function SearchPage() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all min-h-[36px] ${
                 activeTab === tab.id
                   ? 'bg-apple-blue text-white shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)]'
               }`}
             >
-              <tab.icon size={13} />
+              <tab.icon size={14} />
               {tab.label}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={handleToggleSemantic} className={`relative w-9 h-5 rounded-full transition-colors ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`} aria-label={t('search.semantic')}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-[var(--bg-primary)] rounded-full shadow transition-transform ${semantic ? 'translate-x-4' : ''}`} />
+          <button
+            onClick={handleToggleSemantic}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); handleToggleSemantic(); } }}
+            role="switch"
+            aria-checked={semantic}
+            tabIndex={0}
+            className="p-2 -m-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-apple-blue/50"
+            aria-label={t('search.semantic')}
+          >
+            <div className={`relative w-11 h-6 rounded-full transition-colors ${semantic ? 'bg-apple-blue' : 'bg-[var(--border-default)]'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-[var(--bg-primary)] rounded-full shadow transition-transform ${semantic ? 'translate-x-5' : ''}`} />
+            </div>
           </button>
           <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1"><BrainCircuit size={13} />{t('search.semantic')}</span>
-          <button onClick={handleReindex} disabled={reindexing} className="flex items-center gap-1 px-2 py-1 text-[10px] text-[var(--text-tertiary)] hover:text-apple-blue hover:bg-apple-blue/10 rounded-lg transition-all disabled:opacity-50">
-            {reindexing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+          <button onClick={handleReindex} disabled={reindexing} className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-[var(--text-tertiary)] hover:text-apple-blue hover:bg-apple-blue/10 rounded-lg transition-all disabled:opacity-50">
+            {reindexing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
             {t('search.reindex')}
           </button>
         </div>

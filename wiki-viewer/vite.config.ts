@@ -75,7 +75,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
   },
   server: {
-    port: 3000,
+    port: 3666,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8666',
@@ -84,7 +84,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 3000,
+    port: 3666,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8666',

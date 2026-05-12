@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Plug, Loader2, Sparkles, Wand2, RotateCw, Download } from 'lucide-react';
+import { Zap, Plug, Loader2, Sparkles, Wand2, RotateCw, Download, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { generateFromKnowledge } from '@/services/chatService';
 import type { GenerateResult } from '@/services/chatService';
@@ -116,30 +116,30 @@ export function GenerateTab({ query, chatEntries, onSwitchToGenerate }: Generate
   const STAGES = ['searching', 'extracting', 'generating'] as const;
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={() => setGenTarget('skill')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all border min-h-[36px] ${
             genTarget === 'skill' ? 'bg-apple-purple/10 text-apple-purple border-apple-purple/30' : 'text-[var(--text-secondary)] border-[var(--border-default)] hover:border-apple-purple/20'
           }`}
         >
-          <Zap size={12} /> Skill
+          <Zap size={14} /> Skill
         </button>
         <button
           onClick={() => setGenTarget('mcp')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all border min-h-[36px] ${
             genTarget === 'mcp' ? 'bg-apple-green/10 text-apple-green border-apple-green/30' : 'text-[var(--text-secondary)] border-[var(--border-default)] hover:border-apple-green/20'
           }`}
         >
-          <Plug size={12} /> MCP Server
+          <Plug size={14} /> MCP Server
         </button>
         <button
           onClick={() => handleGenerate(genTarget)}
           disabled={genLoading || !query.trim()}
-          className="ml-auto apple-button text-xs py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+          className="ml-auto apple-button text-xs py-2 flex items-center gap-1.5 disabled:opacity-40 min-h-[36px]"
         >
-          {genLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          {genLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {genLoading ? t('chat.generate.loading', 'Generating...') : t('search.gen.start', 'Generate from wiki')}
         </button>
       </div>
@@ -152,9 +152,9 @@ export function GenerateTab({ query, chatEntries, onSwitchToGenerate }: Generate
             const done = i < cur;
             return (
               <div key={stage} className="flex items-center gap-2">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                   active ? 'bg-apple-purple text-white animate-pulse' : done ? 'bg-apple-green text-white' : 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] border border-[var(--border-default)]'
-                }`}>{done ? '✓' : i + 1}</div>
+                }`}>{done ? <Check size={12} strokeWidth={3} /> : i + 1}</div>
                 <span className={`text-[11px] ${active ? 'text-apple-purple font-medium' : done ? 'text-apple-green' : 'text-[var(--text-tertiary)]'}`}>
                   {t(`chat.generate.stage.${stage}`, stage)}
                 </span>
@@ -167,24 +167,30 @@ export function GenerateTab({ query, chatEntries, onSwitchToGenerate }: Generate
 
       {!genLoading && !genResult && (
         <div className="text-center py-16 text-[var(--text-tertiary)]">
-          <Wand2 size={32} className="mx-auto mb-3 opacity-40" />
-          <p className="text-sm">{t('search.gen.empty', 'Enter a query above, then click Generate to create a Skill or MCP Server from your wiki knowledge.')}</p>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-apple-purple/10 flex items-center justify-center">
+            <Wand2 size={28} className="text-apple-purple" />
+          </div>
+          <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">{t('search.gen.emptyTitle', 'Generate from Wiki')}</h3>
+          <p className="text-sm max-w-md mx-auto">{t('search.gen.empty', 'Enter a query above, then click Generate to create a Skill or MCP Server from your wiki knowledge.')}</p>
         </div>
       )}
 
       {genResult && !genLoading && (
         <div className="space-y-3">
           {genResult.explanation && (
-            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{genResult.explanation}</p>
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{genResult.explanation}</p>
           )}
           <div className="relative">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{genTarget === 'mcp' ? 'Python' : 'Markdown'}</span>
+            <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-tertiary)] rounded-t-lg border border-[var(--border-default)] border-b-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">{genTarget === 'mcp' ? 'generated.py' : 'SKILL.md'}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-secondary)] text-[var(--text-tertiary)]">{genTarget === 'mcp' ? 'Python' : 'Markdown'}</span>
+              </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setIsEditingCode(!isEditingCode)} className={`text-[10px] px-2 py-0.5 rounded transition-colors ${isEditingCode ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}>
+                <button onClick={() => setIsEditingCode(!isEditingCode)} className={`text-xs px-2.5 py-1 rounded transition-colors ${isEditingCode ? 'bg-apple-blue/10 text-apple-blue' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'}`}>
                   {isEditingCode ? t('chat.generate.preview', 'Preview') : t('chat.generate.edit', 'Edit')}
                 </button>
-                <button onClick={() => navigator.clipboard.writeText(isEditingCode ? editedCode : genResult.code)} className="text-[10px] px-2 py-0.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+                <button onClick={() => navigator.clipboard.writeText(isEditingCode ? editedCode : genResult.code)} className="text-xs px-2.5 py-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors">
                   {t('chat.copy', 'Copy')}
                 </button>
               </div>
@@ -193,26 +199,26 @@ export function GenerateTab({ query, chatEntries, onSwitchToGenerate }: Generate
               <textarea
                 value={editedCode}
                 onChange={e => setEditedCode(e.target.value)}
-                className="w-full text-[11px] font-mono bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg p-3 max-h-64 overflow-y-auto resize-y focus:outline-none focus:border-apple-blue/40"
-                rows={Math.min(editedCode.split('\n').length + 2, 20)}
+                className="w-full text-[13px] font-mono bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-b-lg p-3 max-h-[50vh] overflow-y-auto resize-y focus:outline-none focus:border-apple-blue/40"
+                rows={Math.min(editedCode.split('\n').length + 2, 24)}
                 spellCheck={false}
               />
             ) : (
-              <div className="max-h-64 overflow-y-auto rounded-lg border border-[var(--border-default)]">
+              <div className="max-h-[50vh] overflow-y-auto rounded-b-lg border border-[var(--border-default)]">
                 <MarkdownRenderer content={`\`\`\`${genTarget === 'mcp' ? 'python' : 'markdown'}\n${genResult.code}\n\`\`\``} />
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={handleInstall} className="apple-button text-xs py-1.5 bg-apple-green/10 text-apple-green border-apple-green/20">
+            <button onClick={handleInstall} className="apple-button text-xs py-2 bg-apple-green/10 text-apple-green border-apple-green/20 min-h-[36px]">
               {t('chat.generate.install', 'Install {{target}}', { target: genTarget.toUpperCase() })}
             </button>
-            <button onClick={() => handleGenerate(genTarget)} className="apple-button text-xs py-1.5 flex items-center gap-1">
-              <RotateCw size={10} />{t('chat.generate.regenerate', 'Regenerate')}
+            <button onClick={() => handleGenerate(genTarget)} className="apple-button text-xs py-2 flex items-center gap-1.5 min-h-[36px]">
+              <RotateCw size={12} />{t('chat.generate.regenerate', 'Regenerate')}
             </button>
-            <button onClick={handleDownload} className="apple-button text-xs py-1.5 flex items-center gap-1">
-              <Download size={10} />{t('chat.generate.download', 'Download')}
+            <button onClick={handleDownload} className="apple-button text-xs py-2 flex items-center gap-1.5 min-h-[36px]">
+              <Download size={12} />{t('chat.generate.download', 'Download')}
             </button>
           </div>
 
@@ -222,20 +228,20 @@ export function GenerateTab({ query, chatEntries, onSwitchToGenerate }: Generate
               onChange={e => setRefineInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleRefine(); }}
               placeholder={t('chat.generate.refinePlaceholder', 'Refine: e.g. add error handling...')}
-              className="flex-1 text-[11px] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 focus:outline-none focus:border-apple-blue/40 placeholder:text-[var(--text-tertiary)]"
+              className="flex-1 text-sm bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg px-3 py-2 focus:outline-none focus:border-apple-blue/40 placeholder:text-[var(--text-tertiary)]"
               disabled={refineLoading}
             />
-            <button onClick={handleRefine} disabled={!refineInput.trim() || refineLoading} className="apple-button text-xs py-1.5 disabled:opacity-40">
-              {refineLoading ? <Loader2 size={12} className="animate-spin" /> : t('chat.generate.refine', 'Refine')}
+            <button onClick={handleRefine} disabled={!refineInput.trim() || refineLoading} className="apple-button text-xs py-2 disabled:opacity-40 min-h-[36px]">
+              {refineLoading ? <Loader2 size={14} className="animate-spin" /> : t('chat.generate.refine', 'Refine')}
             </button>
           </div>
 
           {genResult.sources.length > 0 && (
             <div className="pt-1">
-              <p className="text-[10px] text-[var(--text-tertiary)] mb-1">{t('chat.generate.sources', 'Sources')}:</p>
-              <div className="flex flex-wrap gap-1">
+              <p className="text-xs text-[var(--text-tertiary)] mb-1.5">{t('chat.generate.sources', 'Sources')}:</p>
+              <div className="flex flex-wrap gap-1.5">
                 {genResult.sources.map(s => (
-                  <Link key={s.path} to={`/${s.path.replace(/\.md$/, '')}`} className="text-[10px] px-1.5 py-0.5 bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-apple-blue transition-colors">
+                  <Link key={s.path} to={`/${s.path.replace(/\.md$/, '')}`} className="text-xs px-2 py-0.5 bg-[var(--bg-secondary)] rounded-md text-[var(--text-secondary)] hover:text-apple-blue transition-colors">
                     {s.path.split('/').pop()?.replace('.md', '')}
                   </Link>
                 ))}

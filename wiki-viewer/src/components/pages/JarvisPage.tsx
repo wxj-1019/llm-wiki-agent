@@ -2,10 +2,8 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bot, Activity, RefreshCw, AlertCircle, Play, Pause, Square,
-  Zap, Target, Brain, Clock, Wrench, CheckCircle, XCircle,
-  TrendingUp, Shield, Lock, Cpu, LayoutDashboard,
-  MessageSquare, Columns3, GitBranch, Lightbulb,
+  Bot, RefreshCw, AlertCircle, Play, Pause, Square,
+  MessageSquare, Columns3, GitBranch, Lightbulb, Shield,
 } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useAgentChatStore } from '@/stores/agentChatStore';
@@ -95,9 +93,9 @@ export function JarvisPage() {
   /* ── Local state ── */
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [tools, setTools] = useState<ToolItem[]>([]);
-  const [events, setEvents] = useState<AgentEvent[]>([]);
-  const [goals, setGoals] = useState<AgentGoal[]>([]);
-  const [learning, setLearning] = useState<LearningSummary | null>(null);
+  const [, setEvents] = useState<AgentEvent[]>([]);
+  const [, setGoals] = useState<AgentGoal[]>([]);
+  const [, setLearning] = useState<LearningSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -370,13 +368,13 @@ export function JarvisPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100vh-64px)]"
+      className="flex flex-col h-full overflow-hidden"
     >
       {/* Neural Pulse Bar */}
       <NeuralPulseBar tools={tools} isRunning={isRunning || hasActiveExecution} />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-1 py-2 shrink-0">
+      <div className="flex items-center justify-between px-1 py-1 shrink-0">
         <div className="flex items-center gap-3">
           <Bot size={20} className="text-[var(--apple-teal)]" />
           <h1 className="text-lg font-bold tracking-widest uppercase font-mono-data text-[var(--text-primary)]">
@@ -398,7 +396,7 @@ export function JarvisPage() {
               <button
                 key={key}
                 onClick={() => setViewMode(key)}
-                className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-md transition-all ${
+                className={`flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-md transition-all ${
                   viewMode === key
                     ? 'bg-apple-teal/15 text-apple-teal border border-apple-teal/30'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-transparent'
@@ -467,28 +465,19 @@ export function JarvisPage() {
       {/* ── Chat View ── */}
       {viewMode === 'chat' && (
         <>
-          {/* ── Avatar Hero (collapses when chat has content) ── */}
-          <AnimatePresence>
-            {messages.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9, height: 0 }}
-                className="flex flex-col items-center justify-center shrink-0 py-6"
-              >
-                <JarvisAvatar size={140} isActive={hasActiveExecution} />
-                <p className="mt-4 text-sm text-[var(--text-secondary)] font-mono-data text-center">
-                  {avatarStatusText}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* ── Chat Messages ── */}
           <div className="flex-1 overflow-y-auto px-1 space-y-4 min-h-0">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-tertiary)]">
-                <p className="text-sm font-mono-data">Start a conversation with Jarvis</p>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col items-center justify-center h-full gap-5"
+              >
+                <JarvisAvatar size={120} isActive={hasActiveExecution} />
+                <p className="text-sm text-[var(--text-secondary)] font-mono-data text-center">
+                  {avatarStatusText}
+                </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {['Run health check', 'List orphan pages', 'Build knowledge graph', 'Find broken links'].map((q) => (
                     <button
@@ -500,7 +489,7 @@ export function JarvisPage() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
             {messages.map((msg) => (
               <JarvisChatMessage
@@ -548,7 +537,7 @@ export function JarvisPage() {
       )}
 
       {/* ── Bottom: Input (always visible) ── */}
-      <div className="shrink-0 pt-3 pb-2">
+      <div className="shrink-0 pt-2 pb-0">
         <GoalInput onSubmit={handleSubmit} isLoading={hasActiveExecution} />
       </div>
 

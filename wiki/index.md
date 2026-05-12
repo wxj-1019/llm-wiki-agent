@@ -6,6 +6,39 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [A股大盘指数实时数据](sources/article-c0bf4f.md) — 3440 | 718984002 | 1465272590579 |
+| 深证成指 | 15824. 1670 | 66094509 | 23020130326...
+- [A股蓝筹股实时行情](sources/article-82dd45.md) — 870 |
+| 601318 | 中国平安 | 59. 000 |
+| 000333 | 美的集团 | 80. 510 |
+| 600036 | 招商银行 | ...
+- [Untitled](sources/untitled-3.md) — Tushare为金融数据分析提供便捷、快速的接口，与投研和量化策略无缝对接
+- [实战｜Tushare 量化数据接口入门到实操，A股数据一键获取](sources/tushare-bd35c6.md) — 文章浏览阅读2.3k次，点赞12次，收藏12次。作为一名长期在CSDN分享量化开发经验的开发者，我用过很多金融数据工具，Tushare是最贴合个人开发者的一款—...
+- [Tushare大数据开放社区](sources/tushare-819665.md) — Tushare为金融数据分析提供便捷、快速的接口，与投研和量化策略无缝对接
+- [Untitled](sources/untitled-2.md) — StockCode{border:1px solid #7f9db9;color:#666;height:20px;line-height:18px;paddi...
+- [Untitled](sources/untitled-1.md) — 财联社由上海报业集团主管主办，持有《互联网新闻信息服务许可证》的主流财经新闻集团和财经通讯社，涵盖A股24小时电报、股市、金融、行情看盘、科创板等证券资讯，以“...
+- [Untitled](sources/untitled.md) — 财联社-机构和私募主力都在使用的炒股软件，提供准确、快速、权威、专业的财经资讯，专注于中国证券市场；全面监控各种财经新闻、股市资讯、上市公司动态，7*24小时不...
+- [焦点](sources/article-e0096f.md) — 东方财富网财经频道提供权威、全面、专业、及时的财经资讯，将众多财经资讯、功能进行浓缩，内容饱满详实，展现形式丰富，网友之间互动性突出，是网友获取财经资讯的重要平...
+- [财经导读](sources/article-d20211.md) — 东方财富网财经频道提供权威、全面、专业、及时的财经资讯，将众多财经资讯、功能进行浓缩，内容饱满详实，展现形式丰富，是网友获取财经资讯的重要平台。
+- [股票频道](sources/article-c889ca.md) — 东方财富网(www.eastmoney.com)股票频道：提供24小时全球股票行情、股市直播、大盘分析、板块聚焦、焦点点评、报刊头条、热门股追踪、个股点睛、个股...
+- [财联社-股票](sources/article-c643b1.md) — cn
+财联社
+©2018-2026
+上海界面财联社科技股份有限公司 版权所有
+沪ICP备14040942号-9
+沪公网安备31010402006047号
+互联网...
+- [行情中心](sources/article-656757.md) — 8万亿元 部分券商增设115%即时平仓线
+财经视频
+更多
+从财报看未来：高手只看5个指标，散户别再追涨杀跌了｜对话财报翻译官
+从深套到逃顶：一个18年老股民的“...
+- [世界互联网大会](sources/article-15d035-1.md) — 我们的工作是以一种方式管理伯克希尔的运营和财务，这种方式将随着时间的推移取得可接受的结果，并在金融恐慌或全球严重衰退发生时保持公司无与伦比的持久力。 ”[详细]...
+- [世界互联网大会](sources/article-15d035.md) — |
+| 06:00 - 07:30 | 主题分享：全球投资方向及趋势 | 聚焦人工智能、新能源、先进制造、医疗健康与全球消费等前沿领域， 分析未来十年的产业演进...
+- [新股](sources/article-0dfb70.md) — 中国财经第一门户东方财富网(www.eastmoney.com)新股频道，为您全方位提供新股动态，新股聚焦，热门新股行情，定位预测，增发一览，可转债一览，新股吧...
+- [新浪新闻](sources/article-b711b0.md) — 新浪网新闻中心是新浪网最重要的频道之一，24小时滚动报道国内、国际及社会新闻。每日编发新闻数以万计。
+- [Things we learned about LLMs in 2024](sources/things-we-learned-about-llms-in-2024-1.md) — A lot has happened in the world of Large Language Models over the course of 2024...
 - [Claude Code CLAUDE.md — 项目指南与构建系统](sources/claude-code-claude-md-guide.md) — Claude Code 项目的 CLAUDE.md 文件，包含常见命令、高层架构、构建系统和入口点/UI 循环，使用 Bun/Ink/React
 - [Main Fund Selection System — 主力选股系统](sources/main-fund-selection-system.md) — 六层流水线旗舰选股系统，7种策略×5位AI分析师×量化评分×回测验证
 - [AI智能分析系统](sources/ai-intelligent-analysis-system.md) — 核心智能引擎，多智能体协同架构，9维度深度分析，支持DeepSeek/Qwen/Kimi/GLM四大AI提供商
@@ -42,7 +75,25 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Latte — Claude Code 可构建分支 (AGENTS.md)](sources/latte-claude-code-fork.md) — latte-claude-code 分支的 AGENTS.md 构建能力分析
 
 - [ETF专区](sources/etf-c6f436.md) — 该文章主要汇集了财经新闻、股市行情、公司动态及市场分析等内容，涵盖A股、港股、美股等市场表现，以及行业趋势、机构观点和个
+- [Test Document 2](sources/test-document-2.md) — 测试文档2
 ## Entities
+- [股大盘指数实时数据](entities/article-9021bd.md) — auto-detected entity
+- [美的集团](entities/article-3e682d.md) — auto-detected entity
+- [沪深股票数据](entities/article-a0309f.md) — auto-detected entity
+- [爬取数据](entities/article-686420.md) — auto-detected entity
+- [拥有丰富的数据](entities/article-788aef.md) — auto-detected entity
+- [SimSun](entities/simsun.md) — auto-detected entity
+- [事件首届香港具身智能](entities/article-76e94a.md) — auto-detected entity
+- [股票是股份有限公司](entities/article-05668d.md) — auto-detected entity
+- [东方证券](entities/article-e4b25c.md) — auto-detected entity
+- [中金公司](entities/article-4c695c.md) — auto-detected entity
+- [嘉晨智能](entities/article-acd429.md) — auto-detected entity
+- [上海界面财联社科技](entities/article-8d07c7.md) — auto-detected entity
+- [上市公司](entities/article-e4f097.md) — auto-detected entity
+- [经成为一家伟大的公司](entities/article-93d8a7.md) — auto-detected entity
+- [如何在市场波动与技术](entities/article-0df44f.md) — auto-detected entity
+- [惠康科技](entities/article-2ab2de.md) — auto-detected entity
+- [Amazon](entities/amazon.md) — auto-detected entity
 - [持仓管理与组合分析](entities/持仓管理与组合分析.md) — auto-healed entity
 - [价格监控与预警系统](entities/价格监控与预警系统.md) — auto-healed entity
 - [股票数据服务](entities/股票数据服务.md) — auto-healed entity

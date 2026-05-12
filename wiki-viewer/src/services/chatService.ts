@@ -20,13 +20,12 @@ export interface WikiChatSource {
   preview: string;
 }
 
-export interface WikiChatChunk {
-  chunk?: string;
-  sources?: WikiChatSource[];
-  status?: string;
-  error?: string;
-  done?: boolean;
-}
+export type WikiChatChunk =
+  | { type: 'chunk'; content: string }
+  | { type: 'sources'; sources: WikiChatSource[] }
+  | { type: 'status'; status: string }
+  | { type: 'error'; error: string }
+  | { type: 'done' };
 
 export interface WebSearchResult {
   title: string;
@@ -46,6 +45,8 @@ export interface GenerateResult {
   sources: { path: string }[];
 }
 
+const STREAM_TIMEOUT_MS = 60_000;
+
 function parseSseEvent(eventText: string): WikiChatChunk | null {
   const lines = eventText.split('\n');
   let data = '';
@@ -56,21 +57,23 @@ function parseSseEvent(eventText: string): WikiChatChunk | null {
   }
   data = data.trim();
   if (!data) return null;
-  if (data === '[DONE]') return { done: true };
+  if (data === '[DONE]') return { type: 'done' };
   try {
     const parsed = JSON.parse(data);
-    if (parsed.error) return { error: parsed.error };
-    if (parsed.chunk) return { chunk: parsed.chunk };
-    if (parsed.sources) return { sources: parsed.sources as WikiChatSource[] };
-    if (parsed.status) return { status: parsed.status };
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
+    if (typeof parsed.error === 'string' && parsed.error) return { type: 'error', error: parsed.error };
+    if (typeof parsed.chunk === 'string' && parsed.chunk) return { type: 'chunk', content: parsed.chunk };
+    if (Array.isArray(parsed.sources)) return { type: 'sources', sources: parsed.sources as WikiChatSource[] };
+    if (typeof parsed.status === 'string' && parsed.status) return { type: 'status', status: parsed.status };
   } catch {
-    // ignore malformed lines
+    console.warn('[SSE] malformed event data:', data.slice(0, 200));
   }
   return null;
 }
 
 async function* readSseStream(
-  res: Response
+  res: Response,
+  signal?: AbortSignal
 ): AsyncGenerator<WikiChatChunk, void, unknown> {
   if (!res.body) {
     throw new Error('No response body');
@@ -78,29 +81,54 @@ async function* readSseStream(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (value) {
-      buffer += decoder.decode(value, { stream: true });
-    }
-    const events = buffer.split('\n\n');
-    buffer = events.pop() || '';
-    for (const event of events) {
-      const chunk = parseSseEvent(event);
-      if (chunk) {
-        if (chunk.done) return;
-        if (chunk.error) {
-          yield chunk;
-          return;
-        }
-        yield chunk;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const resetTimeout = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      reader.cancel();
+    }, STREAM_TIMEOUT_MS);
+  };
+  const abortHandler = () => reader.cancel();
+  signal?.addEventListener('abort', abortHandler, { once: true });
+  try {
+    while (true) {
+      resetTimeout();
+      let result: ReadableStreamReadResult<Uint8Array>;
+      try {
+        result = await reader.read();
+      } catch {
+        if (signal?.aborted) return;
+        yield { type: 'error', error: 'Response timed out. The server may be overloaded.' };
+        return;
       }
+      const { done, value } = result;
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+      }
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
+      for (const event of events) {
+        if (!event.trim()) continue;
+        const chunk = parseSseEvent(event);
+        if (chunk) {
+          if (chunk.type === 'done') return;
+          if (chunk.type === 'error') {
+            yield chunk;
+            return;
+          }
+          yield chunk;
+        }
+      }
+      if (done) break;
     }
-    if (done) break;
-  }
-  if (buffer.trim()) {
-    const chunk = parseSseEvent(buffer);
-    if (chunk) yield chunk;
+    if (buffer.trim()) {
+      const chunk = parseSseEvent(buffer);
+      if (chunk && chunk.type !== 'done') yield chunk;
+    }
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortHandler);
+    reader.releaseLock();
   }
 }
 
@@ -120,7 +148,7 @@ export async function* chatWithWikiStream(
     const err = await res.text();
     throw new Error(err || `Wiki chat failed: ${res.status}`);
   }
-  yield* readSseStream(res);
+  yield* readSseStream(res, signal);
 }
 
 export async function* chatWithLLMStream(
@@ -138,7 +166,7 @@ export async function* chatWithLLMStream(
     const err = await res.text();
     throw new Error(err || `LLM chat failed: ${res.status}`);
   }
-  yield* readSseStream(res);
+  yield* readSseStream(res, signal);
 }
 
 export async function searchWeb(

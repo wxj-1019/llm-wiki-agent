@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Lightbulb, ChevronDown, ChevronRight, ArrowRight,
-  AlertTriangle, RefreshCw, Plus, Sparkles, Zap,
-  FileText, Link2, Wrench, Target,
+  Lightbulb, ChevronDown, ChevronRight,
+  AlertTriangle, RefreshCw, Sparkles, Zap,
+  FileText, Link2, Target,
 } from 'lucide-react';
 
 interface HealthData {
