@@ -34,6 +34,14 @@ export function JarvisReplyBubble({
       return;
     }
 
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      setDisplayed(content);
+      setIsTyping(false);
+      onComplete?.();
+      return;
+    }
+
     const tick = (timestamp: number) => {
       if (lastTimeRef.current === 0) {
         lastTimeRef.current = timestamp;

@@ -39,6 +39,7 @@ export function JarvisPersonaCore({
   onChange,
   onReplyComplete,
 }: JarvisPersonaCoreProps) {
+  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lastAssistantIndex = useMemo(() => {
     for (let i = visibleMessages.length - 1; i >= 0; i--) {
       if (visibleMessages[i].role === 'assistant') {
@@ -61,7 +62,7 @@ export function JarvisPersonaCore({
           y: isDockedLeft ? 0 : '-50%',
           scale: isDockedLeft ? 0.4 : 1.0,
         }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={reducedMotion ? { duration: 0 } : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <JarvisAvatar size={120} isActive={hasActiveExecution} mood={mood} />
       </motion.div>
@@ -75,7 +76,7 @@ export function JarvisPersonaCore({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: reducedMotion ? 0 : 0.3 }}
               className="flex flex-col h-full"
             >
               <div className="flex-1 min-h-[20px]" />
@@ -104,7 +105,7 @@ export function JarvisPersonaCore({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: reducedMotion ? 0 : 0.3 }}
               className="flex flex-col h-full"
             >
               <div className="shrink-0 h-14" />

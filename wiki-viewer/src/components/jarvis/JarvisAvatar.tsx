@@ -31,6 +31,14 @@ const BLOB_CONFIG = [
 
 const JA_TIME = 2; // seconds per rotation cycle
 
+const MOOD_CONFIG: Record<JarvisMood, { speedMult: number; glowColor: [number, number, number]; glowIntensity: number }> = {
+  idle:      { speedMult: 1.0, glowColor: [255, 191, 72],  glowIntensity: 0.30 },
+  attentive: { speedMult: 1.5, glowColor: [100, 210, 255], glowIntensity: 0.50 },
+  thinking:  { speedMult: 2.5, glowColor: [10, 132, 255],  glowIntensity: 0.60 },
+  success:   { speedMult: 1.0, glowColor: [48, 209, 88],   glowIntensity: 0.70 },
+  error:     { speedMult: 1.0, glowColor: [255, 69, 58],   glowIntensity: 0.70 },
+};
+
 export function JarvisAvatar({ size = 120, isActive = false, mood = 'idle' }: JarvisAvatarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -38,20 +46,26 @@ export function JarvisAvatar({ size = 120, isActive = false, mood = 'idle' }: Ja
   const rafRef = useRef<number>(0);
   const startRef = useRef<number>(0);
 
-  const MOOD_CONFIG: Record<JarvisMood, { speedMult: number; glowColor: string; glowIntensity: number }> = {
-    idle:      { speedMult: 1.0, glowColor: '255,191,72',  glowIntensity: 0.30 },
-    attentive: { speedMult: 1.5, glowColor: '100,210,255', glowIntensity: 0.50 },
-    thinking:  { speedMult: 2.5, glowColor: '10,132,255',  glowIntensity: 0.60 },
-    success:   { speedMult: 1.0, glowColor: '48,209,88',   glowIntensity: 0.70 },
-    error:     { speedMult: 1.0, glowColor: '255,69,58',   glowIntensity: 0.70 },
-  };
-
   useEffect(() => {
-    startRef.current = performance.now();
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const moodCfg = MOOD_CONFIG[mood];
+    const [r, g, b] = moodCfg.glowColor;
+    const alpha = isActive ? moodCfg.glowIntensity : moodCfg.glowIntensity * 0.6;
+
+    if (reduced) {
+      // Static styling only — no rotation, no pulse
+      if (overlayRef.current) {
+        overlayRef.current.style.boxShadow =
+          `inset 0 5px 5px 0 rgba(${r},${g},${b},${alpha}), ` +
+          `inset 0 -5px 5px 0 rgba(${r},${g},${b},${alpha})`;
+      }
+      return;
+    }
+
+    if (!startRef.current) startRef.current = performance.now();
 
     const animate = (now: number) => {
       const t = (now - startRef.current) / 1000; // seconds
-      const moodCfg = MOOD_CONFIG[mood];
       const adjustedTime = JA_TIME / moodCfg.speedMult;
 
       // Blob rotations
@@ -72,8 +86,6 @@ export function JarvisAvatar({ size = 120, isActive = false, mood = 'idle' }: Ja
 
       // Overlay glow pulse (ja-pulse-glow)
       if (overlayRef.current) {
-        const [r, g, b] = moodCfg.glowColor.split(',').map(Number);
-        const alpha = isActive ? moodCfg.glowIntensity : moodCfg.glowIntensity * 0.6;
         if (isActive) {
           const glowCycle = (t / 1.2) % 1;
           const intensity = 0.5 + Math.sin(glowCycle * Math.PI * 2) * 0.5; // 0..1
@@ -106,6 +118,8 @@ export function JarvisAvatar({ size = 120, isActive = false, mood = 'idle' }: Ja
       className="jarvis-avatar"
       data-active={isActive}
       style={{ '--ja-scale': scale } as React.CSSProperties}
+      role="img"
+      aria-label={`Jarvis status: ${mood}`}
     >
       {/* Core blob effect container — blur+contrast applied at container level */}
       <div className="ja-blob-layer">
