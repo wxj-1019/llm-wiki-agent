@@ -1,6 +1,7 @@
 import type { GraphData } from '@/types/graph';
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { isValidFilePath } from '@/lib/validation';
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Fetch wiki data from the API server (tools/api_server.py).
@@ -348,4 +349,66 @@ export async function runBatchPipeline(): Promise<BatchResult> {
   });
   if (!res.ok) throw new Error(`Batch pipeline failed: ${res.status}`);
   return safeJson(res);
+}
+
+// ── React Query hooks (TanStack Query with auto-retry) ──
+
+export function useGraphData() {
+  return useQuery({
+    queryKey: ['graph'],
+    queryFn: fetchGraphData,
+    staleTime: 60_000,
+  });
+}
+
+export function useRawFiles() {
+  return useQuery({
+    queryKey: ['raw-files'],
+    queryFn: fetchRawFiles,
+    staleTime: 30_000,
+  });
+}
+
+export function useLog(tail = 0) {
+  return useQuery({
+    queryKey: ['log', tail],
+    queryFn: () => fetchLog(tail),
+    staleTime: 30_000,
+  });
+}
+
+export function useFtsSearch(query: string, limit = 20, semantic = false) {
+  return useQuery({
+    queryKey: ['fts', query, limit, semantic],
+    queryFn: () => searchFts(query, limit, semantic),
+    enabled: query.length > 0,
+    staleTime: 10_000,
+  });
+}
+
+export function useWebSourcesConfig() {
+  return useQuery({
+    queryKey: ['config', 'web_sources'],
+    queryFn: fetchWebSourcesConfig,
+    staleTime: 60_000,
+  });
+}
+
+export function useIndexEtag(enabled = true) {
+  return useQuery({
+    queryKey: ['index-etag'],
+    queryFn: fetchIndexEtag,
+    enabled,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useRawFileContent(path: string | null) {
+  return useQuery({
+    queryKey: ['raw-file', path],
+    queryFn: () => fetchRawFileContent(path!),
+    enabled: path !== null && path.length > 0,
+    staleTime: 30_000,
+  });
 }
