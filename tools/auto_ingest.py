@@ -1012,8 +1012,8 @@ def main() -> int:
     parser.add_argument("--source", help="Filter by source type subdir (e.g. web, rss, arxiv)")
     parser.add_argument("--file", type=Path, help="Auto-ingest a single fetched file")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
-    parser.add_argument("--min-quality", type=float, default=0,
-                        help="Minimum quality score 0-100 (default: 0, no filter)")
+    parser.add_argument("--min-quality", type=float, default=30,
+                        help="Minimum quality score 0-100 (default: 30, skip noise)")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Show detailed quality scores and entity info")
     args = parser.parse_args()

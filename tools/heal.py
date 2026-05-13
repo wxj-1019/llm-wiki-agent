@@ -66,13 +66,16 @@ def _atomic_write(path: Path, content: str) -> None:
 try:
     from tools.shared.llm import _load_llm_config, call_llm, LLMUnavailableError
 except ImportError:
+    # If shared.llm is not available, provide minimal stubs that fail clearly
+    class LLMUnavailableError(Exception):
+        """LLM is not available — litellm or shared.llm not installed."""
+        pass
+
     def _load_llm_config() -> dict:
         cfg_path = REPO_ROOT / "config" / "llm.yaml"
         defaults = {
             "provider": "anthropic",
-            "model": "anthropic/claude-3-5-haiku-latest",
-            "api_key": "",
-            "api_base": "",
+            "model": os.getenv("LLM_MODEL", "claude-3-5-sonnet-latest"),
         }
         if cfg_path.exists():
             try:
@@ -83,42 +86,20 @@ except ImportError:
                 pass
         return defaults
 
-    class LLMUnavailableError(Exception):
-        pass
-
-    def call_llm(prompt: str, max_tokens: int = 1500, model_env: str = "LLM_MODEL", default_model: str = "anthropic/claude-3-5-haiku-latest", max_retries: int = 2, timeout: int = 120) -> str:
+    def call_llm(prompt: str, **kwargs) -> str:
         try:
-            from litellm import completion
+            import litellm
         except ImportError as exc:
-            raise LLMUnavailableError("litellm not installed") from exc
-
+            raise LLMUnavailableError("litellm not installed. Run: pip install litellm") from exc
         cfg = _load_llm_config()
-        model = cfg.get("model") or os.getenv(model_env, default_model)
-        provider = cfg.get("provider", "anthropic")
-        if "/" not in model:
-            model = f"{provider}/{model}"
-        api_key = cfg.get("api_key", "")
-
-        kwargs = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "timeout": timeout,
-        }
-        if api_key:
-            kwargs["api_key"] = api_key
-
-        last_err = None
-        for attempt in range(max_retries + 1):
-            try:
-                response = completion(**kwargs)
-                return response.choices[0].message.content
-            except Exception as e:
-                last_err = e
-                if attempt < max_retries:
-                    import time
-                    time.sleep(2 ** attempt)
-        raise last_err
+        model = kwargs.get("model", os.getenv("LLM_MODEL", cfg.get("model", "claude-3-5-sonnet-latest")))
+        max_tokens = kwargs.get("max_tokens", 1500)
+        resp = litellm.completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+        )
+        return resp.choices[0].message.content
 
 
 try:

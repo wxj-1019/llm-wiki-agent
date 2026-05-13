@@ -181,9 +181,45 @@ If no skill is suggested, set `skill_suggestion` to null.
 """
 
 
+def _extract_key_phrases(text: str, min_len: int = 8) -> set[str]:
+    """Extract normalized key phrases for dedup comparison."""
+    import re as _re
+    # Split on Chinese/English punctuation and line breaks
+    phrases = _re.split(r"[；;。，,、\n•\-]", text)
+    result: set[str] = set()
+    for p in phrases:
+        p = _re.sub(r"[^\w\u4e00-\u9fff]", "", p).strip().lower()
+        if len(p) >= min_len:
+            result.add(p)
+    return result
+
+
+def _is_duplicate_content(existing_section: str, new_content: str, threshold: float = 0.6) -> bool:
+    """Check if new_content is semantically duplicated in existing_section.
+    
+    Returns True if enough key phrases from new_content already exist
+    in existing_section (asymmetric phrase overlap >= threshold).
+    """
+    new_phrases = _extract_key_phrases(new_content)
+    if not new_phrases:
+        return False
+    existing_phrases = _extract_key_phrases(existing_section)
+    if not existing_phrases:
+        return False
+    intersection = new_phrases & existing_phrases
+    # Asymmetric: what % of new phrases already exist
+    overlap = len(intersection) / len(new_phrases)
+    return overlap >= threshold
+
+
 def merge_memory_section(
     existing: str, section_name: str, new_content: str
 ) -> str:
+    """Merge new content into a named section, with semantic dedup.
+    
+    Only appends if the new content isn't already represented.
+    Uses key-phrase overlap to detect semantic duplicates.
+    """
     pattern = re.compile(
         rf"(## {re.escape(section_name)}\n)(.*?)(?=\n## |\Z)",
         re.DOTALL,
@@ -191,13 +227,64 @@ def merge_memory_section(
     match = pattern.search(existing)
     if match:
         old_body = match.group(2).strip()
+        # Check for semantic duplication
+        if old_body and _is_duplicate_content(old_body, new_content):
+            # Content already exists — skip append, return unchanged
+            return existing
+        # Not a duplicate — merge
         if old_body:
             merged = old_body.rstrip() + "\n- " + new_content.lstrip("- ")
         else:
             merged = "- " + new_content.lstrip("- ")
         return existing[: match.start(2)] + merged + "\n" + existing[match.end(2):]
     else:
+        # Section doesn't exist yet — create it
         return existing.rstrip() + f"\n\n## {section_name}\n- {new_content}\n"
+
+
+MEMORY_MAX_CHARS = 2200
+
+
+def _trim_memory_if_needed(memory_text: str) -> str:
+    """If MEMORY.md exceeds MEMORY_MAX_CHARS, truncate oldest entries."""
+    if len(memory_text) <= MEMORY_MAX_CHARS:
+        return memory_text
+    
+    # Strategy: keep frontmatter + first 2 sections intact,
+    # trim the Operation Log to last 5 entries
+    lines = memory_text.split("\n")
+    frontmatter_end = 0
+    in_frontmatter = False
+    for i, line in enumerate(lines):
+        if line.strip() == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+            else:
+                frontmatter_end = i + 1
+                break
+    
+    header = "\n".join(lines[:frontmatter_end])
+    body = "\n".join(lines[frontmatter_end:])
+    
+    # If still too large, trim body proportionally
+    while len(header) + len(body) > MEMORY_MAX_CHARS and len(body) > 200:
+        # Remove oldest Operation Log entry
+        op_log_marker = "## Operation Log"
+        op_log_idx = body.find(op_log_marker)
+        if op_log_idx >= 0:
+            after_header = body[op_log_idx + len(op_log_marker):]
+            entries = [e for e in after_header.strip().split("\n- [") if e.strip()]
+            if len(entries) > 5:
+                # Keep only last 5 entries
+                kept = "\n- [" + "\n- [".join(entries[-5:])
+                body = body[:op_log_idx + len(op_log_marker)] + kept
+                continue
+        # Fallback: cut body by 30%
+        cut = int(len(body) * 0.7)
+        body = body[:cut] + "\n\n> ... (older entries trimmed for token budget)\n"
+        break
+    
+    return header + body
 
 
 def update_memory_file(reflection: dict) -> str:
@@ -233,6 +320,8 @@ last_updated: {today}
 
     fm_pattern = re.compile(r"(last_updated:\s*)([\d-]+)")
     existing = fm_pattern.sub(rf"\g<1>{date.today().isoformat()}", existing)
+
+    existing = _trim_memory_if_needed(existing)
 
     return existing
 

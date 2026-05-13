@@ -185,21 +185,27 @@ def monitor_and_refresh() -> int:
 def _web_fetch_and_ingest() -> int:
     """Fetch web pages, then auto-ingest them directly into wiki/sources/."""
     fetched = fetch_web()
-    ingested = auto_ingest_web()
+    cmd = [PYTHON, "tools/auto_ingest.py", "--source", "web", "--min-quality", "30"]
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    ingested = 1 if result.returncode == 0 else 0
     return fetched + ingested
 
 
 def _rss_fetch_and_ingest() -> int:
     """Fetch RSS feeds, then auto-ingest into wiki/sources/."""
     fetched = fetch_rss()
-    ingested = auto_ingest_rss()
+    cmd = [PYTHON, "tools/auto_ingest.py", "--source", "rss", "--min-quality", "30"]
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    ingested = 1 if result.returncode == 0 else 0
     return fetched + ingested
 
 
 def _arxiv_fetch_and_ingest() -> int:
     """Fetch arXiv papers, then auto-ingest into wiki/sources/."""
     fetched = fetch_arxiv()
-    ingested = auto_ingest_arxiv()
+    cmd = [PYTHON, "tools/auto_ingest.py", "--source", "arxiv", "--min-quality", "30"]
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    ingested = 1 if result.returncode == 0 else 0
     return fetched + ingested
 
 
@@ -211,12 +217,35 @@ def _github_fetch_and_ingest() -> int:
 
 
 def _maintenance() -> int:
-    """Weekly maintenance."""
+    """Weekly maintenance — full optimization cycle."""
     return _run(
         [PYTHON, "tools/archive_stale.py"],
-        [PYTHON, "tools/health.py"],
+        [PYTHON, "tools/health.py", "--save"],
+        [PYTHON, "tools/lint.py", "--save"],
+        [PYTHON, "tools/heal.py"],
+        [PYTHON, "tools/reflect.py", "--last", "5"],
         [PYTHON, "tools/build_graph.py"],
     )
+
+
+def _reflect_and_learn() -> int:
+    """Post-ingest reflection: analyze patterns, update MEMORY.md."""
+    return _run([PYTHON, "tools/reflect.py", "--last", "10", "--suggest-skills"])
+
+
+def _lint_check() -> int:
+    """Content quality checks: orphans, broken links, missing entities."""
+    return _run([PYTHON, "tools/lint.py", "--save"])
+
+
+def _heal_entities() -> int:
+    """Auto-heal missing entity pages."""
+    return _run([PYTHON, "tools/heal.py"])
+
+
+def _self_optimize_full() -> int:
+    """Full self-optimization pipeline: health → heal → lint → graph → refresh."""
+    return _run([PYTHON, "tools/self_optimize.py", "--auto-fix"])
 
 
 # ── Wrapped job functions (with metrics + adaptive skip) ───────────────────
@@ -251,6 +280,11 @@ def maintenance() -> None:
     run_job("maintenance", _maintenance)
 
 
+def self_optimize_daily() -> None:
+    """Daily lightweight optimization: heal missing entities."""
+    run_job("heal_daily", _heal_entities)
+
+
 # --- Schedule ---
 # GitHub trending: every day at 00:00, then auto compile & ingest at 00:30
 schedule.every().day.at("00:00").do(fetch_github_and_ingest)
@@ -264,8 +298,12 @@ schedule.every().day.at("08:45").do(web_fetch_and_ingest)
 schedule.every().day.at("14:00").do(monitor_and_refresh_job)
 schedule.every().day.at("20:00").do(monitor_and_refresh_job)
 
-# Weekly maintenance: Sunday night (includes refresh_monitor for full sweep)
-schedule.every().sunday.at("22:00").do(maintenance)
+# Daily heal: fix missing entity pages (lightweight)
+schedule.every().day.at("22:00").do(self_optimize_daily)
+
+# Weekly maintenance: Sunday night full optimization cycle
+# Order: archive → health → lint → heal → reflect → graph
+schedule.every().sunday.at("23:00").do(maintenance)
 
 if __name__ == "__main__":
     import argparse

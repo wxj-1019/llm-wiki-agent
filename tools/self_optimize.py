@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Self-optimization orchestrator — diagnose → fix → prevent loop.
 
+Pipeline: health → lint → heal → graph → refresh
+
 Usage:
     python tools/self_optimize.py --dry-run           # preview only (default)
     python tools/self_optimize.py --auto-fix           # auto-heal
@@ -80,8 +82,8 @@ def run_health(dry_run: bool = True) -> dict:
     return result
 
 
-def run_heal(health_result: dict, dry_run: bool = True) -> dict:
-    """Heal missing entity pages."""
+def run_heal(health_result: dict, lint_result: dict | None = None, dry_run: bool = True) -> dict:
+    """Heal missing entity pages. Optionally driven by lint results."""
     print("\n" + "=" * 50)
     print("Step 2: Heal Missing Pages")
     print("=" * 50)
@@ -92,6 +94,11 @@ def run_heal(health_result: dict, dry_run: bool = True) -> dict:
         from tools.heal import heal_missing_entities
         import io
         import contextlib
+
+        # If lint found missing entities, log them before healing
+        if lint_result and lint_result.get("missing_entities", 0) > 0:
+            print(f"  Lint found {lint_result['missing_entities']} missing entities")
+            print(f"  Proceeding with auto-heal...")
 
         f = io.StringIO()
         try:
@@ -342,15 +349,16 @@ def main():
     t0 = time.time()
     scope = args.scope
     health_result = {}
+    lint_result = {}
 
     if scope in ("health", "all"):
         health_result = run_health(dry_run=dry_run)
 
-    if scope in ("heal", "all"):
-        run_heal(health_result, dry_run=dry_run)
-
     if scope in ("lint", "all"):
-        run_lint(dry_run=dry_run)
+        lint_result = run_lint(dry_run=dry_run)
+
+    if scope in ("heal", "all"):
+        run_heal(health_result, lint_result=lint_result if lint_result else None, dry_run=dry_run)
 
     if scope in ("graph", "all"):
         run_graph_build(dry_run=dry_run)
