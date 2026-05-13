@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, MoreHorizontal, ChevronLeft } from 'lucide-react';
+import { Search, Plus, ChevronLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ChatHistoryItem } from './ChatHistoryItem';
 
@@ -17,7 +17,7 @@ interface ChatHistoryProps {
   onToggleCollapse: () => void;
 }
 
-function groupByDate(sessions: ChatSession[]): { label: string; items: ChatSession[] }[] {
+function groupByDate(sessions: ChatSession[], t: (key: string) => string): { label: string; items: ChatSession[] }[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86400000);
@@ -33,7 +33,12 @@ function groupByDate(sessions: ChatSession[]): { label: string; items: ChatSessi
     else groups.earlier.push(s);
   }
 
-  const labels: Record<string, string> = { today: 'Today', yesterday: 'Yesterday', thisWeek: 'This Week', earlier: 'Earlier' };
+  const labels: Record<string, string> = {
+    today: t('chat.history.today'),
+    yesterday: t('chat.history.yesterday'),
+    thisWeek: t('chat.history.thisWeek'),
+    earlier: t('chat.history.earlier'),
+  };
   return Object.entries(groups)
     .filter(([, items]) => items.length > 0)
     .map(([key, items]) => ({ label: labels[key] || key, items }));
@@ -52,7 +57,7 @@ export function ChatHistory({
     return sessions.filter((s) => s.title.toLowerCase().includes(q));
   }, [sessions, searchQuery]);
 
-  const grouped = useMemo(() => groupByDate(filtered), [filtered]);
+  const grouped = useMemo(() => groupByDate(filtered, t), [filtered, t]);
 
   useEffect(() => {
     if (!collapsed && inputRef.current) inputRef.current.focus();

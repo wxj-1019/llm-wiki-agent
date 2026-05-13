@@ -265,3 +265,37 @@ export function MindmapSkeleton() {
     </div>
   );
 }
+
+export function ChatSkeleton() {
+  return (
+    <div role="status" aria-busy="true" aria-label="Loading chat" className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)]">
+        <div className="flex items-center gap-2">
+          <Skeleton className="w-5 h-5 rounded-full" />
+          <Skeleton className="w-32 h-5 rounded-xl" />
+        </div>
+        <Skeleton className="w-8 h-8 rounded-lg" />
+      </div>
+      {/* Messages area */}
+      <div className="flex-1 px-4 py-4 space-y-4 overflow-hidden">
+        {/* User message */}
+        <div className="flex justify-end">
+          <Skeleton className="w-2/3 h-16 rounded-2xl rounded-tr-sm" />
+        </div>
+        {/* Assistant message */}
+        <div className="flex justify-start">
+          <Skeleton className="w-3/4 h-20 rounded-2xl rounded-tl-sm" />
+        </div>
+        {/* User message */}
+        <div className="flex justify-end">
+          <Skeleton className="w-1/2 h-12 rounded-2xl rounded-tr-sm" />
+        </div>
+      </div>
+      {/* Input area */}
+      <div className="px-4 py-3 border-t border-[var(--border-default)]">
+        <Skeleton className="w-full h-12 rounded-xl" />
+      </div>
+    </div>
+  );
+}

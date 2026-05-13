@@ -9,6 +9,7 @@ import { StatusPage } from '@/components/pages/StatusPage';
 import { NotFoundPage } from '@/components/pages/NotFoundPage';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { lazy } from 'react';
+const ChatPage = lazy(() => import('@/components/pages/ChatPage').then((m) => ({ default: m.ChatPage })));
 
 // Lazy-load heavy / less frequently visited pages
 const GraphPage = lazy(() => import('@/components/pages/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: '/y/:slug', element: <PageDetailPage type='synthesis' />, errorElement: <ErrorBoundary /> },
       { path: '/graph', element: <LazyPage><GraphPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/chat', element: <Navigate to="/search" replace /> },
+      { path: '/chat/:sessionId', element: <LazyPage><ChatPage /></LazyPage>, errorElement: <ErrorBoundary /> },
       { path: '/search', element: <SearchPage />, errorElement: <ErrorBoundary /> },
       { path: '/log', element: <LogPage />, errorElement: <ErrorBoundary /> },
       { path: '/upload', element: <LazyPage><UploadPage /></LazyPage>, errorElement: <ErrorBoundary /> },

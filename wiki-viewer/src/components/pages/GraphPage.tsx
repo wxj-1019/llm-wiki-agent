@@ -43,7 +43,7 @@ const GRAPH_ONBOARDED_KEY = 'wiki-graph-onboarded';
 import { Link, useNavigate } from 'react-router-dom';
 import { Network as VisNetwork, DataSet } from 'vis-network/standalone';
 
-import { Network as NetworkIcon, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers, FileDown, Terminal } from 'lucide-react';
+import { Network as NetworkIcon, RefreshCw, BookOpen, Heart, ArrowRight, BarChart3, ChevronDown, ChevronUp, X, Frown, MousePointer2, ZoomIn, Move, Save, Wrench, Download, Trash2, Layers, FileDown, Terminal, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWikiStore } from '@/stores/wikiStore';
 import { useNotificationStore } from '@/stores/notificationStore';

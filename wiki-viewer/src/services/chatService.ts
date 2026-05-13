@@ -218,3 +218,125 @@ export async function generateFromKnowledge(
   }
   return safeJson(res);
 }
+
+// ── Chat Session API (PG backend) ──
+
+export interface ChatSessionDTO {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+}
+
+export interface ChatMessageDTO {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: { path: string; preview: string }[];
+  created_at: string;
+}
+
+export async function fetchChatSessions(query?: string): Promise<ChatSessionDTO[]> {
+  const url = query ? `/api/chat/sessions?q=${encodeURIComponent(query)}` : '/api/chat/sessions';
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch sessions: ${res.status}`);
+  const data = await safeJson<{ sessions?: ChatSessionDTO[] }>(res);
+  return data.sessions || [];
+}
+
+export async function createChatSession(title?: string): Promise<ChatSessionDTO> {
+  const res = await fetch('/api/chat/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title || 'New Chat' }),
+  });
+  if (!res.ok) throw new Error(`Failed to create session: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function fetchChatSession(sessionId: string): Promise<{ session: ChatSessionDTO; messages: ChatMessageDTO[] }> {
+  const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error(`Failed to fetch session: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function updateChatSession(sessionId: string, updates: { title?: string }): Promise<ChatSessionDTO> {
+  const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update session: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function deleteChatSession(sessionId: string): Promise<void> {
+  const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(`Failed to delete session: ${res.status}`);
+}
+
+export async function fetchChatMessages(sessionId: string, cursor?: string, limit = 50): Promise<{ messages: ChatMessageDTO[]; next_cursor?: string }> {
+  let url = `/api/chat/sessions/${encodeURIComponent(sessionId)}/messages?limit=${limit}`;
+  if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function appendChatMessage(sessionId: string, message: { role: 'user' | 'assistant'; content: string; sources?: { path: string; preview: string }[] }): Promise<ChatMessageDTO> {
+  const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(message),
+  });
+  if (!res.ok) throw new Error(`Failed to append message: ${res.status}`);
+  return safeJson(res);
+}
+
+export async function migrateLocalStorageToPG(): Promise<{ migrated: number; errors: string[] }> {
+  const errors: string[] = [];
+  let migrated = 0;
+
+  try {
+    const raw = localStorage.getItem('wiki-chat-sessions');
+    if (!raw) return { migrated: 0, errors: [] };
+
+    const data = JSON.parse(raw);
+    if (!data.sessions || !Array.isArray(data.sessions)) return { migrated: 0, errors: [] };
+
+    for (const session of data.sessions) {
+      try {
+        // Create session on backend
+        const created = await createChatSession(session.title || 'Migrated Chat');
+        const sessionId = created.id;
+
+        // Migrate messages
+        if (session.messages && Array.isArray(session.messages)) {
+          for (const msg of session.messages) {
+            await appendChatMessage(sessionId, {
+              role: msg.role,
+              content: msg.content,
+              sources: msg.sources,
+            });
+          }
+        }
+        migrated++;
+      } catch (e) {
+        errors.push(String(e));
+      }
+    }
+
+    // Clear localStorage after successful migration
+    if (errors.length === 0) {
+      localStorage.removeItem('wiki-chat-sessions');
+    }
+  } catch (e) {
+    errors.push(String(e));
+  }
+
+  return { migrated, errors };
+}

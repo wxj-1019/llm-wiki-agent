@@ -4,6 +4,12 @@
 html, body, #root {
   height: 100%;
   overflow: hidden;
+  scroll-behavior: smooth;
+}
+
+/* main 内容区平滑滚动 */
+#main-content {
+  scroll-behavior: smooth;
 }
 
 @theme {
@@ -440,6 +446,40 @@ html, body, #root {
 
 .animate-scale-in-bounce {
   animation: scaleInBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Ripple Effect ── */
+.ripple-effect {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(20);
+    opacity: 0;
+  }
+}
+
+/* ── Image Fade In ── */
+.img-fade-in {
+  animation: imgFadeIn 0.4s ease-out;
+}
+
+@keyframes imgFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .growth-line {

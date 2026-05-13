@@ -410,6 +410,22 @@ export async function searchWeb(query: string, limit = 10): Promise<{ results: {
   return safeJson(res);
 }
 
+export interface UnifiedSearchResult {
+  id: string;
+  path: string;
+  title: string;
+  preview: string;
+  source_type: 'wiki' | 'chat';
+  score?: number;
+}
+
+export async function searchUnified(query: string, limit = 50, chatLimit = 5): Promise<{ results: UnifiedSearchResult[]; total: number }> {
+  const url = `/api/search?q=${encodeURIComponent(query)}&limit=${limit}&include_chats=true&chat_limit=${chatLimit}`;
+  const res = await fetchWithTimeout(url, { timeoutMs: 10000 });
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+  return safeJson(res);
+}
+
 export async function searchReindexFts(): Promise<{ success: boolean; message: string }> {
   const res = await fetchWithTimeout('/api/search/reindex', {
     method: 'POST',

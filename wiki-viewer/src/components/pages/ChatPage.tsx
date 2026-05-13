@@ -1,27 +1,24 @@
-import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Square, MessageCircle, Trash2, Sparkles,
-  ChevronDown, Plus, X, Search, FileText, Zap, Plug,
-  Globe, BookOpen, Quote, Wand2, Loader2, Pencil,
-  MoreHorizontal, Download, ArrowUp
-} from 'lucide-react';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { Square, MessageCircle, Trash2, Sparkles, X, Loader2, ArrowUp, Search, ChevronDown, PanelRight, Wand2, FileText, Zap, Plug, MoreHorizontal, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { ChatMessage } from '@/components/chat/ChatMessage';
+import { ChatHistory } from '@/components/chat/ChatHistory';
+import { ChatConversation } from '@/components/chat/ChatConversation';
+import { ChatRightPanel } from '@/components/chat/ChatRightPanel';
 import { MarkdownRenderer } from '@/components/content/MarkdownRenderer';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import {
-  chatWithWikiStream, chatWithLLMStream, searchWeb, searchWiki,
+  chatWithWikiStream, chatWithLLMStream, searchWiki,
   generateFromKnowledge, type WikiChatMessage, type WikiChatSource,
-  type WebSearchResult, type WikiSearchResult, type GenerateResult,
+  type WikiSearchResult, type GenerateResult,
 } from '@/services/chatService';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { safeGet, safeSet, isObject, isArray } from '@/lib/safeStorage';
 import { StreamDeduplicator, mergeStreamChunk } from '@/lib/streamUtils';
 import { extractWikiLinks } from '@/lib/wikilink';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
+import type { ChatSession as ChatHistorySession } from '@/components/chat/ChatHistory';
 
 const SESSIONS_KEY = 'wiki-chat-sessions';
 const SEARCH_HISTORY_KEY = 'wiki-chat-search-history';
@@ -91,6 +88,7 @@ interface ChatSession {
   id: string;
   title: string;
   messages: ChatEntry[];
+  createdAt?: number;
   updatedAt: number;
   isDefaultTitle: boolean;
 }
@@ -136,17 +134,23 @@ function saveSessions(sessions: ChatSession[], activeId: string) {
 
 export function ChatPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const defaultTitle = t('chat.sessionDefault');
 
+  // ── Layout state ──
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(true);
+  const [rightTab, setRightTab] = useState<'doc' | 'search'>('doc');
+  const [activeDocPath, setActiveDocPath] = useState<string | null>(null);
+
+  // ── Session state ──
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions().sessions);
   const [activeId, setActiveId] = useState<string>(() => loadSessions().activeId);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showFindPanel, setShowFindPanel] = useState(false);
   const [findQuery, setFindQuery] = useState('');
@@ -154,22 +158,6 @@ export function ChatPage() {
   const findInputRef = useRef<HTMLInputElement>(null);
   const [llmConfig, setLlmConfig] = useState<{ model: string; provider: string } | null>(null);
   const [online, setOnline] = useState(true);
-  const [showSearchPanel, setShowSearchPanel] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState<'web' | 'wiki'>('wiki');
-  const [searchResults, setSearchResults] = useState<WebSearchResult[] | WikiSearchResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<SearchHistory>(loadSearchHistory);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [showGeneratePanel, setShowGeneratePanel] = useState(false);
-  const [generateTarget, setGenerateTarget] = useState<'skill' | 'mcp'>('skill');
-  const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
-  const [generateLoading, setGenerateLoading] = useState(false);
-  const [generateStage, setGenerateStage] = useState<'searching' | 'extracting' | 'generating' | null>(null);
-  const [editedCode, setEditedCode] = useState('');
-  const [isEditingCode, setIsEditingCode] = useState(false);
-  const [refineInput, setRefineInput] = useState('');
-  const [refineLoading, setRefineLoading] = useState(false);
   const [summarizeStyle, setSummarizeStyle] = useState<'brief' | 'detailed' | 'bullet' | 'action'>('brief');
   const [showSummarizeMenu, setShowSummarizeMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -189,19 +177,24 @@ export function ChatPage() {
   const [slashIndex, setSlashIndex] = useState(0);
   const slashStartRef = useRef(-1);
 
+  // Generate panel
+  const [showGeneratePanel, setShowGeneratePanel] = useState(false);
+  const [generateTarget, setGenerateTarget] = useState<'skill' | 'mcp'>('skill');
+  const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
+  const [generateLoading, setGenerateLoading] = useState(false);
+  const [generateStage, setGenerateStage] = useState<string | null>(null);
+  const [editedCode, setEditedCode] = useState('');
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [refineInput, setRefineInput] = useState('');
+  const [refineLoading, setRefineLoading] = useState(false);
+
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isAtBottomRef = useRef(true);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const sessionTrapRef = useFocusTrap<HTMLDivElement>(dropdownOpen);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const contextSentRef = useRef(false);
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingSessionTitle, setEditingSessionTitle] = useState('');
-  const [sessionSearchQuery, setSessionSearchQuery] = useState('');
-  const sessionEditRef = useRef<HTMLInputElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeId) || sessions[0];
   const entries = useMemo<ChatEntry[]>(() => activeSession?.messages || [], [activeSession]);
@@ -211,6 +204,27 @@ export function ChatPage() {
   activeIdRef.current = activeId;
 
   useDocumentTitle(activeSession?.title || t('chat.title'));
+
+  // Handle URL sessionId: switch to that session if it exists, otherwise create it
+  useEffect(() => {
+    if (!sessionId) return;
+    const exists = sessions.find((s) => s.id === sessionId);
+    if (exists) {
+      setActiveId(sessionId);
+    } else {
+      // Create a new session with the given ID (from search result)
+      const newSession: ChatSession = {
+        id: sessionId,
+        title: defaultTitle,
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isDefaultTitle: true,
+      };
+      setSessions((prev) => [...prev, newSession]);
+      setActiveId(sessionId);
+    }
+  }, [sessionId, defaultTitle]);
 
   // Custom setEntries that updates the active session
   const setEntries = useCallback((updater: React.SetStateAction<ChatEntry[]>) => {
@@ -302,27 +316,14 @@ export function ChatPage() {
     setInput(drafts[activeId] || '');
   }, [activeId]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
-
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // ESC: close search/generate panels first, then abort stream
+      // ESC: close right panel first, then abort stream
       if (e.key === 'Escape') {
-        if (showSearchPanel || showGeneratePanel) {
+        if (!rightCollapsed) {
           e.preventDefault();
-          setShowSearchPanel(false);
-          setShowGeneratePanel(false);
+          setRightCollapsed(true);
           return;
         }
         if (abortRef.current) {
@@ -331,12 +332,11 @@ export function ChatPage() {
           abortRef.current = null;
         }
       }
-      // Ctrl/Cmd + K: open search
+      // Ctrl/Cmd + K: open right search tab
       if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        setShowSearchPanel(true);
-        setShowGeneratePanel(false);
-        setTimeout(() => searchInputRef.current?.focus(), 100);
+        setRightTab('search');
+        setRightCollapsed(false);
       }
       // Ctrl/Cmd + F: find in conversation
       if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
@@ -354,7 +354,7 @@ export function ChatPage() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [showSearchPanel, showGeneratePanel]);
+  }, [rightCollapsed]);
 
   // Auto-send from URL context parameter
   useEffect(() => {
@@ -651,16 +651,13 @@ export function ChatPage() {
     const s: ChatSession = { id: generateId(), title: defaultTitle, messages: [], updatedAt: Date.now(), isDefaultTitle: true };
     setSessions((prev) => [...prev, s]);
     setActiveId(s.id);
-    setDropdownOpen(false);
   }, [defaultTitle]);
 
   const handleSwitchSession = useCallback((id: string) => {
     setActiveId(id);
-    setDropdownOpen(false);
   }, []);
 
-  const handleDeleteSession = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteSession = useCallback((id: string) => {
     setSessions((prev) => {
       const next = prev.filter((s) => s.id !== id);
       if (next.length === 0) {
@@ -676,29 +673,14 @@ export function ChatPage() {
     addNotification(t('chat.sessionDeleted', '会话已删除'), 'success');
   }, [defaultTitle, addNotification, t]);
 
-  const handleStartRename = useCallback((id: string, currentTitle: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingSessionId(id);
-    setEditingSessionTitle(currentTitle);
-    setTimeout(() => sessionEditRef.current?.focus(), 50);
-  }, []);
-
-  const handleSaveRename = useCallback(() => {
-    if (!editingSessionId) return;
-    const trimmed = editingSessionTitle.trim();
+  const handleRenameSession = useCallback((id: string, title: string) => {
+    const trimmed = title.trim();
     if (trimmed) {
       setSessions((prev) =>
-        prev.map((s) => (s.id === editingSessionId ? { ...s, title: trimmed, isDefaultTitle: false } : s))
+        prev.map((s) => (s.id === id ? { ...s, title: trimmed, isDefaultTitle: false } : s))
       );
     }
-    setEditingSessionId(null);
-    setEditingSessionTitle('');
-  }, [editingSessionId, editingSessionTitle]);
-
-  const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSaveRename();
-    if (e.key === 'Escape') { setEditingSessionId(null); setEditingSessionTitle(''); }
-  };
+  }, []);
 
   const handleClear = useCallback(() => {
     setEntries([]);
@@ -946,45 +928,7 @@ export function ChatPage() {
     textareaRef.current?.focus();
   };
 
-  const doSearch = useCallback(async (query: string, type: 'wiki' | 'web') => {
-    if (!query.trim()) return;
-    setSearchLoading(true);
-    try {
-      if (type === 'web') {
-        const data = await searchWeb(query.trim(), 10);
-        setSearchResults(data.results);
-      } else {
-        const data = await searchWiki(query.trim(), 20);
-        setSearchResults(data.results);
-      }
-      // Save to history
-      setSearchHistory((prev) => {
-        const next = addSearchQuery(prev, type, query.trim());
-        saveSearchHistory(next);
-        return next;
-      });
-    } catch (err) {
-      addNotification((err as Error).message, 'error');
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [addNotification]);
 
-  const handleSearch = useCallback(() => {
-    doSearch(searchQuery, searchType);
-  }, [searchQuery, searchType, doSearch]);
-
-  // Debounced auto-search
-  useEffect(() => {
-    if (!showSearchPanel || !searchQuery.trim() || searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      doSearch(searchQuery, searchType);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchType, showSearchPanel, doSearch]);
 
   const getSummarizePrompt = useCallback((style: 'brief' | 'detailed' | 'bullet' | 'action') => {
     const prompts: Record<typeof style, string> = {
@@ -1120,9 +1064,9 @@ export function ChatPage() {
     { id: 'summarize', label: t('chat.cmd.summarize', 'Summarize conversation'), icon: 'file', action: () => { handleSummarize(); setInput(''); } },
     { id: 'skill', label: t('chat.cmd.skill', 'Generate Skill from wiki'), icon: 'zap', action: () => { handleGenerate('skill'); setInput(''); } },
     { id: 'mcp', label: t('chat.cmd.mcp', 'Generate MCP Server from wiki'), icon: 'plug', action: () => { handleGenerate('mcp'); setInput(''); } },
-    { id: 'search', label: t('chat.cmd.search', 'Search wiki'), icon: 'search', action: () => { setShowSearchPanel(true); setSearchType('wiki'); setInput(''); } },
-    { id: 'web', label: t('chat.cmd.web', 'Web search'), icon: 'globe', action: () => { setShowSearchPanel(true); setSearchType('web'); setInput(''); } },
-  ], [t, handleClear, handleSummarize, handleGenerate]);
+    { id: 'search', label: t('chat.cmd.search', 'Search wiki'), icon: 'search', action: () => { setRightTab('search'); setRightCollapsed(false); setInput(''); } },
+    { id: 'web', label: t('chat.cmd.web', 'Web search'), icon: 'globe', action: () => { setRightTab('search'); setRightCollapsed(false); setInput(''); } },
+  ], [t, handleClear, handleSummarize, handleGenerate, setRightTab, setRightCollapsed]);
 
   const filteredSlashCommands = useMemo(() => {
     if (!slashQuery) return slashCommands;
@@ -1131,7 +1075,6 @@ export function ChatPage() {
 
   const handleQuoteResult = (text: string) => {
     setInput((prev) => (prev ? prev + '\n\n' : '') + text);
-    setShowSearchPanel(false);
     textareaRef.current?.focus();
   };
 
@@ -1192,384 +1135,146 @@ export function ChatPage() {
     }
   }, [findMatches, findIndex]);
 
+  const navigate = useNavigate();
+
+  const handleSourceClick = useCallback((path: string) => {
+    const slug = path.replace('.md', '');
+    const parts = slug.split('/');
+    const type = parts[0];
+    const name = parts.slice(1).join('/');
+    if (type === 'sources') navigate(`/s/${name}`);
+    else if (type === 'entities') navigate(`/e/${name}`);
+    else if (type === 'concepts') navigate(`/c/${name}`);
+    else if (type === 'syntheses') navigate(`/y/${name}`);
+  }, [navigate]);
+
   return (
-    <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex flex-col">
-      {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-[var(--border-default)] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <MessageCircle size={20} className="text-apple-blue" />
-          <h1 className="text-lg font-semibold">{t('chat.title')}</h1>
-          {llmConfig && (
-            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[10px] text-[var(--text-tertiary)] rounded-md" title={llmConfig.model}>
-              {llmConfig.provider}/{llmConfig.model.split('/').pop()}
-            </span>
-          )}
-          <span className={`hidden sm:inline-flex w-2 h-2 rounded-full ${online ? 'bg-apple-green' : 'bg-apple-red'} ${online ? '' : 'animate-pulse'}`} title={online ? t('chat.online', 'Online') : t('chat.offline', 'Offline')} />
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Session dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors border border-[var(--border-default)] rounded-xl max-w-[140px] sm:max-w-[200px]"
-              aria-expanded={dropdownOpen}
-              aria-haspopup="listbox"
-            >
-              <span className="truncate">{activeSession?.title || defaultTitle}</span>
-              <ChevronDown size={12} className={`shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {dropdownOpen && (
-              <motion.div
-                ref={sessionTrapRef}
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 top-full mt-2 py-1 glass rounded-xl min-w-[240px] z-50"
-              >
-                {/* Session search */}
-                <div className="px-2 pb-1">
-                  <input
-                    value={sessionSearchQuery}
-                    onChange={(e) => setSessionSearchQuery(e.target.value)}
-                    placeholder={t('chat.searchSessions', 'Search sessions...')}
-                    className="w-full apple-input text-xs py-1.5"
-                  />
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {sessions
-                    .filter((s) => (s.title || defaultTitle).toLowerCase().includes(sessionSearchQuery.toLowerCase()))
-                    .map((s) => (
-                      <div
-                        key={s.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleSwitchSession(s.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSwitchSession(s.id); }}
-                        className={`group flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors ${
-                          s.id === activeId
-                            ? 'bg-apple-blue/10 text-apple-blue'
-                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
-                        }`}
-                      >
-                        {editingSessionId === s.id ? (
-                          <input
-                            ref={sessionEditRef}
-                            value={editingSessionTitle}
-                            onChange={(e) => setEditingSessionTitle(e.target.value)}
-                            onKeyDown={handleRenameKeyDown}
-                            onBlur={handleSaveRename}
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex-1 text-xs bg-[var(--bg-primary)] border border-[var(--border-default)] rounded px-1.5 py-0.5 focus:outline-none focus:border-apple-blue/50"
-                          />
-                        ) : (
-                          <span className="truncate flex-1 pr-2">{s.title || defaultTitle}</span>
-                        )}
-                        {editingSessionId !== s.id && sessions.length > 1 && (
-                          <div className="flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => handleStartRename(s.id, s.title || defaultTitle, e)}
-                              className="p-1 hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)] transition-colors"
-                              title={t('chat.renameSession', 'Rename')}
-                            >
-                              <Pencil size={10} />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteSession(s.id, e)}
-                              className="p-1 hover:bg-apple-red/10 hover:text-apple-red transition-colors"
-                              aria-label={t('chat.deleteSession', 'Delete session')}
-                            >
-                              <X size={10} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-                <div className="border-t border-[var(--border-default)] mt-1 pt-1 px-2 pb-1">
-                  <button
-                    onClick={handleNewSession}
-                    className="flex items-center gap-1.5 w-full px-2 py-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-                  >
-                    <Plus size={12} />
-                    {t('chat.newSession')}
-                  </button>
-                </div>
-              </motion.div>
+    <div className="h-[calc(100vh-7rem)] -mx-6 -my-8 flex">
+      {/* Left sidebar */}
+      <ChatHistory
+        sessions={sessions.map((s) => ({ ...s, message_count: s.messages.length }))}
+        activeId={activeId}
+        onSwitch={handleSwitchSession}
+        onNew={handleNewSession}
+        onDelete={handleDeleteSession}
+        onRename={handleRenameSession}
+        collapsed={leftCollapsed}
+        onToggleCollapse={() => setLeftCollapsed((v) => !v)}
+      />
+
+      {/* Center */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="px-4 sm:px-6 py-3 border-b border-[var(--border-default)] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <MessageCircle size={18} className="text-apple-blue" />
+            <h1 className="text-base font-semibold">{t('chat.title')}</h1>
+            {llmConfig && (
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[10px] text-[var(--text-tertiary)] rounded-md" title={llmConfig.model}>
+                {llmConfig.provider}/{llmConfig.model.split('/').pop()}
+              </span>
             )}
+            <span className={`hidden sm:inline-flex w-2 h-2 rounded-full ${online ? 'bg-apple-green' : 'bg-apple-red'} ${online ? '' : 'animate-pulse'}`} title={online ? t('chat.online', 'Online') : t('chat.offline', 'Offline')} />
           </div>
-
-          {!isEmpty && (
+          <div className="flex items-center gap-2">
+            {!isEmpty && (
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-apple-red hover:bg-apple-red/10 transition-colors rounded-lg"
+                aria-label={t('chat.clear')}
+              >
+                <Trash2 size={13} />
+                <span className="hidden sm:inline">{t('chat.clear')}</span>
+              </button>
+            )}
             <button
-              onClick={handleClear}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-apple-red hover:bg-apple-red/10 transition-colors"
-              aria-label={t('chat.clear')}
+              onClick={() => setRightCollapsed((v) => !v)}
+              className={`p-1.5 rounded-lg transition-colors ${rightCollapsed ? 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]' : 'text-apple-blue bg-apple-blue/10'}`}
+              title={t('chat.right.toggle', 'Toggle side panel')}
             >
-              <Trash2 size={13} aria-hidden="true" />
-              <span className="hidden sm:inline">{t('chat.clear')}</span>
+              <PanelRight size={16} />
             </button>
-          )}
+          </div>
         </div>
-      </div>
 
-      {/* Message list */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 pt-4 pb-8 space-y-3 relative"
-        role="log"
-        aria-live="polite"
-        aria-label={t('chat.title')}
-      >
-        {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+        {/* Find in conversation */}
+        <AnimatePresence>
+          {showFindPanel && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-md"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-4 sm:px-6 pt-2 overflow-hidden border-b border-[var(--border-default)]"
             >
-              <div className="w-16 h-16 mx-auto mb-6 bg-apple-blue/10 rounded-xl flex items-center justify-center">
-                <Sparkles size={28} className="text-apple-blue" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">{t('chat.empty.title')}</h2>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">{t('chat.empty.description')}</p>
-              <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-                {['chat.empty.example1', 'chat.empty.example2', 'chat.empty.example3'].map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => handleExample(t(key))}
-                    className="px-3 py-1.5 bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] hover:text-apple-blue hover:border-apple-blue transition-colors border border-[var(--border-default)] rounded-full"
-                  >
-                    {t(key)}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center gap-2 bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-xl px-3 py-1.5 mb-2">
+                <Search size={12} className="text-[var(--text-tertiary)] shrink-0" />
+                <input
+                  ref={findInputRef}
+                  value={findQuery}
+                  onChange={(e) => { setFindQuery(e.target.value); setFindIndex(0); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setFindIndex((prev) => (prev + 1) % Math.max(findMatches.length, 1));
+                    }
+                    if (e.key === 'Escape') { setShowFindPanel(false); setFindQuery(''); }
+                  }}
+                  placeholder={t('chat.findPlaceholder', 'Find in conversation...')}
+                  className="flex-1 bg-transparent text-xs focus:outline-none text-[var(--text-primary)]"
+                />
+                {findMatches.length > 0 && (
+                  <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
+                    {findIndex + 1}/{findMatches.length}
+                  </span>
+                )}
                 <button
-                  onClick={() => handleGenerate('skill')}
-                  className="group px-3 py-1.5 bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] hover:text-apple-purple hover:border-apple-purple/30 hover:bg-apple-purple/5 transition-all border border-[var(--border-default)] rounded-full flex items-center gap-1.5"
+                  onClick={() => { setFindIndex((prev) => (prev - 1 + findMatches.length) % findMatches.length); }}
+                  disabled={findMatches.length === 0}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
                 >
-                  <Zap size={12} className="text-[var(--text-tertiary)] group-hover:text-apple-purple transition-colors" />
-                  {t('chat.quick.genSkill', 'Generate Skill')}
+                  <ChevronDown size={12} className="rotate-180" />
                 </button>
                 <button
-                  onClick={() => handleGenerate('mcp')}
-                  className="group px-3 py-1.5 bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] hover:text-apple-green hover:border-apple-green/30 hover:bg-apple-green/5 transition-all border border-[var(--border-default)] rounded-full flex items-center gap-1.5"
+                  onClick={() => { setFindIndex((prev) => (prev + 1) % findMatches.length); }}
+                  disabled={findMatches.length === 0}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
                 >
-                  <Plug size={12} className="text-[var(--text-tertiary)] group-hover:text-apple-green transition-colors" />
-                  {t('chat.quick.genMcp', 'Generate MCP Server')}
+                  <ChevronDown size={12} />
+                </button>
+                <button
+                  onClick={() => { setShowFindPanel(false); setFindQuery(''); }}
+                  className="p-1 text-[var(--text-tertiary)] hover:text-apple-red transition-colors"
+                >
+                  <X size={12} />
                 </button>
               </div>
             </motion.div>
-          </div>
-        ) : (
-          <AnimatePresence initial={false}>
-            {hasOlderEntries && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-center py-2"
-              >
-                <button
-                  onClick={() => setVisibleCount((c) => Math.min(c + RENDER_WINDOW, entries.length))}
-                  className="px-4 py-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] border border-[var(--border-default)] rounded-full hover:bg-[var(--bg-secondary)] transition-colors"
-                >
-                  {t('chat.loadOlder', 'Load older messages')}
-                </button>
-              </motion.div>
-            )}
-            {visibleEntries.map((entry) => {
-              const i = entries.indexOf(entry);
-              const prevEntry = entries[i - 1];
-              const showDivider = !prevEntry || getDateKey(entry.timestamp) !== getDateKey(prevEntry.timestamp);
-              return (
-                <Fragment key={entry.id}>
-                  {showDivider && entry.timestamp && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex items-center justify-center my-4"
-                    >
-                      <div className="h-px bg-[var(--border-default)] flex-1" />
-                      <span className="px-3 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">
-                        {formatDateDivider(entry.timestamp, t)}
-                      </span>
-                      <div className="h-px bg-[var(--border-default)] flex-1" />
-                    </motion.div>
-                  )}
-                  <motion.div
-                    data-message-index={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={findMatches.includes(i) && findQuery ? 'ring-1 ring-apple-blue/30 rounded-2xl' : ''}
-                  >
-                    <ChatMessage
-                      entry={entry}
-                      index={i}
-                      isLastAssistant={i === lastAssistantIndex}
-                      streaming={streaming}
-                      copiedIndex={copiedIndex}
-                      onCopy={handleCopy}
-                      onRegenerate={handleRegenerate}
-                      onEdit={entry.role === 'user' ? (content) => handleEditMessage(i, content) : undefined}
-                      onDelete={() => handleDeleteMessage(i)}
-                      onSaveSummary={entry.meta?.type === 'summary' ? () => handleSaveSummary(entry.content) : undefined}
-                      onQuoteSummary={entry.meta?.type === 'summary' ? () => handleQuoteSummary(entry.content) : undefined}
-                      onContinue={() => handleContinue(i)}
-                      truncated={entry.truncated}
-                      onReply={() => handleReplyMessage(i)}
-                      bookmarked={entry.bookmarked}
-                      onToggleBookmark={() => handleToggleBookmark(i)}
-                      onSourceClick={(path) => {
-                        const slug = path.replace('.md', '');
-                        const parts = slug.split('/');
-                        const type = parts[0];
-                        const name = parts.slice(1).join('/');
-                        if (type === 'sources') navigate(`/s/${name}`);
-                        else if (type === 'entities') navigate(`/e/${name}`);
-                        else if (type === 'concepts') navigate(`/c/${name}`);
-                        else if (type === 'syntheses') navigate(`/y/${name}`);
-                      }}
-                    />
-                  </motion.div>
-                </Fragment>
-              );
-            })}
-          </AnimatePresence>
-        )}
-
-        {/* Floating scroll-to-bottom */}
-        <AnimatePresence>
-          {showScrollToBottom && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => {
-                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-                setShowScrollToBottom(false);
-              }}
-              className="absolute bottom-4 right-6 w-9 h-9 flex items-center justify-center bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-secondary)] rounded-full shadow-lg hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors z-30"
-              title={t('chat.scrollToBottom', 'Scroll to bottom')}
-            >
-              <ChevronDown size={16} />
-            </motion.button>
           )}
         </AnimatePresence>
-      </div>
 
-      {/* Search Panel */}
-      <AnimatePresence>
-        {showSearchPanel && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className="px-4 sm:px-6 py-3 border-t border-[var(--border-default)] bg-[var(--bg-secondary)]"
-          >
-            <div className="max-w-3xl mx-auto">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex gap-1 p-0.5 bg-[var(--bg-primary)] rounded-lg">
-                  <button
-                    onClick={() => setSearchType('wiki')}
-                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${searchType === 'wiki' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}
-                  >
-                    <BookOpen size={11} />
-                    {t('chat.search.wiki', 'Wiki')}
-                  </button>
-                  <button
-                    onClick={() => setSearchType('web')}
-                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${searchType === 'web' ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}
-                  >
-                    <Globe size={11} />
-                    {t('chat.search.web', 'Web')}
-                  </button>
-                </div>
-                <div className="flex-1 relative">
-                  <input
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                    placeholder={t('chat.search.placeholder', 'Search...')}
-                    className="w-full apple-input text-xs py-1.5 pr-8"
-                  />
-                  <button
-                    onClick={handleSearch}
-                    disabled={searchLoading || !searchQuery.trim()}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-[var(--text-tertiary)] hover:text-apple-blue transition-colors disabled:opacity-40"
-                  >
-                    {searchLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                  </button>
-                </div>
-                <button
-                  onClick={() => setShowSearchPanel(false)}
-                  className="p-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              {/* Search History */}
-              {searchQuery.trim().length < 2 && searchHistory[searchType].length > 0 && (
-                <div className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{t('chat.search.history', 'Recent')}</span>
-                    <button
-                      onClick={() => { setSearchHistory({ wiki: [], web: [] }); saveSearchHistory({ wiki: [], web: [] }); }}
-                      className="text-[10px] text-[var(--text-tertiary)] hover:text-apple-red transition-colors"
-                    >
-                      {t('chat.search.clearHistory', 'Clear')}
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {searchHistory[searchType].map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => { setSearchQuery(q); doSearch(q, searchType); }}
-                        className="px-2 py-0.5 text-[11px] text-[var(--text-secondary)] bg-[var(--bg-primary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors rounded-md border border-[var(--border-default)]"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-1.5">
-                  {searchResults.map((r, i) => {
-                    const isWeb = searchType === 'web';
-                    const title = isWeb ? (r as WebSearchResult).title : (r as WikiSearchResult).title;
-                    const snippet = isWeb ? (r as WebSearchResult).body : (r as WikiSearchResult).excerpt;
-                    const href = isWeb ? (r as WebSearchResult).href : (r as WikiSearchResult).path;
-                    return (
-                      <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-default)]">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-[var(--text-primary)] truncate">{title}</p>
-                          <p className="text-[10px] text-[var(--text-tertiary)] truncate">{href}</p>
-                          <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 mt-0.5">{snippet}</p>
-                        </div>
-                        <button
-                          onClick={() => handleQuoteResult(`${title}: ${snippet}`)}
-                          className="shrink-0 p-1 text-[var(--text-tertiary)] hover:text-apple-blue transition-colors"
-                          title={t('chat.search.quote', 'Quote')}
-                        >
-                          <Quote size={12} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {/* Empty state */}
-              {!searchLoading && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                <div className="py-4 text-center">
-                  <p className="text-xs text-[var(--text-tertiary)]">{t('chat.search.noResults', 'No results found')}</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Messages */}
+        <ChatConversation
+          entries={entries}
+          loading={loading}
+          streaming={streaming}
+          showScrollToBottom={showScrollToBottom}
+          copiedIndex={copiedIndex}
+          onCopy={handleCopy}
+          onReply={handleReplyMessage}
+          onToggleBookmark={handleToggleBookmark}
+          onContinue={handleContinue}
+          onSourceClick={handleSourceClick}
+          onDelete={handleDeleteMessage}
+          onEdit={handleEditMessage}
+          onRegenerate={handleRegenerate}
+          onScrollToBottom={() => {
+            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+            setShowScrollToBottom(false);
+          }}
+          scrollRef={scrollRef}
+          renderWindow={RENDER_WINDOW}
+          findQuery={findQuery}
+        />
+      </div>
 
       {/* Generate Panel */}
       <AnimatePresence>
@@ -1913,7 +1618,7 @@ export function ChatPage() {
               <div className="flex items-center gap-0.5">
                 {/* Search */}
                 <button
-                  onClick={() => { setShowSearchPanel(true); setShowGeneratePanel(false); }}
+                  onClick={() => { setRightTab('search'); setRightCollapsed(false); setShowGeneratePanel(false); }}
                   className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
                   title={t('chat.tools.search', 'Search')}
                 >
@@ -2104,6 +1809,21 @@ export function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Right panel */}
+      <AnimatePresence initial={false}>
+        {!rightCollapsed && (
+          <ChatRightPanel
+            tab={rightTab}
+            onTabChange={setRightTab}
+            sources={entries.findLast((e) => e.role === 'assistant')?.sources || []}
+            activeDocPath={activeDocPath}
+            onSelectPath={setActiveDocPath}
+            onQuoteToChat={(text) => setInput((prev) => (prev ? prev + '\n\n' : '') + text)}
+            onClose={() => setRightCollapsed(true)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

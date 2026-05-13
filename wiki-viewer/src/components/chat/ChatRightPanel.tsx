@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ChatDocPreview } from './ChatDocPreview';
 import { ChatSearchPanel } from './ChatSearchPanel';
 import type { WikiChatSource } from '@/services/chatService';
@@ -20,7 +21,13 @@ export function ChatRightPanel({
   const { t } = useTranslation();
 
   return (
-    <div className="w-[360px] min-w-[360px] border-l border-[var(--border-default)] flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+    <motion.div
+      className="w-[360px] min-w-[360px] border-l border-[var(--border-default)] flex flex-col overflow-hidden bg-[var(--bg-primary)]"
+      initial={{ width: 0, opacity: 0 }}
+      animate={{ width: 360, opacity: 1 }}
+      exit={{ width: 0, opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
       {/* Tab bar */}
       <div className="flex items-center border-b border-[var(--border-default)]">
         <button
@@ -64,6 +71,6 @@ export function ChatRightPanel({
           <ChatSearchPanel onQuote={onQuoteToChat} />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

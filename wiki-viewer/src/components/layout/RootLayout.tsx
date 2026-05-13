@@ -12,6 +12,7 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { IngestProgress } from '@/components/upload/IngestProgress';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageSkeleton } from '@/components/ui/Skeleton';
+import { ScrollToTop } from '@/components/ui/ScrollToTop';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { useSWUpdate } from '@/hooks/useSWUpdate';
@@ -44,6 +45,7 @@ function PageTransition({ pathname, isGraphPage, children }: { pathname: string;
 }
 
 export function RootLayout() {
+  useKeyboardShortcuts();
   const { t } = useTranslation();
   const initialize = useWikiStore((s) => s.initialize);
   const sidebarCollapsed = useWikiStore((s) => s.sidebarCollapsed);
@@ -127,9 +129,9 @@ export function RootLayout() {
         */}
         <main
           id="main-content"
-          className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'} ${isGraphPage ? 'overflow-hidden' : 'overflow-hidden'}`}
+          className={`flex-1 transition-all duration-300 overflow-y-auto ${sidebarCollapsed ? 'md:ml-14' : 'md:ml-60'}`}
         >
-          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-1 h-full flex flex-col'}>
+          <div className={isGraphPage ? 'h-full' : 'max-w-5xl mx-auto px-4 sm:px-6 py-1 min-h-full flex flex-col'}>
             {loading ? (
               <div className="min-h-[60vh] py-8">
                 <PageSkeleton />
@@ -157,6 +159,7 @@ export function RootLayout() {
           </div>
         </main>
       </div>
+      <ScrollToTop />
     </div>
   );
 }

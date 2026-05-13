@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { hybridSearch, getAllNodes } from '@/lib/search';
 import type { FuseResult } from 'fuse.js';
 import type { GraphNode } from '@/types/graph';
+import type { UnifiedSearchResult } from '@/services/dataService';
+import { searchUnified } from '@/services/dataService';
 import { motion } from 'framer-motion';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -26,6 +28,7 @@ export function SearchPage() {
 
   const debouncedQuery = useDebounce(query, 200);
   const [results, setResults] = useState<FuseResult<GraphNode>[]>([]);
+  const [unifiedResults, setUnifiedResults] = useState<UnifiedSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [semantic, setSemantic] = useState(() => {
     try { return localStorage.getItem('wiki-semantic-search') === 'true'; } catch { return false; }
@@ -66,13 +69,41 @@ export function SearchPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!debouncedQuery.trim()) { setResults([]); return; }
+    if (!debouncedQuery.trim()) { setResults([]); setUnifiedResults([]); return; }
     setSearching(true);
     let cancelled = false;
-    hybridSearch(debouncedQuery, getAllNodes(), semantic)
-      .then(r => { if (!cancelled) setResults(r.slice(0, 50)); })
-      .catch(() => { if (!cancelled) setResults([]); })
+
+    // Try backend unified search first (includes chat results), fallback to local hybrid search
+    searchUnified(debouncedQuery, 50, 5)
+      .then(r => {
+        if (!cancelled) {
+          setUnifiedResults(r.results);
+          // Also update fuse results for fallback compatibility
+          const nodes = getAllNodes();
+          const mapped: FuseResult<GraphNode>[] = r.results
+            .filter(res => res.source_type === 'wiki')
+            .map((res, idx) => {
+              const node = nodes.find(n => n.id === res.id);
+              return {
+                item: node || { id: res.id, type: 'source', label: res.title, preview: res.preview } as GraphNode,
+                matches: [],
+                score: res.score || 0,
+                refIndex: idx,
+              } as unknown as FuseResult<GraphNode>;
+            });
+          setResults(mapped);
+        }
+      })
+      .catch(() => {
+        // Fallback to local hybrid search if backend is unavailable
+        if (!cancelled) {
+          hybridSearch(debouncedQuery, getAllNodes(), semantic)
+            .then(r => { if (!cancelled) setResults(r.slice(0, 50)); })
+            .catch(() => { if (!cancelled) setResults([]); });
+        }
+      })
       .finally(() => { if (!cancelled) setSearching(false); });
+
     return () => { cancelled = true; };
   }, [debouncedQuery, semantic]);
 
@@ -304,6 +335,7 @@ export function SearchPage() {
         <SearchResultsTab
           query={query}
           results={results}
+          unifiedResults={unifiedResults}
           searching={searching}
           onGenerate={handleOnGenerate}
         />

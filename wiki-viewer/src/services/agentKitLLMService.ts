@@ -1,7 +1,6 @@
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import { isValidFilePath } from '@/lib/validation';
 import { useQuery } from '@tanstack/react-query';
-import { useQuery } from '@tanstack/react-query';
 
 async function safeJson<T>(res: Response): Promise<T> {
   const text = await res.text();

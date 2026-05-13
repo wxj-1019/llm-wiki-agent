@@ -65,14 +65,17 @@ export default defineConfig({
         manualChunks: {
           // Split large vendor libraries into separate chunks
           'vendor-shiki': ['shiki'],
-          'vendor-vis': ['vis-network'],
+          'vendor-vis': ['vis-network/standalone'],
           'vendor-motion': ['framer-motion'],
           'vendor-markdown': ['react-markdown', 'remark-gfm', 'rehype-raw', 'rehype-slug', 'rehype-autolink-headings'],
           'vendor-fuse': ['fuse.js'],
         },
       },
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 500,
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    sourcemap: false,
   },
   server: {
     port: 3666,

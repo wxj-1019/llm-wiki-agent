@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Search, FileText, Zap, Plug } from 'lucide-react';
+import { Search, FileText, Zap, Plug, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import type { FuseResult } from 'fuse.js';
 import type { GraphNode } from '@/types/graph';
+import type { UnifiedSearchResult } from '@/services/dataService';
 import { typeLabelKey } from '@/i18n';
 import { getPagePath } from '@/lib/wikilink';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -13,18 +14,30 @@ import { typeIcons, typeColors, typeTagColors } from './types';
 interface SearchResultsTabProps {
   query: string;
   results: FuseResult<GraphNode>[];
+  unifiedResults?: UnifiedSearchResult[];
   searching: boolean;
   onGenerate: () => void;
 }
 
-export function SearchResultsTab({ query, results, searching, onGenerate }: SearchResultsTabProps) {
+export function SearchResultsTab({ query, results, unifiedResults, searching, onGenerate }: SearchResultsTabProps) {
   const { t } = useTranslation();
+
+  // Use unified results when available (includes chat results), otherwise fall back to fuse results
+  const hasUnified = unifiedResults && unifiedResults.length > 0;
+  const wikiResults = hasUnified
+    ? unifiedResults!.filter(r => r.source_type === 'wiki')
+    : results;
+  const chatResults = hasUnified
+    ? unifiedResults!.filter(r => r.source_type === 'chat')
+    : [];
+
+  const totalCount = wikiResults.length + chatResults.length;
 
   return (
     <>
       {query && !searching && (
         <div className="mb-4 text-sm text-[var(--text-secondary)] flex items-center gap-2">
-          {t('search.resultCount', { count: results.length, query })}
+          {t('search.resultCount', { count: totalCount, query })}
         </div>
       )}
 
@@ -46,38 +59,130 @@ export function SearchResultsTab({ query, results, searching, onGenerate }: Sear
         </div>
       )}
 
-      {!searching && <div className="space-y-3">
-        {results.map((result, i) => {
-          const node = result.item;
-          const Icon = typeIcons[node.type] || FileText;
-          const labelMatches = result.matches?.find(m => m.key === 'label');
-          const previewMatches = result.matches?.find(m => m.key === 'preview');
-          return (
-            <motion.div key={node.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.4) }}>
-              <Link to={getPagePath(node)} className="apple-card p-4 flex items-start gap-4 block group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className={`p-2.5 rounded-xl shrink-0 ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>
-                  <Icon size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold group-hover:text-apple-blue transition-colors">
-                      <HighlightText text={node.label} matches={labelMatches?.indices} />
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-lg border ${typeTagColors[node.type] || 'text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-[var(--border-default)]'}`}>
-                      {t(typeLabelKey(node.type) as string)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                    <HighlightText text={node.preview} matches={previewMatches?.indices} />
-                  </p>
-                </div>
-              </Link>
-            </motion.div>
-          );
-        })}
-      </div>}
+      {!searching && (
+        <div className="space-y-3">
+          {/* Chat results section */}
+          {chatResults.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <MessageSquare size={14} className="text-apple-purple" />
+                <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+                  {t('search.chatResults', 'Chat History')}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {chatResults.map((result, i) => (
+                  <motion.div
+                    key={result.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.4) }}
+                  >
+                    <Link
+                      to={`/chat/${result.path.replace('chat/', '')}`}
+                      className="apple-card p-4 flex items-start gap-4 block group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    >
+                      <div className="p-2.5 rounded-xl shrink-0 text-apple-purple bg-apple-purple/10">
+                        <MessageSquare size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold group-hover:text-apple-purple transition-colors line-clamp-1">
+                            {result.title || t('chat.sessionDefault', 'New Chat')}
+                          </span>
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-lg border text-apple-purple bg-apple-purple/10 border-apple-purple/20">
+                            {t('search.chatLabel', 'Chat')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                          <HighlightText text={result.preview} />
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {(query && results.length === 0 && !searching) || (!query) ? (
+          {/* Wiki results section */}
+          {wikiResults.length > 0 && (
+            <div>
+              {chatResults.length > 0 && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <FileText size={14} className="text-apple-blue" />
+                  <span className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wide">
+                    {t('search.wikiResults', 'Wiki Pages')}
+                  </span>
+                </div>
+              )}
+              <div className="space-y-2">
+                {hasUnified
+                  ? (wikiResults as UnifiedSearchResult[]).map((result, i) => (
+                      <motion.div
+                        key={result.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, delay: Math.min((chatResults.length + i) * 0.05, 0.4) }}
+                      >
+                        <Link
+                          to={getPagePath({ id: result.id, type: result.id.split('/')[0] || 'source' })}
+                          className="apple-card p-4 flex items-start gap-4 block group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                        >
+                          <div className="p-2.5 rounded-xl shrink-0 text-apple-blue bg-apple-blue/10">
+                            <FileText size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold group-hover:text-apple-blue transition-colors line-clamp-1">
+                                {result.title}
+                              </span>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-lg border text-apple-blue bg-apple-blue/10 border-apple-blue/20">
+                                {t('search.wikiLabel', 'Wiki')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                              <HighlightText text={result.preview} />
+                            </p>
+                          </div>
+                        </Link>
+                      </motion.div>
+                    ))
+                  : results.map((result, i) => {
+                      const node = result.item;
+                      const Icon = typeIcons[node.type] || FileText;
+                      const labelMatches = result.matches?.find(m => m.key === 'label');
+                      const previewMatches = result.matches?.find(m => m.key === 'preview');
+                      return (
+                        <motion.div key={node.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: Math.min(i * 0.05, 0.4) }}>
+                          <Link to={getPagePath(node)} className="apple-card p-4 flex items-start gap-4 block group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                            <div className={`p-2.5 rounded-xl shrink-0 ${typeColors[node.type] || 'text-apple-blue bg-apple-blue/10'}`}>
+                              <Icon size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold group-hover:text-apple-blue transition-colors">
+                                  <HighlightText text={node.label} matches={labelMatches?.indices} />
+                                </span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-lg border ${typeTagColors[node.type] || 'text-[var(--text-secondary)] bg-[var(--bg-secondary)] border-[var(--border-default)]'}`}>
+                                  {t(typeLabelKey(node.type) as string)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                                <HighlightText text={node.preview} matches={previewMatches?.indices} />
+                              </p>
+                            </div>
+                          </Link>
+                        </motion.div>
+                      );
+                    })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(query && totalCount === 0 && !searching) || (!query) ? (
         <div className="empty-state-warm mt-12">
           <div className="flex justify-center mb-3"><Search size={40} className="text-apple-blue" /></div>
           <h3 className="text-lg font-semibold mb-1">{query ? t('search.empty.title') : t('search.empty.hint', 'Enter keywords to search')}</h3>

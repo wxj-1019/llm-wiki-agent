@@ -8,6 +8,7 @@
  */
 import { AlertTriangle, WifiOff, ServerOff, RefreshCw, Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback } from "react";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { useWikiStore } from "../../stores/wikiStore";
 import type { Severity } from "../../stores/notificationStore";
@@ -44,6 +45,12 @@ export function AlertBanner({
   onPwaUpdate,
   onPwaInstall,
 }: AlertBannerProps) {
+  // Track dismissed system alerts in component state (resets on page reload)
+  const [dismissedSystemAlerts, setDismissedSystemAlerts] = useState<Set<string>>(new Set());
+  const dismissSystemAlert = useCallback((id: string) => {
+    setDismissedSystemAlerts((prev) => new Set(prev).add(id));
+  }, []);
+
   // B1 fix: use zustand selector to react to alert state changes
   const notifications = useNotificationStore((s) => s.notifications);
   const activeAlerts = notifications.filter((n) => n.isAlert);
@@ -97,7 +104,7 @@ export function AlertBanner({
     });
   }
 
-  if (showPwaInstall) {
+  if (showPwaInstall && !dismissedSystemAlerts.has("system-pwa-install")) {
     allAlerts.push({
       id: "system-pwa-install",
       message: "安装为本地应用以获得更好体验",
@@ -169,15 +176,19 @@ export function AlertBanner({
                     {alert.actionLabel}
                   </button>
                 )}
-                {!alert.isSystem && (
-                  <button
-                    onClick={() => dismissAlert(alert.id)}
-                    className="p-0.5 rounded hover:bg-white/20 transition-colors"
-                    aria-label="Dismiss alert"
-                  >
-                    <X size={14} aria-hidden="true" />
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    if (alert.isSystem) {
+                      dismissSystemAlert(alert.id);
+                    } else {
+                      dismissAlert(alert.id);
+                    }
+                  }}
+                  className="p-0.5 rounded hover:bg-white/20 transition-colors"
+                  aria-label="Dismiss alert"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
               </div>
             </motion.div>
           );
