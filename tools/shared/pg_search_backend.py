@@ -74,15 +74,23 @@ class PgSearchBackend(SearchBackend):
         self._pool_max = config.get("pool_max", 10)
         self._cjk_parser = config.get("cjk_parser", "auto")
 
+        conn_kwargs: dict[str, Any] = {
+            "host": config["host"],
+            "port": config["port"],
+            "dbname": config["database"],
+            "user": config["user"],
+            "password": config["password"],
+            "sslmode": config.get("sslmode", "prefer"),
+        }
+        if "connect_timeout" in config:
+            conn_kwargs["connect_timeout"] = config["connect_timeout"]
+        if "statement_timeout" in config:
+            conn_kwargs["options"] = f"-c statement_timeout={config['statement_timeout']}"
+
         self._pool = pool.ThreadedConnectionPool(
             minconn=self._pool_min,
             maxconn=self._pool_max,
-            host=config["host"],
-            port=config["port"],
-            dbname=config["database"],
-            user=config["user"],
-            password=config["password"],
-            sslmode=config.get("sslmode", "prefer"),
+            **conn_kwargs,
         )
 
         # Detect whether zh_cfg exists on PG side

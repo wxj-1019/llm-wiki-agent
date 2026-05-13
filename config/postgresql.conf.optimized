@@ -1,0 +1,48 @@
+# ============================================================================
+# PostgreSQL 优化配置片段 — 合并到 postgresql.conf
+#
+# 位置: C:\Program Files\PostgreSQL\17\data\postgresql.conf
+# 合并后执行: net stop postgresql-x64-17 && net start postgresql-x64-17
+#
+# 适用硬件: 16GB RAM, 开发机
+# ============================================================================
+
+# ═════════ 内存配置 ═════════
+# 默认 128MB → 2GB (1/8 内存)
+shared_buffers = 2GB
+effective_cache_size = 6GB
+work_mem = 64MB
+maintenance_work_mem = 512MB
+
+# ═════════ 连接配置 ═════════
+max_connections = 200
+listen_addresses = 'localhost,127.0.0.1'
+
+# ═════════ WAL / 日志配置 ═════════
+wal_buffers = 16MB
+max_wal_size = 2GB
+min_wal_size = 512MB
+
+# 慢查询日志 (>500ms)
+log_min_duration_statement = 500
+log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+log_checkpoints = on
+log_connections = on
+log_disconnections = on
+log_lock_waits = on
+
+# ═════════ 并行查询 ═════════
+max_parallel_workers_per_gather = 4
+max_parallel_workers = 8
+max_worker_processes = 8
+
+# ═════════ 自动清理 ═════════
+autovacuum = on
+autovacuum_vacuum_scale_factor = 0.1
+autovacuum_analyze_scale_factor = 0.05
+
+# ═════════ pg_stat_statements (慢查询分析 - 可选) ═════════
+# 需要先 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+# shared_preload_libraries = 'pg_stat_statements'
+# pg_stat_statements.track = all
+# pg_stat_statements.max = 10000

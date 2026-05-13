@@ -17,15 +17,23 @@ def _get_pool() -> pool.ThreadedConnectionPool:
     if _pool is not None:
         return _pool
     cfg = load_pg()
+    conn_kwargs = {
+        "host": cfg["host"],
+        "port": cfg["port"],
+        "dbname": cfg["database"],
+        "user": cfg["user"],
+        "password": cfg["password"],
+        "sslmode": cfg.get("sslmode", "prefer"),
+    }
+    if "connect_timeout" in cfg:
+        conn_kwargs["connect_timeout"] = cfg["connect_timeout"]
+    if "statement_timeout" in cfg:
+        conn_kwargs["options"] = f"-c statement_timeout={cfg['statement_timeout']}"
+
     _pool = pool.ThreadedConnectionPool(
-        minconn=cfg.get("pool_min", 2),
-        maxconn=cfg.get("pool_max", 10),
-        host=cfg["host"],
-        port=cfg["port"],
-        dbname=cfg["database"],
-        user=cfg["user"],
-        password=cfg["password"],
-        sslmode=cfg.get("sslmode", "prefer"),
+        minconn=cfg.get("pool_min", 5),
+        maxconn=cfg.get("pool_max", 30),
+        **conn_kwargs,
     )
     return _pool
 
