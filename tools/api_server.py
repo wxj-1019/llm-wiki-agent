@@ -736,7 +736,8 @@ async def search_web(q: str = Query("", min_length=1), limit: int = Query(10, ge
 
 
 @app.get("/api/search")
-def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200)):
+def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200),
+           include_chats: bool = True, chat_limit: int = Query(5, ge=0, le=50)):
     if not q or len(q.strip()) == 0:
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required and must be non-empty")
     q_clean = q.strip().lower()
@@ -792,10 +793,65 @@ def search(q: str = Query("", min_length=1), limit: int = Query(50, ge=1, le=200
                 "id": p.relative_to(WIKI).as_posix().replace(".md", ""),
                 "path": str(p.relative_to(REPO)),
                 "preview": preview_raw,
+                "source_type": "wiki",
             })
             if len(results) >= limit:
                 break
-    return {"results": results, "total": len(results)}
+
+    # Chat message search integration
+    if include_chats and chat_limit > 0:
+        try:
+            chat_results = _search_chat_messages(q_clean, chat_limit)
+            for cr in chat_results:
+                results.append({
+                    "id": f"chat:{cr['session_id']}:{cr['message_id']}",
+                    "path": f"chat/{cr['session_id']}",
+                    "title": cr.get("session_title", ""),
+                    "preview": cr.get("excerpt", ""),
+                    "source_type": "chat",
+                    "score": float(cr.get("rank", 0)),
+                })
+        except Exception as e:
+            logger.warning("Chat search skipped: %s", e)
+
+    # Sort: wiki results first, then chat by score
+    results.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return {"results": results[:limit], "total": len(results)}
+
+
+def _search_chat_messages(query: str, limit: int = 5) -> list[dict]:
+    """Search across all chat messages using PG FTS."""
+    from tools.jarvis.config import load_pg
+    cfg = load_pg()
+    conn = psycopg2.connect(
+        host=cfg["host"], port=cfg["port"], dbname=cfg["database"],
+        user=cfg["user"], password=cfg["password"],
+        sslmode=cfg.get("sslmode", "prefer"),
+    )
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT
+                    cm.id AS message_id,
+                    cm.session_id,
+                    cs.title AS session_title,
+                    ts_rank(cm.content_tsv, plainto_tsquery('simple', %s)) AS rank,
+                    ts_headline('simple', cm.content, plainto_tsquery('simple', %s),
+                                'MaxWords=30, MinWords=15, StartSel=<<, StopSel=>>') AS excerpt,
+                    cm.created_at
+                FROM chat_messages cm
+                JOIN chat_sessions cs ON cs.id = cm.session_id
+                WHERE cm.content_tsv @@ plainto_tsquery('simple', %s)
+                  AND cs.deleted_at IS NULL
+                ORDER BY rank DESC
+                LIMIT %s
+            """, (query, query, query, limit))
+            return [dict(row) for row in cur.fetchall()]
+    except Exception as e:
+        logger.warning("Chat message search failed: %s", e)
+        return []
+    finally:
+        conn.close()
 
 @app.get("/api/health")
 def health():
@@ -3296,6 +3352,12 @@ def _check_port_available(host: str, port: int) -> bool:
         except OSError:
             return False
 
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+# Chat API router
+from tools.chat_api import router as chat_router
+app.include_router(chat_router)
 
 # Load LLM config on startup
 _load_llm_config()
