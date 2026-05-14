@@ -49,6 +49,7 @@ llm-wiki-agent/
 │   ├── sources/            # One summary page per source document
 │   ├── entities/           # People, companies, projects, products
 │   ├── concepts/           # Ideas, frameworks, methods, theories
+│   ├── code/               # Code documentation (modules, classes, functions)
 │   └── syntheses/          # Saved query answers
 ├── graph/                  # Auto-generated graph data
 │   ├── graph.json          # Node/edge data (SHA256-cached)
@@ -78,7 +79,7 @@ All scripts in `tools/` are standalone and can be run directly. They require `li
 
 | Script | Purpose | LLM Calls? | Usage |
 |---|---|---|---|
-| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files via markitdown; supports batch, `--no-convert`, `--validate-only` |
+| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files via markitdown; **code files** (`.py`, `.ts`, `.tsx`, `.js`, `.jsx`) are ingested as plain text with optional AST analysis; supports batch, `--no-convert`, `--validate-only` |
 | `query.py` | Query wiki and synthesize answers | Yes | `python tools/query.py "<question>" [--save [<path>]]` |
 | `lint.py` | Content quality checks | Yes (semantic) | `python tools/lint.py [--save]` — orphans, broken links, contradictions, missing entities, data gaps |
 | `health.py` | Structural integrity checks | **No** | `python tools/health.py [--save] [--json]` — empty stubs, index sync, log coverage |
@@ -124,6 +125,13 @@ poetry install
 # Ingest a document
 python tools/ingest.py raw/papers/my-paper.md
 
+# Ingest source code (auto AST analysis if tree-sitter installed)
+python tools/ingest.py tools/api_server.py
+python tools/ingest.py wiki-viewer/src/services/chatService.ts
+
+# Batch ingest a directory of code files
+python tools/ingest.py tools/shared/code_graph/
+
 # Query the wiki
 python tools/query.py "What are the main themes?"
 
@@ -135,6 +143,9 @@ python tools/lint.py
 
 # Build knowledge graph
 python tools/build_graph.py --open
+
+# Build knowledge graph with code-level structure
+python tools/build_graph.py --code --open
 
 # Heal missing entities
 python tools/heal.py
@@ -168,7 +179,7 @@ python -c "from tools.shared.search_backend import get_search_backend; e=get_sea
 ```yaml
 ---
 title: "Page Title"
-type: source | entity | concept | synthesis
+type: source | entity | concept | synthesis | code_module | code_class | code_func
 tags: []
 sources: []       # list of source slugs that inform this page
 last_updated: YYYY-MM-DD
@@ -179,6 +190,7 @@ last_updated: YYYY-MM-DD
 - Source slugs / filenames: `kebab-case.md`
 - Entity pages: `TitleCase.md` (e.g., `OpenAI.md`, `SamAltman.md`)
 - Concept pages: `TitleCase.md` (e.g., `ReinforcementLearning.md`, `RAG.md`)
+- Code pages: `TitleCase.md` under `wiki/code/` (e.g., `wiki/code/ChatService.md`)
 - Wikilinks: `[[PageName]]`
 
 **Index Format (`wiki/index.md`):**
@@ -196,6 +208,9 @@ last_updated: YYYY-MM-DD
 
 ## Concepts
 - [Concept Name](concepts/ConceptName.md) — one-line description
+
+## Code
+- [Code Page Title](code/PageName.md) — one-line description
 
 ## Syntheses
 - [Analysis Title](syntheses/slug.md) — what question it answers
@@ -243,19 +258,21 @@ python tools/ingest.py --validate-only
 
 Triggered by: *"ingest <file>"*
 
-**Supported formats:** Markdown (`.md`) is ingested directly. Non-markdown files (`.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.txt`, `.csv`, `.json`, `.xml`, `.rst`, `.rtf`, `.epub`, `.ipynb`, `.yaml`, `.yml`, `.tsv`, `.wav`, `.mp3`) are auto-converted to markdown via [markitdown](https://github.com/microsoft/markitdown) before ingestion. Use `--no-convert` to skip auto-conversion.
+**Supported formats:** Markdown (`.md`) is ingested directly. Non-markdown files (`.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.txt`, `.csv`, `.json`, `.xml`, `.rst`, `.rtf`, `.epub`, `.ipynb`, `.yaml`, `.yml`, `.tsv`, `.wav`, `.mp3`) are auto-converted to markdown via [markitdown](https://github.com/microsoft/markitdown) before ingestion. **Code files** (`.py`, `.js`, `.ts`, `.tsx`, `.jsx`) are ingested as plain text with automatic AST structure extraction (requires `tree-sitter` dependencies). Use `--no-convert` to skip auto-conversion.
 
 Steps (in order):
-1. Read the source document fully (auto-convert if non-markdown)
-2. Read `wiki/index.md` and `wiki/overview.md` for current wiki context
-3. Write `wiki/sources/<slug>.md` — use the source page format below
-4. Update `wiki/index.md` — add entry under Sources section
-5. Update `wiki/overview.md` — revise synthesis if warranted
-6. Update/create entity pages for key people, companies, projects mentioned
-7. Update/create concept pages for key ideas and frameworks discussed
-8. Flag any contradictions with existing wiki content
-9. Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Title>`
-10. **Post-ingest validation** — check for broken `[[wikilinks]]`, verify all new pages are in `index.md`, print a change summary
+1. Read the source document fully (auto-convert if non-markdown; code files read as plain text)
+2. For code files: extract AST summary (modules, classes, functions, imports, inheritance) via `tools/shared/code_graph/`
+3. Read `wiki/index.md` and `wiki/overview.md` for current wiki context
+4. Write `wiki/sources/<slug>.md` — use the source page format below
+5. Update `wiki/index.md` — add entry under Sources section
+6. Update `wiki/overview.md` — revise synthesis if warranted
+7. Update/create entity pages for key people, companies, projects mentioned
+8. Update/create concept pages for key ideas and frameworks discussed
+9. For code files: update/create `code_pages` under `wiki/code/` for notable modules, classes, and public functions
+10. Flag any contradictions with existing wiki content
+11. Append to `wiki/log.md`: `## [YYYY-MM-DD] ingest | <Title>`
+12. **Post-ingest validation** — check for broken `[[wikilinks]]`, verify all new pages are in `index.md`, print a change summary
 
 ### Source Page Format
 

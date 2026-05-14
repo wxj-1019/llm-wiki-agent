@@ -1,0 +1,10 @@
+---
+title: "FramerMotion"
+type: entity
+tags: [frontend, animation, react, motion, library]
+sources: [Header.md, PageTransitionComponent.md, SearchPage.md, chathistory-chat-session-sidebar-component.md, command-palette-component.md, errorboundary-route-error-handling-component.md, header-component-wiki-viewer-navigation-bar.md, lazypage-component.md, notification-dropdown-component.md, root-layout-main-application-layout-component.md, searchpage-wiki-search-ai-chat-component.md, sidebar-component-navigation-sidebar.md]
+---
+
+# FramerMotion
+
+**FramerMotion** is the declarative animation library used throughout the **LLMWikiViewer** frontend to power all motion, transitions, and gesture-based interactions. It is the single source of animation logic for the application, replacing raw CSS transitions or imperative animation libraries. The library is employed via its two primary exports: `motion.div` and `AnimatePresence`. `motion.div` is used to animate individual elements with `initial`, `animate`, `exit`, and `transition` props, enabling page-level route transitions in `PageTransition`, loading bar looping in `LazyPage`, spring-based unread notification badges in `NotificationDropdown`, glassmorphism entrance animations in the `Header` search popover and `CommandPalette` overlay, collapsible section toggles in the `Sidebar`, and centered error fallback entrance in `ErrorBoundary`. `AnimatePresence` wraps conditional rendering blocks (such as modals, dropdowns, and tab panels in `SearchPage`) to ensure smooth enter/exit animations when components mount or unmount. FramerMotion's `repeat: Infinity` and `repeatType: 'loop'` are specifically used in `LazyPage` to simulate indeterminate progress. The library is integrated at the layout level in `RootLayout`, which orchestrates animated page transitions for all child routes. No alternative animation library (e.g., `react-spring`, `GSAP`, or CSS keyframes) is used; FramerMotion is the exclusive motion layer, chosen for its React-native API, ease of composing complex multi-step animations, and built-in accessibility support (respecting `prefers-reduced-motion`).

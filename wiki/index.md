@@ -6,6 +6,66 @@ This file is maintained by the LLM. Updated on every ingest.
 - [Overview](overview.md) — living synthesis across all sources
 
 ## Sources
+- [Notification Store — Zustand State Manager](sources/notification-store-zustand-manager.md) — dual-model notification/toast store with throttling, progress support, alert deduplication, and auto-dismiss timers
+- [Refresh Tool — Stale Source Page Refresher](sources/refresh-tool-stale-source-page-refresher.md) — hash-based stale detection and re-ingest via ingest.py subprocess
+- [Auto-Ingest Pipeline](sources/auto-ingest-pipeline-auto-ingest-py.md) — zero-LLM fast path automation pipeline with quality scoring, entity detection, and dedup
+- [Wiki Watcher](sources/wiki-watcher-file-system-watcher.md) — file system watcher with auto-ingest and graph rebuild capabilities
+- [Wiki MCP Server](sources/wiki-mcp-server-mcp-stdio-server.md) — production-ready MCP stdio server exposing wiki as Resources, Tools, and Prompts
+- [PgSearchBackend — PostgreSQL + pgvector Search Backend](sources/pg-search-backend-postgresql-pgvector-search-backend.md) — synchronous PostgreSQL + pgvector search backend implementing SearchBackend interface with hybrid search, CJK-aware FTS, "did you mean" suggestions, and connection pooling
+- [Search Backend Abstraction Layer](sources/search-backend-abstraction-layer.md) — pluggable SearchBackend interface supporting SQLite FTS5 and PostgreSQL+pgvector via configuration
+- [i18n Configuration](sources/i18n-configuration-llm-wiki-viewer.md) — i18next-based internationalization setup for LLM Wiki Viewer with en/zh-CN locales, auto-detection, and reactive title/lang sync
+- [WikiStore — Zustand Global State Store](sources/wikistore-zustand-global-state-store.md) — Zustand store with graph caching, ETag-based polling, theme management, debounced persistence, and API health heartbeat for the LLM Wiki Viewer
+- [NotificationStore — Zustand Notification Store with Alert & Toast Management](sources/notification-store-zustand-notification-store.md) — Dual-tier notification store with toast auto-dismiss, alert deduplication, progress tracking, and unread count management
+- [Ingest Job Store — Zustand Manager for Ingest Job State](sources/ingest-job-store-zustand-manager.md) — Zustand store for ingest job lifecycle with LocalStorage persistence, crash recovery, and auto-dismiss
+- [System Configuration Store — Zustand Manager for Wiki Automation Config](sources/system-config-store-zustand-manager.md) — Zustand store for managing GitHub/RSS/arXiv automation pipeline config with local persistence and bidirectional backend sync
+- [Agent Chat Store — Zustand Manager for Agent Execution State](sources/agent-chat-store-zustand-manager.md) — Zustand store for agent execution lifecycle with approval workflow and history loading
+- [useSpeechSynthesis — Browser TTS Hook for React](sources/usespeechsynthesis-browser-tts-hook.md) — React hook for Web Speech Synthesis with play/pause/stop, live rate adjustment, and voice selection
+- [useReducedMotion — OS-Level Reduced Motion Preference Hook](sources/usereducedmotion-os-level-reduced-motion-preference-hook.md) — React hook that detects the user's OS-level `prefers-reduced-motion` setting with reactive updates and clean teardown
+- [useJarvisMood — J.A.R.V.I.S. Mood State Hook](sources/usejarvis-mood-jarvis-mood-state-hook.md) — React hook for managing J.A.R.V.I.S. avatar mood with minimum thinking duration enforcement and docking position control
+- [useSWUpdate — Service Worker Update Hook](sources/useswupdate-service-worker-update-hook.md) — React hook for detecting and applying PWA service worker updates with 30-minute polling and SKIP_WAITING activation
+
+Until **confirmed**: API-first tools (RSS, arXiv, GitHub) should count toward the pipeline. Ingest→Graph→Maintain loops should be reflected as a weekly automated count.
+- [useToast — Toast Notification Hook](sources/usetoast-toast-notification-hook.md) — Lightweight React hook for auto-dismissing toast notifications with success/error types, pause-on-hover, and timer lifecycle management
+- [usePWAInstall — PWA Install Hook](sources/usepwainstall-pwa-install-hook.md) — React hook for managing PWA installation flow, including prompt capture, installed state detection, and native install trigger
+- [useNetworkStatus — Network Connectivity Hook](sources/usenetworkstatus-network-connectivity-hook.md) — lightweight React hook tracking browser online/offline status with lazy initialization and clean event listener teardown
+- [useBodyScrollLock — Body Scroll Lock Hook](sources/usebodyscrolllock-body-scroll-lock-hook.md) — Hook that locks body scroll while active and restores original overflow on unlock/unmount
+- [useFocusTrap — Focus Trap Hook for React](sources/usefocustrap-focus-trap-hook.md) — Focus trap hook that restricts Tab navigation to focusable elements, remembers and restores previous focus, and uses comprehensive CSS selectors for modals and popovers
+- [useKeyboardShortcuts — Global Keyboard Shortcuts Hook](sources/usekeyboardshortcuts-global-keyboard-shortcuts-hook.md) — Global keyboard shortcut hook with input-aware filtering and Ctrl/Cmd navigation for the LLM Wiki Viewer
+- [useDocumentTitle — Document Title Hook](sources/usetitle-document-title-hook.md) — React hook that synchronizes document title with page and responds to i18n language changes
+- [useCountUp — Animated Counter Hook with Cubic Ease-Out](sources/usecountup-animated-counter-hook.md) — Animated counter hook with cubic ease-out interpolation and seamless mid-animation target changes
+- [useDebounce — Debounce Hook for React](sources/usedebounce-debounce-hook-for-react.md) — Generic debounce hook for React functional components with configurable delay
+- [useIngestStream — Ingest Job SSE Stream Consumer Hook](sources/useingeststream-ingest-job-sse-stream-consumer-hook.md) — SSE-based job stream consumer with lifecycle management for ingest jobs
+- [useEventStream — SSE EventStream Consumer Hook](sources/useeventstream-sse-eventstream-consumer-hook.md) — SSE event stream hook with severity-based routing, exponential backoff reconnection, and action buttons for alert banners
+- [useAgentChat — Agent Execution Chat Hook](sources/useagentchat-agent-execution-chat-hook.md) — Streaming SSE Agent hook with execution lifecycle, approval workflow, and abort support
+- [useChat — Agent Kit Chat State Management Hook](sources/usechat-agent-kit-chat-state-management-hook.md) — streaming chat hook with knowledge-based MCP/Skill generation, quick prompts, abort support, and localStorage persistence
+- [NotificationDropdown — Notification Bell Dropdown Component](sources/notification-dropdown-component.md) — Bell icon dropdown with real-time notifications, type/severity styling, unread badge, and keyboard accessibility for LLM Wiki Viewer frontend
+- [CommandPalette Component](sources/command-palette-component.md) — Cmd/Ctrl+K modal quick-action interface with wiki graph search, recent/favorite pages, keyboard navigation, and i18n support
+- [ErrorBoundary — Route Error Handling Component](sources/errorboundary-route-error-handling-component.md) — React Router error boundary with animated fallback UI, dual error detection, i18n support, and refresh/home recovery actions
+- [LazyPage — Lazy Loading Page Component](sources/lazypage-component.md) — Suspense-based lazy loading wrapper with animated progress bar fallback for code-split route components
+- [RootLayout — Main Application Layout Component for LLM Wiki Viewer](sources/root-layout-main-application-layout-component.md) — Top-level application shell with Header, Sidebar, CommandPalette, animated page transitions, banner height measurement, PWA integration, and error/loading/offline state handling
+- [Sidebar Component — Navigation Sidebar for LLM Wiki Viewer](sources/sidebar-component-navigation-sidebar.md) — grouped navigation with collapsible sections, active page highlighting, and mobile responsive overlay for LLM Wiki Viewer frontend
+- [Header Component — Wiki Viewer Navigation Bar](sources/header-component-wiki-viewer-navigation-bar.md) — Apple glassmorphism top navigation bar with theme switching, debounced search popover, keyboard navigation, SSE status indicator, language switcher, and notification dropdown
+- [ChatSearchPanel — Search Panel Component for LLM Wiki Viewer](sources/chatsearchpanel-search-panel-component.md) — Dual-mode (wiki/web) search panel with debounced input, search history, and quote-to-chat functionality
+- [ChatHistory — Chat Session Sidebar Component](sources/chathistory-chat-session-sidebar-component.md) — Collapsible date-grouped chat session sidebar with search, rename, and new session for LLM Wiki Viewer ChatPage
+- [ChatInput — Chat Input Component](sources/chatinput-chat-input-component.md) — multi-function chat input toolbar with search, summarization, skill/MCP generation, and auto-resizing textarea
+- [ChatConversation — Chat Message List Component](sources/chatconversation-chat-message-list-component.md) — Scrollable virtualized conversation list with date dividers, scroll-to-bottom, loading/empty states, and full interaction callbacks for LLM Wiki Viewer ChatPage
+- [UploadPage — File Upload & Management Component](sources/uploadpage-file-upload-component.md) — Drag-and-drop file upload, text paste, URL fetch, image ingest via vision API, batch operations, preview, and error handling for LLM Wiki Viewer frontend
+- [GraphPage — Interactive Knowledge Graph Visualization Component](sources/graphpage-interactive-knowledge-graph-component.md) — Interactive vis-network knowledge graph with type/community filtering, physics stabilization, layout save/restore, export (PNG/SVG/CSV/GraphML/GEXF), query panel, and real-time stats
+- [SearchPage — Wiki Search & AI Chat Interface Component](sources/searchpage-wiki-search-ai-chat-component.md) — Unified search (hybrid/semantic), wiki-grounded chat streaming, web search, and knowledge generation in three-tab layout
+- [ChatPage — Chat Interface Component](sources/chatpage-chat-interface-component.md) — Full-featured chat UI with wiki-aware streaming, session management, @mention, slash commands, and generate-from-knowledge panel
+- [Router Configuration](sources/router-configuration.md) — Complete route structure for LLM Wiki Viewer with lazy loading, typed paths, and error boundaries
+- [Data Service (dataService.ts)](sources/data-service-dataservicets.md) — Unified frontend API client for the LLM Wiki Viewer with request deduplication, file management, ingestion, crawlers, and React Query hooks
+- [Chat Service — Wiki Chat & SSE Stream Client](sources/chat-service-sse-client.md) — TypeScript SSE streaming client for wiki chat, LLM chat, search, and session persistence with localStorage migration
+- [Shared LLM Module (tools/shared/llm.py)](sources/shared-llm-module.md) — central LLM configuration, circuit breaker, budget tracker, and call utility for the LLM Wiki toolchain
+- [Health Tool (health.py)](sources/health-tool-structural-health-checker.md) — deterministic structural health checker for LLM Wiki, zero LLM calls
+- [TypeScript/JavaScript Code Parser (typescript_parser.py)](sources/typescript-javascript-code-parser-typescript-parser-py.md) — tree-sitter based TypeScript/JavaScript AST extractor producing code_module, code_class, code_func nodes with IMPORTS, CONTAINS, INHERITS edges; supports arrow function extraction and export unwrapping
+- [Python Code Parser (python_parser.py)](sources/python-code-parser-python-parser-py.md) — tree-sitter based Python AST extractor producing code_module, code_class, code_func nodes with IMPORTS, CONTAINS, INHERITS edges
+- [Query Tool (query.py)](sources/query-tool-llm-wiki-query-engine.md) — natural language query engine with CJK-aware page relevance and graph-based context expansion
+- [Code Graph Builder (builder.py)](sources/code-graph-builder-builder-py.md) — high-level orchestration for scanning, parsing, and building unified code knowledge graphs; supports full and incremental builds with hash-based change detection
+- [Build Graph Tool (build_graph.py)](sources/build-graph-tool-knowledge-graph-builder.md) — two-pass knowledge graph builder with Louvain/Leiden community detection and interactive vis.js visualization
+- [API Server (api_server.py)](sources/api-server-fastapi-backend-for-llm-wiki-viewer.md) — FastAPI backend for LLM Wiki Viewer; serves wiki content, search, graph, chat, upload, webhooks, and tool execution via REST/WebSocket endpoints
+- [Ingest Tool (ingest.py)](sources/ingest-tool-source-document-processing-engine.md) — core document ingestion engine; auto-converts 20+ formats, processes code with AST, updates wiki index/overview/log
+- [Code Graph Extraction Base Protocol](sources/code-graph-base-protocol.md) — defines the base protocol and dataclasses for language-agnostic code-level knowledge graph extraction
 - [A股大盘指数实时数据](sources/article-c0bf4f.md) — 3440 | 718984002 | 1465272590579 |
 | 深证成指 | 15824. 1670 | 66094509 | 23020130326...
 - [A股蓝筹股实时行情](sources/article-82dd45.md) — 870 |
@@ -76,6 +136,217 @@ This file is maintained by the LLM. Updated on every ingest.
 
 - [ETF专区](sources/etf-c6f436.md) — 该文章主要汇集了财经新闻、股市行情、公司动态及市场分析等内容，涵盖A股、港股、美股等市场表现，以及行业趋势、机构观点和个
 ## Entities
+- [Loader2](entities/Loader2.md) — auto-healed entity
+- [useSpeechSynthesis](entities/useSpeechSynthesis.md) — auto-healed entity
+- [useJarvisMood](entities/useJarvisMood.md) — auto-healed entity
+- [wikilink](entities/wikilink.md) — auto-healed entity
+- [Header Component — Wiki Viewer Navigation Bar](entities/HeaderComponent—WikiViewerNavigationBar.md) — auto-healed entity
+- [useRef](entities/useRef.md) — auto-healed entity
+- [Map](entities/Map.md) — auto-healed entity
+- [useState](entities/useState.md) — auto-healed entity
+- [RequestAnimationFrame](entities/RequestAnimationFrame.md) — auto-healed entity
+- [saveAgentKitFile](entities/saveAgentKitFile.md) — auto-healed entity
+- [AgentKit](entities/AgentKit.md) — auto-healed entity
+- [React](entities/React.md) — auto-healed entity
+- [useEffect](entities/useEffect.md) — auto-healed entity
+- [useCountUp](entities/useCountUp.md) — auto-healed entity
+- [useWikiStore](entities/useWikiStore.md) — auto-healed entity
+- [FileUtils](entities/FileUtils.md) — auto-healed entity
+- [searchWeb](entities/searchWeb.md) — auto-healed entity
+- [AlertBanner](entities/AlertBanner.md) — auto-healed entity
+- [ToastContainer](entities/ToastContainer.md) — auto-healed entity
+- [ScrollToTop](entities/ScrollToTop.md) — auto-healed entity
+- [IngestProgress](entities/IngestProgress.md) — auto-healed entity
+- [database.yaml](entities/database.yaml.md) — auto-healed entity
+- [AppleSelect](entities/AppleSelect.md) — auto-healed entity
+- [SUPPORTED_LANGUAGES](entities/SUPPORTED_LANGUAGES.md) — auto-healed entity
+- [wikilinks](entities/wikilinks.md) — auto-healed entity
+- [PageName](entities/PageName.md) — auto-healed entity
+- [FramerMotion](entities/FramerMotion.md) — auto-healed entity
+- [graph.json](entities/graph.json.md) — auto-healed entity
+- [Home](entities/Home.md) — auto-healed entity
+- [AlertTriangle](entities/AlertTriangle.md) — auto-healed entity
+- [RefreshCcw](entities/RefreshCcw.md) — auto-healed entity
+- [Skill](entities/Skill.md) — auto-healed entity
+- [generateFromKnowledge](entities/generateFromKnowledge.md) — auto-healed entity
+- [MCP](entities/MCP.md) — auto-healed entity
+- [ChatHistory](entities/ChatHistory.md) — auto-healed entity
+- [LLMWikiViewer](entities/LLMWikiViewer.md) — auto-healed entity
+- [Lucide](entities/Lucide.md) — auto-healed entity
+- [LLM](entities/LLM.md) — auto-healed entity
+- [Litellm](entities/Litellm.md) — auto-healed entity
+- [FastAPI](entities/FastAPI.md) — auto-healed entity
+- [LLMWiki Viewer](entities/LLMWikiViewer.md) — auto-healed entity
+- [SQLite](entities/SQLite.md) — auto-healed entity
+- [IngestTool](entities/IngestTool.md) — auto-healed entity
+- [BuildGraphTool](entities/BuildGraphTool.md) — auto-healed entity
+- [BatchIngest](entities/BatchIngest.md) — auto-healed entity
+- [BatchCompiler](entities/BatchCompiler.md) — auto-healed entity
+- [pgvector](entities/pgvector.md) — auto-healed entity
+- [StateManagement](entities/StateManagement.md) — auto-healed entity
+- [useAgentChat](entities/useAgentChat.md) — auto-healed entity
+- [ToastThrottling](entities/ToastThrottling.md) — auto-created entity
+- [NotificationState](entities/NotificationState.md) — auto-created entity
+- [WikiSourcePage](entities/WikiSourcePage.md) — auto-created entity
+- [RefreshTool](entities/RefreshTool.md) — auto-created entity
+- [WikiPageIndex](entities/WikiPageIndex.md) — auto-created entity
+- [ContentFingerprinting](entities/ContentFingerprinting.md) — auto-created entity
+- [QualityScoring](entities/QualityScoring.md) — auto-created entity
+- [AutoIngestPipeline](entities/AutoIngestPipeline.md) — auto-created entity
+- [Context](entities/Context.md) — auto-created entity
+- [Memory](entities/Memory.md) — auto-created entity
+- [FastMCP](entities/FastMCP.md) — auto-created entity
+- [Ollama](entities/Ollama.md) — auto-created entity
+- [psycopg2](entities/Psycopg2.md) — auto-created entity
+- [config/database.yaml](entities/config/database.yaml.md) — auto-created entity
+- [get_search_backend](entities/get_search_backend.md) — auto-created entity
+- [PgSearchBackend](entities/PgSearchBackend.md) — auto-created entity
+- [WikiSearchEngine](entities/WikiSearchEngine.md) — auto-created entity
+- [SearchBackend](entities/SearchBackend.md) — auto-created entity
+- [typeLabelKey](entities/typeLabelKey.md) — auto-created entity
+- [LanguageDetector](entities/LanguageDetector.md) — auto-created entity
+- [react-i18next](entities/react-i18next.md) — auto-created entity
+- [i18next](entities/i18next.md) — auto-created entity
+- [LRUCache](entities/LRUCache.md) — auto-created entity
+- [ExponentialBackoff](entities/ExponentialBackoff.md) — auto-created entity
+- [HeartbeatPolling](entities/HeartbeatPolling.md) — auto-created entity
+- [ETag](entities/ETag.md) — auto-created entity
+- [GraphNode](entities/GraphNode.md) — auto-created entity
+- [GraphData](entities/GraphData.md) — auto-created entity
+- [DataService](entities/DataService.md) — auto-created entity
+- [Zustand](entities/Zustand.md) — auto-created entity
+- [NotificationAction](entities/NotificationAction.md) — auto-created entity
+- [Severity](entities/Severity.md) — auto-created entity
+- [NotificationType](entities/NotificationType.md) — auto-created entity
+- [Notification](entities/Notification.md) — auto-created entity
+- [useIngestStore](entities/useIngestStore.md) — auto-created entity
+- [parseArxivYaml](entities/parseArxivYaml.md) — auto-created entity
+- [buildArxivYaml](entities/buildArxivYaml.md) — auto-created entity
+- [parseRssYaml](entities/parseRssYaml.md) — auto-created entity
+- [buildRssYaml](entities/buildRssYaml.md) — auto-created entity
+- [parseGithubYaml](entities/parseGithubYaml.md) — auto-created entity
+- [buildGithubYaml](entities/buildGithubYaml.md) — auto-created entity
+- [DEFAULT_CONFIG](entities/DEFAULT_CONFIG.md) — auto-created entity
+- [deepMerge](entities/deepMerge.md) — auto-created entity
+- [fetchWithRetry](entities/fetchWithRetry.md) — auto-created entity
+- [useConfigStore](entities/useConfigStore.md) — auto-created entity
+- [SystemConfig](entities/SystemConfig.md) — auto-created entity
+- [useAgentChatStore](entities/useAgentChatStore.md) — auto-created entity
+- [AlternativeAction](entities/AlternativeAction.md) — auto-created entity
+- [ReasoningStep](entities/ReasoningStep.md) — auto-created entity
+- [PendingApproval](entities/PendingApproval.md) — auto-created entity
+- [AgentReflection](entities/AgentReflection.md) — auto-created entity
+- [AgentToolCall](entities/AgentToolCall.md) — auto-created entity
+- [AgentStep](entities/AgentStep.md) — auto-created entity
+- [AgentExecutionState](entities/AgentExecutionState.md) — auto-created entity
+- [SpeechSynthesis](entities/SpeechSynthesis.md) — auto-created entity
+- [SpeechSynthesisUtterance](entities/SpeechSynthesisUtterance.md) — auto-created entity
+- [JarvisAvatar](entities/JarvisAvatar.md) — auto-created entity
+- [SWUpdateNotification](entities/SWUpdateNotification.md) — auto-created entity
+- [useToast](entities/useToast.md) — auto-created entity
+- [Toast](entities/Toast.md) — auto-created entity
+- [PWA](entities/PWA.md) — auto-created entity
+- [EventSource](entities/EventSource.md) — auto-created entity
+- [ApprovalWorkflow](entities/ApprovalWorkflow.md) — auto-created entity
+- [AbortController](entities/AbortController.md) — auto-created entity
+- [AgentChatStore](entities/AgentChatStore.md) — auto-created entity
+- [ChatMessage](entities/ChatMessage.md) — auto-created entity
+- [KnowledgeGeneration](entities/KnowledgeGeneration.md) — auto-created entity
+- [agentKitLLMService](entities/agentKitLLMService.md) — auto-created entity
+- [useChat](entities/useChat.md) — auto-created entity
+- [formatDistanceToNow](entities/formatDistanceToNow.md) — auto-created entity
+- [NotificationDropdown](entities/NotificationDropdown.md) — auto-created entity
+- [useBodyScrollLock](entities/useBodyScrollLock.md) — auto-created entity
+- [useFocusTrap](entities/useFocusTrap.md) — auto-created entity
+- [CommandPalette](entities/CommandPalette.md) — auto-created entity
+- [useRouteError](entities/useRouteError.md) — auto-created entity
+- [ErrorBoundary](entities/ErrorBoundary.md) — auto-created entity
+- [ResizeObserver](entities/ResizeObserver.md) — auto-created entity
+- [useNotificationStore](entities/useNotificationStore.md) — auto-created entity
+- [useSWUpdate](entities/useSWUpdate.md) — auto-created entity
+- [usePWAInstall](entities/usePWAInstall.md) — auto-created entity
+- [useNetworkStatus](entities/useNetworkStatus.md) — auto-created entity
+- [useKeyboardShortcuts](entities/useKeyboardShortcuts.md) — auto-created entity
+- [useEventStream](entities/useEventStream.md) — auto-created entity
+- [PageSkeleton](entities/PageSkeleton.md) — auto-created entity
+- [PageTransition](entities/PageTransition.md) — auto-created entity
+- [AnimatePresence](entities/AnimatePresence.md) — auto-created entity
+- [RootLayout](entities/RootLayout.md) — auto-created entity
+- [WikiStore](entities/WikiStore.md) — auto-created entity
+- [Sidebar](entities/Sidebar.md) — auto-created entity
+- [LanguageSwitcher](entities/LanguageSwitcher.md) — auto-created entity
+- [Header](entities/Header.md) — auto-created entity
+- [SearchHistory](entities/SearchHistory.md) — auto-created entity
+- [ChatSearchPanel](entities/ChatSearchPanel.md) — auto-created entity
+- [ChatHistoryItem](entities/ChatHistoryItem.md) — auto-created entity
+- [IngestStore](entities/IngestStore.md) — auto-created entity
+- [useIngestStream](entities/useIngestStream.md) — auto-created entity
+- [FileList](entities/FileList.md) — auto-created entity
+- [PreviewPanel](entities/PreviewPanel.md) — auto-created entity
+- [PasteTextPanel](entities/PasteTextPanel.md) — auto-created entity
+- [UploadZone](entities/UploadZone.md) — auto-created entity
+- [GraphStats](entities/GraphStats.md) — auto-created entity
+- [GraphPage](entities/GraphPage.md) — auto-created entity
+- [StreamDeduplicator](entities/StreamDeduplicator.md) — auto-created entity
+- [LocalStorage](entities/LocalStorage.md) — auto-created entity
+- [LazyLoading](entities/LazyLoading.md) — auto-created entity
+- [UploadPage](entities/UploadPage.md) — auto-created entity
+- [SettingsPage](entities/SettingsPage.md) — auto-created entity
+- [SearchPage](entities/SearchPage.md) — auto-created entity
+- [LogPage](entities/LogPage.md) — auto-created entity
+- [PageDetailPage](entities/PageDetailPage.md) — auto-created entity
+- [BrowsePage](entities/BrowsePage.md) — auto-created entity
+- [HomePage](entities/HomePage.md) — auto-created entity
+- [WebhookManagerPage](entities/WebhookManagerPage.md) — auto-created entity
+- [IngestJobsPage](entities/IngestJobsPage.md) — auto-created entity
+- [PipelineHealthPage](entities/PipelineHealthPage.md) — auto-created entity
+- [ToolsRegistryPage](entities/ToolsRegistryPage.md) — auto-created entity
+- [AgentLogPage](entities/AgentLogPage.md) — auto-created entity
+- [ApprovalsPage](entities/ApprovalsPage.md) — auto-created entity
+- [JarvisPage](entities/JarvisPage.md) — auto-created entity
+- [CrawlerPage](entities/CrawlerPage.md) — auto-created entity
+- [SkillsPage](entities/SkillsPage.md) — auto-created entity
+- [MCPPage](entities/MCPPage.md) — auto-created entity
+- [TimelinePage](entities/TimelinePage.md) — auto-created entity
+- [MindmapPage](entities/MindmapPage.md) — auto-created entity
+- [DashboardPage](entities/DashboardPage.md) — auto-created entity
+- [ChatPage](entities/ChatPage.md) — auto-created entity
+- [StatusPage](entities/StatusPage.md) — auto-created entity
+- [NotFoundPage](entities/NotFoundPage.md) — auto-created entity
+- [LazyPage](entities/LazyPage.md) — auto-created entity
+- [React Router](entities/ReactRouter.md) — auto-created entity
+- [IngestJobStatus](entities/IngestJobStatus.md) — auto-created entity
+- [LogEntry](entities/LogEntry.md) — auto-created entity
+- [FtsResult](entities/FtsResult.md) — auto-created entity
+- [UploadResult](entities/UploadResult.md) — auto-created entity
+- [RawFile](entities/RawFile.md) — auto-created entity
+- [ToolInfo](entities/ToolInfo.md) — auto-created entity
+- [IngestJob](entities/IngestJob.md) — auto-created entity
+- [TanStackQuery](entities/TanStackQuery.md) — auto-created entity
+- [Dedupe](entities/Dedupe.md) — auto-created entity
+- [SafeJson](entities/SafeJson.md) — auto-created entity
+- [GenerateResult](entities/GenerateResult.md) — auto-created entity
+- [WebSearchResult](entities/WebSearchResult.md) — auto-created entity
+- [WikiSearchResult](entities/WikiSearchResult.md) — auto-created entity
+- [WikiChatSource](entities/WikiChatSource.md) — auto-created entity
+- [WikiChatChunk](entities/WikiChatChunk.md) — auto-created entity
+- [LLMModelCost](entities/LLMModelCost.md) — auto-created entity
+- [LLMUnavailableError](entities/LLMUnavailableError.md) — auto-created entity
+- [LLMErrorClassifier](entities/LLMErrorClassifier.md) — auto-created entity
+- [LLMBudgetTracker](entities/LLMBudgetTracker.md) — auto-created entity
+- [LLMCircuitBreaker](entities/LLMCircuitBreaker.md) — auto-created entity
+- [GraphHealthReport](entities/GraphHealthReport.md) — auto-created entity
+- [GraphJSON](entities/GraphJSON.md) — auto-created entity
+- [GraphHTML](entities/GraphHTML.md) — auto-created entity
+- [CommunityDetection](entities/CommunityDetection.md) — auto-created entity
+- [VisJS](entities/VisJS.md) — auto-created entity
+- [IGraph](entities/IGraph.md) — auto-created entity
+- [NetworkX](entities/NetworkX.md) — auto-created entity
+- [Leidenalg](entities/Leidenalg.md) — auto-created entity
+- [Leiden](entities/Leiden.md) — auto-created entity
+- [Louvain](entities/Louvain.md) — auto-created entity
+- [TreeSitter](entities/TreeSitter.md) — auto-created entity
+- [Markitdown](entities/Markitdown.md) — auto-created entity
 - [上市公司](entities/上市公司.md) — auto-healed entity
 - [美的集团](entities/美的集团.md) — auto-detected entity
 - [东方证券](entities/东方证券.md) — auto-detected entity
@@ -258,6 +529,79 @@ This file is maintained by the LLM. Updated on every ingest.
 - [能源大数据平台](entities/能源大数据平台.md) — [[王信杰]] — API设计与开发
 
 ## Concepts
+- [ToastAutoDismissPattern](concepts/ToastAutoDismissPattern.md) — auto-created concept
+- [DualNotificationModel](concepts/DualNotificationModel.md) — auto-created concept
+- [EntityDetection](concepts/EntityDetection.md) — auto-created concept
+- [QualityScoringAlgorithm](concepts/QualityScoringAlgorithm.md) — auto-created concept
+- [Lazy Backend Initialization](concepts/LazyBackendInitialization.md) — auto-created concept
+- [MCP Stdio Transport](concepts/MCPStdioTransport.md) — auto-created concept
+- [CJKTokenizationStrategy](concepts/CJKTokenizationStrategy.md) — auto-created concept
+- [HybridSearch](concepts/HybridSearch.md) — auto-created concept
+- [DatabaseAbstraction](concepts/DatabaseAbstraction.md) — auto-created concept
+- [InternationalizationPattern](concepts/InternationalizationPattern.md) — auto-created concept
+- [PollingWithETag](concepts/PollingWithETag.md) — auto-created concept
+- [AlertDeduplicationBySource](concepts/AlertDeduplicationBySource.md) — auto-created concept
+- [ToastThrottlePattern](concepts/ToastThrottlePattern.md) — auto-created concept
+- [CrashRecoveryPattern](concepts/CrashRecoveryPattern.md) — auto-created concept
+- [RegexBasedYamlParsing](concepts/RegexBasedYamlParsing.md) — auto-created concept
+- [ConfigPersistencePattern](concepts/ConfigPersistencePattern.md) — auto-created concept
+- [BidirectionalConfigSync](concepts/BidirectionalConfigSync.md) — auto-created concept
+- [ApprovalWorkflow](concepts/ApprovalWorkflow.md) — auto-created concept
+- [SpeechSynthesisHook](concepts/SpeechSynthesisHook.md) — auto-created concept
+- [MinimumThinkingDuration](concepts/MinimumThinkingDuration.md) — auto-created concept
+- [ToastNotificationPattern](concepts/ToastNotificationPattern.md) — auto-created concept
+- [PWAInstallFlow](concepts/PWAInstallFlow.md) — auto-created concept
+- [Easing Function](concepts/EasingFunction.md) — auto-created concept
+- [Cubic Ease-Out](concepts/CubicEaseOut.md) — auto-created concept
+- [Debounce Pattern](concepts/DebouncePattern.md) — auto-created concept
+- [IngestSSEProtocol](concepts/IngestSSEProtocol.md) — auto-created concept
+- [SSE Event Stream Pattern](concepts/SSEEventStreamPattern.md) — auto-created concept
+- [AgentExecutionLifecycle](concepts/AgentExecutionLifecycle.md) — auto-created concept
+- [DebouncedPersistence](concepts/DebouncedPersistence.md) — auto-created concept
+- [DualModeChat](concepts/DualModeChat.md) — auto-created concept
+- [NotificationDropdownAccessibility](concepts/NotificationDropdownAccessibility.md) — auto-created concept
+- [CommandPalette UX](concepts/CommandPaletteUX.md) — auto-created concept
+- [RouteErrorBoundary](concepts/RouteErrorBoundary.md) — auto-created concept
+- [SmartScrollRestoration](concepts/SmartScrollRestoration.md) — auto-created concept
+- [DynamicBannerHeightMeasurement](concepts/DynamicBannerHeightMeasurement.md) — auto-created concept
+- [AdaptivePageTransitions](concepts/AdaptivePageTransitions.md) — auto-created concept
+- [DebouncedSearchPopover](concepts/DebouncedSearchPopover.md) — auto-created concept
+- [QuoteToChat](concepts/QuoteToChat.md) — auto-created concept
+- [DebouncedSearch](concepts/DebouncedSearch.md) — auto-created concept
+- [ScrollToBottom](concepts/ScrollToBottom.md) — auto-created concept
+- [DateDivider](concepts/DateDivider.md) — auto-created concept
+- [VirtualScrolling](concepts/VirtualScrolling.md) — auto-created concept
+- [PhysicsStabilization](concepts/PhysicsStabilization.md) — auto-created concept
+- [AdaptiveGraphTheming](concepts/AdaptiveGraphTheming.md) — auto-created concept
+- [LayoutPersistence](concepts/LayoutPersistence.md) — auto-created concept
+- [GraphExportFormats](concepts/GraphExportFormats.md) — auto-created concept
+- [MentionSystem](concepts/MentionSystem.md) — auto-created concept
+- [Wiki URL Convention](concepts/WikiURLConvention.md) — auto-created concept
+- [Lazy Loading Strategy](concepts/LazyLoadingStrategy.md) — auto-created concept
+- [TwoTierGraphFetch](concepts/TwoTierGraphFetch.md) — auto-created concept
+- [RequestDeduplication](concepts/RequestDeduplication.md) — auto-created concept
+- [SSE Stream Protocol](concepts/SSEStreamProtocol.md) — auto-created concept
+- [Budget Tracking](concepts/BudgetTracking.md) — auto-created concept
+- [Circuit Breaker Pattern](concepts/CircuitBreakerPattern.md) — auto-created concept
+- [Code Graph Registry](concepts/CodeGraphRegistry.md) — auto-created concept
+- [Incremental Graph Build](concepts/IncrementalGraphBuild.md) — auto-created concept
+- [SHA256 Graph Cache](concepts/SHA256GraphCache.md) — auto-created concept
+- [Graph Health Report](concepts/GraphHealthReport.md) — auto-created concept
+- [Two-Pass Graph Build](concepts/TwoPassGraphBuild.md) — auto-created concept
+- [Ambiguous Edge](concepts/AmbiguousEdge.md) — auto-created concept
+- [Inferred Edge](concepts/InferredEdge.md) — auto-created concept
+- [Extracted Edge](concepts/ExtractedEdge.md) — auto-created concept
+- [Graph Inference](concepts/GraphInference.md) — auto-created concept
+- [J.A.R.V.I.S.](concepts/JARVIS.md) — auto-created concept
+- [IngestError](concepts/IngestError.md) — auto-created concept
+- [WikiOverview](concepts/WikiOverview.md) — auto-created concept
+- [WikiLog](concepts/WikiLog.md) — auto-created concept
+- [WikiIndex](concepts/WikiIndex.md) — auto-created concept
+- [IngestCheckpoint](concepts/IngestCheckpoint.md) — auto-created concept
+- [IngestWorkflow](concepts/IngestWorkflow.md) — auto-created concept
+- [CodeEdge](concepts/CodeEdge.md) — auto-created concept
+- [CodeNode](concepts/CodeNode.md) — auto-created concept
+- [CodeParser](concepts/CodeParser.md) — auto-created concept
 - [BuildSystemWithFeatureFlags](concepts/BuildSystemWithFeatureFlags.md) — auto-created concept
 - [QuantPreScoring — 量化预评分](concepts/QuantPreScoring.md) — auto-created concept
 - [AI Provider Factory Pattern](concepts/AIProviderFactoryPattern.md) — auto-created concept
@@ -332,3 +676,97 @@ This file is maintained by the LLM. Updated on every ingest.
 ## Memory
 - [Decisions Log](memory/decisions.md) — cross-session agent decision ledger
 - [Context Pack: transformer-architecture](memory/context-packs/pack-transformer-architecture-20260505-043224.md) — context pack for transformer architecture
+
+## Code
+- [useNotificationStore — Zustand Notification Management Store](code/NotificationStoreModule.md) — auto-created code page
+- [refresh.py](code/RefreshToolRefreshPy.md) — auto-created code page
+- [auto_ingest](code/AutoIngestModule.md) — auto-created code page
+- [WikiWatcher](code/WikiWatcher.md) — auto-created code page
+- [Wiki MCPServer Module](code/WikiMCPServer.md) — auto-created code page
+- [PgSearchBackend](code/PgSearchBackend.md) — auto-created code page
+- [reset_backend](code/reset_backend.md) — auto-created code page
+- [get_search_backend](code/get_search_backend.md) — auto-created code page
+- [SearchBackend](code/SearchBackend.md) — auto-created code page
+- [I18nConfigModule](code/I18nConfigModule.md) — auto-created code page
+- [WikiStore](code/WikiStore.md) — auto-created code page
+- [useNotificationStore](code/useNotificationStore.md) — auto-created code page
+- [IngestState](code/IngestStateInterface.md) — auto-created code page
+- [IngestJob](code/IngestJobInterface.md) — auto-created code page
+- [useIngestStore](code/UseIngestStore.md) — auto-created code page
+- [ParseArxivYaml](code/ParseArxivYaml.md) — auto-created code page
+- [BuildArxivYaml](code/BuildArxivYaml.md) — auto-created code page
+- [ParseRssYaml](code/ParseRssYaml.md) — auto-created code page
+- [BuildRssYaml](code/BuildRssYaml.md) — auto-created code page
+- [ParseGithubYaml](code/ParseGithubYaml.md) — auto-created code page
+- [BuildGithubYaml](code/BuildGithubYaml.md) — auto-created code page
+- [LoadFromStorage](code/LoadFromStorage.md) — auto-created code page
+- [DeepMerge](code/DeepMerge.md) — auto-created code page
+- [UseConfigStore](code/UseConfigStore.md) — auto-created code page
+- [useAgentChatStore](code/UseAgentChatStore.md) — auto-created code page
+- [How to get started with useReducedMotion](code/UseReducedMotionHook.md) — auto-created code page
+- [useJarvisMood](code/UseJarvisMoodHook.md) — auto-created code page
+- [useSWUpdate](code/UseSWUpdateHook.md) — auto-created code page
+- [useToast — Toast Notification Hook](code/UseToastHook.md) — auto-created code page
+- [usePWAInstall Hook](code/UsePWAInstallHook.md) — auto-created code page
+- [useNetworkStatus](code/UseNetworkStatus.md) — auto-created code page
+- [useBodyScrollLock](code/UseBodyScrollLock.md) — auto-created code page
+- [useFocusTrap — Focus Trap Hook](code/UseFocusTrapHook.md) — auto-created code page
+- [useKeyboardShortcuts](code/UseKeyboardShortcuts.md) — auto-created code page
+- [useDocumentTitle](code/UseDocumentTitle.md) — auto-created code page
+- [useCountUp](code/UseCountUpHook.md) — auto-created code page
+- [useDebounce — Generic Debounce Hook](code/UseDebounce.md) — auto-created code page
+- [useIngestStream](code/UseIngestStream.md) — auto-created code page
+- [useEventStream — SSE EventStream Consumer Hook](code/UseEventStreamHook.md) — auto-created code page
+- [useAgentChat Hook](code/useAgentChatHook.md) — auto-created code page
+- [useChat()](code/useChatHook.md) — auto-created code page
+- [NotificationDropdown — Notification Bell Dropdown Component](code/NotificationDropdownComponent.md) — auto-created code page
+- [CommandPalette — Command Palette Component](code/CommandPaletteComponent.md) — auto-created code page
+- [ErrorBoundary](code/ErrorBoundary.md) — auto-created code page
+- [LazyPage Component — Lazy Loading Wrapper](code/LazyPageComponent.md) — auto-created code page
+- [PageTransition](code/PageTransitionComponent.md) — auto-created code page
+- [getPageAnimation](code/GetPageAnimation.md) — auto-created code page
+- [RootLayout](code/RootLayoutComponent.md) — auto-created code page
+- [Sidebar](code/SidebarComponent.md) — auto-created code page
+- [LanguageSwitcher — Language Selection Component](code/LanguageSwitcher.md) — auto-created code page
+- [Header — Main Navigation Bar Component](code/Header.md) — auto-created code page
+- [saveSearchHistory — Search History Persister](code/SaveSearchHistory.md) — auto-created code page
+- [loadSearchHistory — Search History Loader](code/LoadSearchHistory.md) — auto-created code page
+- [ChatSearchPanel — Search Panel Component](code/ChatSearchPanel.md) — auto-created code page
+- [ChatInput — Chat Input Component](code/ChatInput.md) — auto-created code page
+- [ChatConversation](code/ChatConversation.md) — auto-created code page
+- [UploadPage](code/UploadPage.md) — auto-created code page
+- [GraphPage](code/GraphPageComponent.md) — auto-created code page
+- [SearchPage — Component](code/SearchPage.md) — auto-created code page
+- [ChatPage](code/ChatPage.md) — auto-created code page
+- [router — Wiki Viewer Route Configuration](code/RouterDefinition.md) — auto-created code page
+- [DataService](code/DataService.md) — auto-created code page
+- [migrateLocalStorageToPG](code/migrateLocalStorageToPG.md) — auto-created code page
+- [appendChatMessage](code/appendChatMessage.md) — auto-created code page
+- [getChatSession](code/getChatSession.md) — auto-created code page
+- [listChatSessions](code/listChatSessions.md) — auto-created code page
+- [createChatSession](code/createChatSession.md) — auto-created code page
+- [searchWiki](code/searchWiki.md) — auto-created code page
+- [chatWithLLMStream](code/chatWithLLMStream.md) — auto-created code page
+- [chatWithWikiStream](code/chatWithWikiStream.md) — auto-created code page
+- [readSseStream](code/readSseStream.md) — auto-created code page
+- [parseSseEvent](code/parseSseEvent.md) — auto-created code page
+- [safeJson](code/safeJson.md) — auto-created code page
+- [LLMModelCost](code/LLMModelCost.md) — auto-created code page
+- [LLMUnavailableError](code/LLMUnavailableError.md) — auto-created code page
+- [LLMBudgetTracker](code/LLMBudgetTracker.md) — auto-created code page
+- [LLMCircuitBreaker](code/LLMCircuitBreaker.md) — auto-created code page
+- [LLMErrorClassifier](code/LLMErrorClassifier.md) — auto-created code page
+- [call_llm](code/call_llm.md) — auto-created code page
+- [HealthChecker — health.py module](code/HealthChecker.md) — auto-created code page
+- [JavaScriptParser — JavaScript/JSX AST Parser](code/JavaScriptParser.md) — auto-created code page
+- [TypeScriptParser — TypeScript/TSX AST Parser](code/TypeScriptParser.md) — auto-created code page
+- [PythonParser](code/PythonParser.md) — auto-created code page
+- [sanitize_wiki_path()](code/SanitizeWikiPath.md) — auto-created code page
+- [query()](code/QueryMain.md) — auto-created code page
+- [find_relevant_pages()](code/FindRelevantPages.md) — auto-created code page
+- [call_llm()](code/CallLLM.md) — auto-created code page
+- [CodeGraphBuilder — High-Level Code Graph Construction](code/CodeGraphBuilder.md) — auto-created code page
+- [generate_report() — Graph Health Report Generator](code/GenerateReport.md) — auto-created code page
+- [build_graph() — Main Entry Point](code/BuildGraphMain.md) — auto-created code page
+- [IngestionJobManager](code/IngestionJobManager.md) — auto-created code page
+- [APIServer](code/APIServer.md) — auto-created code page

@@ -1,0 +1,10 @@
+---
+title: "useEffect"
+type: entity
+tags: [react, hook, side-effects, lifecycle, frontend]
+sources: [UseBodyScrollLock.md, UseCountUpHook.md, UseDebounce.md, UseDocumentTitle.md, UseJarvisMoodHook.md, UseKeyboardShortcuts.md, UseNetworkStatus.md, usebodyscrolllock-body-scroll-lock-hook.md, usecountup-animated-counter-hook.md, usedebounce-debounce-hook-for-react.md, usefocustrap-focus-trap-hook.md, usejarvis-mood-jarvis-mood-state-hook.md, usekeyboardshortcuts-global-keyboard-shortcuts-hook.md, usenetworkstatus-network-connectivity-hook.md]
+---
+
+# useEffect
+
+`useEffect` is a fundamental [[React]] hook that enables imperative side-effect management within functional components, serving as the primary mechanism for synchronizing component state with external systems, browser APIs, or asynchronous operations. In this wiki, it appears as the foundational building block underlying numerous custom hooks: [[useBodyScrollLock]] uses `useEffect` to apply and clean up `overflow: hidden` style mutations on `document.body`; [[useCountUp]] leverages it to drive animation frame scheduling via `requestAnimationFrame`; [[UseDebounce]] employs it behind its `setTimeout`-based debounce logic; [[UseDocumentTitle]] uses it to synchronize `document.title` with component state and react to `languageChanged` events from `i18next`; and [[useNetworkStatus]] and [[useKeyboardShortcuts]] both use `useEffect` to register and unregister global `window` event listeners (`'online'`/`'offline'` and `keydown`, respectively). Across every occurrence, `useEffect` is used in its canonical form—taking a callback that performs side effects and returning a cleanup function that tears down subscriptions, timers, or style overrides on unmount or dependency change. This cleanup discipline is essential to preventing memory leaks and stale subscriptions throughout the [[LLMWikiViewer]] codebase.

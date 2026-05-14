@@ -115,6 +115,8 @@ ALLOWED_EXTENSIONS = {
     ".html", ".htm", ".csv", ".json", ".xml",
     ".rst", ".rtf", ".epub", ".ipynb",
     ".yaml", ".yml", ".tsv",
+    # Code files (ingested as plain text with optional AST analysis)
+    ".py", ".js", ".ts", ".tsx", ".jsx",
 }
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024
 MAX_LLM_MESSAGES = 20
@@ -1054,6 +1056,12 @@ async def upload_file(file: UploadFile = File(...)):
         ".xml": ["application/xml", "text/xml"],
         ".yaml": ["application/yaml", "text/yaml"],
         ".yml": ["application/yaml", "text/yaml"],
+        # Code files — browsers often send text/plain or octet-stream
+        ".py": ["text/plain", "text/x-python"],
+        ".js": ["text/plain", "application/javascript"],
+        ".ts": ["text/plain", "application/typescript"],
+        ".tsx": ["text/plain"],
+        ".jsx": ["text/plain", "text/jsx"],
     }
     allowed = expected_types.get(suffix, [])
     # application/octet-stream is a generic browser fallback for unknown types
@@ -1093,7 +1101,9 @@ async def upload_file(file: UploadFile = File(...)):
             f.write(chunk)
 
     converted = None
-    if suffix.lower() not in (".md", ".txt"):
+    # Skip markitdown conversion for code files (ingest.py handles them as plain text)
+    CODE_SUFFIXES = {".py", ".js", ".ts", ".tsx", ".jsx"}
+    if suffix.lower() not in (".md", ".txt") and suffix.lower() not in CODE_SUFFIXES:
         try:
             def _do_convert():
                 from markitdown import MarkItDown

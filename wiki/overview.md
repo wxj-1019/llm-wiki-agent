@@ -2,8 +2,8 @@
 title: "Overview"
 type: synthesis
 tags: []
-sources: [attention-is-all-you-need, intro-to-llms, main-fund-selection-system-analysis, a-share-quantitative-trading-strategies-guide, wangxinjie-backend-developer-resume, stock-data-service, backtest-engine, news-feed-system, task-scheduler-and-infrastructure]
-last_updated: 2026-05-12
+sources: [attention-is-all-you-need, intro-to-llms, main-fund-selection-system-analysis, a-share-quantitative-trading-strategies-guide, wangxinjie-backend-developer-resume, stock-data-service, backtest-engine, news-feed-system, task-scheduler-and-infrastructure, api-server-fastapi-backend-for-llm-wiki-viewer, ingest-tool-source-document-processing-engine, code-graph-base-protocol, build-graph-tool-knowledge-graph-builder, search-backend-abstraction-layer, pg-search-backend-postgresql-pgvector-search-backend, auto-ingest-pipeline-auto-ingest-py]
+last_updated: 2026-05-14
 ---
 
 # Overview
@@ -12,7 +12,11 @@ last_updated: 2026-05-12
 
 ## Current Wiki State
 
-The wiki contains **~313 pages** across 6 layers (sources, entities, concepts, syntheses, memory, overview) forming a dense knowledge graph centered on three major domains: **A-share quantitative trading systems**, **AI/LLM technology**, and **personal developer portfolio**.
+The wiki contains **~318 pages** across 6 layers (sources, entities, concepts, syntheses, memory, overview) forming a dense knowledge graph centered on three major domains: **A-share quantitative trading systems**, **AI/LLM technology**, **personal developer portfolio**, and **LLM Wiki tool infrastructure**.
+
+The search backend layer now supports two implementations: the default [[WikiSearchEngine]] ([[SQLite]] FTS5) and the new [[PgSearchBackend]] ([[PostgreSQL]] + [[pgvector]]). Both implement the [[SearchBackend]] abstraction interface and are selectable via `config/database.yaml`. [[PgSearchBackend]] adds hybrid (FTS + vector) search, CJK-aware full-text via zhparser/bigram fallback, "did you mean" suggestions, and analytics logging.
+
+The automation pipeline has two parallel paths: the legacy **batch pipeline** (fetcher → [[BatchCompiler]] → [[BatchIngest]] → [[IngestTool]]) and the new **fast path** (fetcher → [[AutoIngestPipeline]]), which performs deterministic, zero-LLM conversion with quality scoring, entity detection, and near-duplicate filtering.
 
 ## Domain 1: A-Share Quantitative Trading Platform
 
@@ -21,84 +25,109 @@ The largest knowledge cluster (~70% of content) documents an AI-powered A-share 
 ### Core Selection Engine — [[MainFundSelection|主力选股系统]]
 - **Six-layer pipeline architecture**: data ingestion → hard filtering → strategy matching → quantitative pre-scoring → AI five-dimension analysis → senior researcher synthesis
 - **7 strategies**: [[ControlledPullback]], [[LowRiskIncome]], [[SectorRotation]], [[GrowthPotential]], [[ValueStable]], [[ShortTermBreakout]], [[MainForceAccumulation]]
-- **5 AI analyst agents**: [[SentimentAnalystAgent]], [[NewsAnalystAgent]], [[FundamentalAnalystAgent]], [[TechnicalAnalystAgent]], [[MacroAnalystAgent]] plus [[RiskAnalystAgent]] and specialized agents
-- **Quantitative pre-scoring**: [[QuantPreScoring]] with multi-factor scoring before AI analysis
+- **Quant pre-scoring**: [[QuantPreScoring]] system scores stocks before AI analysis
+- **5 AI analysts**: [[TechnicalAnalystAgent]], [[FundamentalAnalystAgent]], [[SentimentAnalystAgent]], [[FundFlowAnalystAgent]], [[MacroAnalystAgent]] in coordinated multi-agent architecture
 
-### Data Infrastructure
-- **[[DataPipeline|Data Pipeline]]**: Multi-source ingestion with [[WencaiAPI]] (primary) + [[Tushare]] (backup), 3-retry with exponential backoff, Fail-Closed quality gating
-- **[[StockDataCoordinator]]**: Unified data source management with [[FourSourceDegradationChain|4-tier degradation chain]]
-- **[[多层缓存策略]]**: [[Redis]]-backed multi-layer caching with TTL configuration
-- **Real-time data**: [[大盘云图]] Treemap visualization, [[大盘指数服务]], [[板块策略数据服务]]
+### Supporting Subsystems
+- [[stock-data-service]] — unified data source management with multi-level degradation chain ([[WencaiAPI]] → [[TusharePro]] → [[AKShare]] → [[TushareClient]])
+- [[sector-strategy-and-market-analysis]] — fund flow, AI diagnosis, market map treemap, 8 major indices
+- [[longhubang-analysis-system]] — tracking hot money and institutional trading patterns
+- [[backtest-engine]] — six indicator-based strategies, parameter optimization, Monte Carlo simulation
+- [[price-monitoring-and-alert-system]] — real-time monitoring, technical indicator alerts, AI-powered surveillance
+- [[portfolio-management-and-analysis]] — portfolio tracking, AI diagnosis, risk assessment
+- [[news-feed-system]] — 5 financial news sources × AI sentiment analysis × A-share entity extraction
+- [[task-scheduler-and-infrastructure]] — APScheduler, Redis caching, rate limiting, distributed tracing, Prometheus monitoring
+- [[user-auth-and-permission-system]] — JWT + bcrypt + RBAC lifecycle management
+- [[subscription-payment-system]] — three-tier membership, Alipay integration, usage limits
+- [[notification-and-messaging-system]] — email, SMS, in-app notification channels
+- [[user-profile-system]] — 5 parallel collectors × AI 4-dimension profiling
+- [[data-model-overview]] — 7 schemas, 40+ tables with indexes and relationships
+- [[admin-backend-system]] — port 8586 admin console for operations and AI configuration
 
-### Risk & Quality Control
-- **[[RiskManagement]]**: 9-layer Fail-Closed defensive screening (data quality → hard filter → strategy filter → financial guardrails → technical filter → quant scoring → AI analysis → strategy matching → researcher synthesis)
-- **[[Backtesting]]**: [[BackTrader]]-based strategy validation with [[WalkForwardAnalysis]] and [[MonteCarloSimulation]]
-- **[[价格监控与预警系统|Price Monitoring & Alerting]]**: Real-time monitoring with [[AI智能盯盘]] and multi-rule alerting
+### 14 A-Share Quantitative Trading Strategies
+| Strategy | Type | Description |
+|---|---|---|
+| [[TrendTracking]] | Trend | Follow established price trends |
+| [[MomentumStrategy]] | Momentum | Cross-sectional momentum ranking |
+| [[MeanReversion]] | Mean-reversion | Buy oversold, sell overbought |
+| [[VolumePriceBreakout]] | Breakout | Volume-confirmed price breakouts |
+| [[MultiFactorSelection]] | Multi-factor | Composite scoring across dimensions |
+| [[MoneyFlowStrategy]] | Flow | Track institutional capital flows |
+| [[SectorRotation]] | Rotation | Select strongest sectors first |
+| [[EventDriven]] | Event | Capitalize on corporate events |
+| [[ConvertibleBondArbitrage]] | Arbitrage | CB- equity arbitrage |
+| [[StatisticalArbitrage]] | Arbitrage | Pairs trading/cointegration |
+| [[ValueStrategy]] | Value | Low PE/PB with stable fundamentals |
+| [[GrowthStrategy]] | Growth | High earnings growth premium |
+| [[QualityStrategy]] | Quality | Strong profitability and financial health |
+| [[HighDividendLowVol]] | Defensive | Stable income with low drawdown |
 
-### Platform Infrastructure
-- **Auth**: [[用户与权限系统]] with [[JWT]] + [[bcrypt]] + [[RBAC]] + [[Redis]]-based CAPTCHA
-- **Scheduling**: [[APScheduler]] with trading calendar awareness
-- **Monitoring**: [[Prometheus]] metrics + [[DistributedTracing]] + [[RateLimiting]]
-- **Notifications**: [[NotificationService]] with [[NotificationChannels|multi-channel delivery]] (email/SMS/in-app)
-- **Payments**: [[SubscriptionPlan|3-tier membership]] with [[AlipayProvider]]
+## Domain 2: AI/LLM Technology
 
-### Market Data Sources (Auto-ingested)
-- Web-scraped A-share data from 东方财富网 (EastMoney): stocks, IPOs, sector analysis, market indices
-- Financial news from 财联社 (CaiLianShe) and 新浪新闻 (Sina News)
-- [[longhubang-analysis-system|龙虎榜分析系统]] for institutional flow tracking
+Covers foundational LLM concepts, the Transformer revolution, 2024 developments, and agent architectures:
 
-## Domain 2: AI/LLM Technology Landscape
+### Foundation Papers & Frameworks
+- **[[Transformer]]**: Introduced by [[Vaswani]] et al. in "[[attention-is-all-you-need]]" (2017) — the architecture underlying [[GPT]], [[BERT]], [[T5]], [[LLaMA]] and every modern LLM
+- **[[AttentionMechanism]]**: Originated by [[Bahdanau]] for neural machine translation, extended by the Transformer's multi-head self-attention
+- **[[ChainOfThought]]**: Explicit intermediate reasoning steps that improve LLM performance on complex tasks
+- **[[InferenceScalingReasoning]]**: Models like [[o1]], [[DeepSeekR1]], [[QwQ]], and [[Gemini2.0FlashThinking]] that scale test-time compute
 
-### Foundation Models
-- **Transformer architecture**: [[Attention Is All You Need]] seminal paper, [[AttentionMechanism]], [[Transformer]]
-- **Major models**: [[DeepSeek]] ([[DeepSeekV3]], [[DeepSeekR1]]), [[GPT4]], [[ChatGPT]], [[Claude]], [[Gemini]], [[Qwen]], [[LLaMA]], [[BERT]], [[T5]]
-- **Key researchers & orgs**: [[OpenAI]], [[Anthropic]], [[GoogleDeepMind]], [[SamAltman]], [[IlyaSutskever]], [[Vaswani]]
+### 2024 LLM Landscape (from [[ThingWeLearnedAboutLLMsIn2024]])
+- **Capabilities plateau**: Models converged on chatbot Q&A; gains now in reliability, instruction following, and honesty
+- **Reasoning frontier**: [[o1]], [[DeepSeekR1]], [[QwQ]] improved math/science; still early for real-world tools
+- **Multimodality**: All major labs released vision models; audio/video production still separate
+- **Synthetic data**: Used for reasoning training (math, code); risk of [[ModelCollapse]] from [[Slop]] pollution
+- **Agent breakthroughs**: [[Claude]] computer use, [[Gemini2.0Flash]] agentic search; safety systems limited
+- **2025 prediction**: Apple-level on-device intelligence, smaller specialized models, agent-focused improvements
 
-### AI Agent Ecosystem
-- **[[AIAgent|AI Agent]]** concepts: [[SelfImprovingAI]], [[MultiAgentCoordinationArchitecture]], [[AIMultiAgentStockAnalysis]]
-- **Agent frameworks**: [[HermesAgent]] (⭐128K), [[AgentFrameworkComparison]]
-- **Reasoning**: [[ChainOfThought]], [[InferenceScalingReasoning]]
-- **Safety**: [[AIAlignment]], [[Slop]] (low-quality AI content)
+### Key Entities
+- **Major labs**: [[OpenAI]], [[Anthropic]], [[GoogleDeepMind]], [[Meta]], [[DeepSeek]]
+- **Key people**: [[SamAltman]], [[GregBrockman]], [[IlyaSutskever]], [[AmandaAskell]], [[SimonWillison]]
+- **Products**: [[ChatGPT]], [[Claude]], [[Gemini]], [[NotebookLM]], [[ClaudeArtifacts]], [[ClaudeCode]]
 
-### Development Tools
-- [[ClaudeCode]] — Anthropic's CLI with [[Latte]] fork for multi-model support
-- [[Bun]], [[Ink]] — CLI framework stack
+### Agent Ecosystem
+- [[AIAgent]] — autonomous perception, decision-making, and execution
+- [[HermesAgent]] — self-improving agent (⭐128K), part of [[NousResearch]] ecosystem
+- [[AgentFrameworkComparison]] — comparative analysis of agent architectures
+- [[SelfImprovingAI]] — systems that learn from operational experience
 
-## Domain 3: Developer Portfolio — [[王信杰]]
+## Domain 3: LLM Wiki Tool Infrastructure
 
-Personal profile of a backend developer with:
-- **Internship**: [[海康威视]] (Python component platform, Java agile projects)
-- **Projects**: [[能源大数据平台]] (5000 QPS via [[Redis]] cluster + [[SpringCloudAlibaba]]), [[慧公寓管理系统]] ([[HyperledgerFabric]] blockchain + [[ZKP]] + [[DeepLearning|DL]]/[[GeneticAlgorithm|GA]] hybrid optimization)
-- **Tech stack**: [[SpringBoot]], [[Redis]], [[RocketMQ]], [[PostgreSQL]], [[SQLAlchemy]]
+The wiki tools themselves are documented as a meta-layer:
 
-## Domain 4: Quantitative Trading Strategies
+### Core Tools
+- [[IngestTool]] — LLM-powered source ingestion engine
+- [[AutoIngestPipeline]] — zero-LLM fast-path automation pipeline with quality scoring and dedup
+- [[QueryTool]] — natural language query engine with CJK-aware page relevance
+- [[HealthTool]] — deterministic structural health checker (zero LLM calls)
+- [[LintTool]] — content quality checks (orphans, broken links, contradictions)
+- [[BuildGraphTool]] — two-pass knowledge graph builder with community detection
+- [[HealTool]] — auto-heal missing entity pages
+- [[RefreshTool]] — hash-based change detection
 
-Comprehensive coverage of 14 A-share strategies from [[a-share-quantitative-trading-strategies-guide|A股常见量化交易策略指南]]:
+### Automation Pipeline
+- [[Fetchers]] — RSS, arXiv, GitHub, web scrapers producing `.md` files
+- [[AutoIngestPipeline]] — deterministic zero-LLM fast-path conversion with quality scoring (threshold 30/100), entity detection, content fingerprinting for near-duplicate detection, and post-ingest graph rebuild trigger
+- [[Scheduler]] — cross-platform daemon running full pipeline on schedule
+- [[StateManagement]] — state.json persistence for processed URLs and hashes
 
-| Strategy | Concept Page |
-|---|---|
-| 趋势跟踪 | [[TrendTracking]] |
-| 均值回归 | [[MeanReversion]] |
-| 动量策略 | [[MomentumStrategy]] |
-| 资金流策略 | [[MoneyFlowStrategy]] |
-| 多因子选股 | [[MultiFactorSelection]] |
-| 事件驱动 | [[EventDriven]] |
-| 板块轮动 | [[SectorRotation]] |
-| 统计套利 | [[StatisticalArbitrage]] |
-| 量价突破 | [[VolumePriceBreakout]] |
-| 质量策略 | [[QualityStrategy]] |
-| 价值策略 | [[ValueStrategy]] |
-| 成长策略 | [[GrowthStrategy]] |
-| 高股息低波 | [[HighDividendLowVol]] |
-| 可转债套利 | [[ConvertibleBondArbitrage]] |
+### Frontend (React)
+- **Architecture**: React 18 + TypeScript + Vite, Tailwind CSS 4, Zustand, vis-network
+- **Key components**: [[WikiStore]], [[DataService]], [[Header]], [[Sidebar]], [[ChatPage]], [[GraphPage]], [[SearchPage]]
+- **State flow**: `dataService.ts` fetches → `wikiStore.ts` (Zustand) → React components via selectors
+- **i18n**: [[i18next]] + [[react-i18next]] with en/zh-CN
+- **Key hooks**: [[UseDebounce]], [[useEventStream]], [[useKeyboardShortcuts]], [[useAgentChat]]
 
-## Cross-Domain Connections
+### Search Infrastructure
+- [[SearchBackend]] — pluggable abstraction layer
+- [[WikiSearchEngine]] — default SQLite FTS5 backend
+- [[PgSearchBackend]] — PostgreSQL + pgvector backend with hybrid search, CJK FTS, "did you mean"
 
-- [[ai-intelligent-analysis-system|AI智能分析系统]] bridges LLM technology with financial analysis via [[MultiAgentCoordinationArchitecture]]
-- [[DeepSeek]] serves as the primary LLM backend for the entire platform (via [[DeepSeekClient]], [[AsyncDeepSeekClient]])
-- [[StreamingAnalysisService]] provides real-time AI streaming analysis with [[ConnectionManager]] for SSE
-- [[UserProfileSystem]] applies behavioral analytics to investment patterns
+## Domain 4: Personal Developer Portfolio
+- [[WangXinjie]] — backend engineer, internship at [[Hikvision]]
+- Projects: [[EnergyBigDataPlatform]] (Spring Boot + Redis cluster, 5000 QPS) and [[SmartApartmentSystem]] (Hyperledger Fabric + ZKP)
 
-## Test Infrastructure
-
-A small set of test documents validates the ingestion→graph rebuild pipeline: [[auto-graph-test]], [[final-iteration-test]], [[iteration-test]]. These are operational artifacts, not knowledge content.
+## Quality Assessment
+- **Link density**: High (many cross-references between A-share subsystems, LLM concepts, and tool documentation)
+- **Balance**: Strong depth in A-share trading (70%) and LLM Wiki tools (20%); thinner in AI/LLM theory (10%)
+- **Data gaps**: Limited coverage of actual financial market data, minimal coding tutorials, no external API usage patterns beyond A-share domain

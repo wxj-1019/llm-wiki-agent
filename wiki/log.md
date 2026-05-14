@@ -6,6 +6,242 @@
 
 ---
 
+## [2026-05-14] ingest | Notification Store — Zustand State Manager for Notifications and Alerts
+
+Added source `notification-store-zustand-manager.md`. Key claims: dual notification model (history list + toast queue) with 300ms throttling, 4-second auto-dismiss timers, progress notification support, persistent alert banners with source-based deduplication, and full lifecycle management with timer cleanup. Created entity pages for `useNotificationStore`, `Notification`, `NotificationType`, `Severity`, `NotificationAction`, `NotificationState`, `ToastThrottling` and concept pages for `DualNotificationModel`, `AlertDeduplicationBySource`, and `ToastAutoDismissPattern`. Added code module page for the store implementation.
+
+## [2026-05-14] ingest | Refresh Tool — Stale Source Page Refresher
+
+Added source. Key claims: hash-based stale detection against persistent SHA256 cache; subprocess-based re-ingest via ingest.py with 300s timeout; path traversal safety with project root validation; --page and --force modes; structured logging with semantic error fields.
+
+## [2026-05-14] ingest | Auto-Ingest Pipeline — auto_ingest.py
+
+Added source. Key claims: zero-LLM fast-path pipeline with heuristic quality scoring (threshold 30), entity/concept auto-detection via fuzzy matching, near-duplicate content fingerprinting (MD5 hashes), automatic wikilink generation, and post-ingest graph rebuild trigger. Bypasses the legacy batch pipeline.
+
+## [2026-05-14] ingest | Wiki Watcher — File System Watcher with Auto-Ingest and Graph Rebuild
+
+Added source. Key claims: debounced auto-ingest on file changes, optional graph rebuild on code/wiki changes, hash-based dedup, watchdog/polling dual mode.
+
+## [2026-05-14] ingest | Wiki MCP Server — MCP stdio Server for LLM Wiki Agent
+
+Added source. Key claims: production-ready MCP stdio server exposing wiki as Resources, Tools, and Prompts; lazy backend loading with double-checked locking; path safety validation with symlink resolution; fallback substring search; resource endpoints for overview and index; memory and context building integration; structured prompt templates for summarization, comparison, and contradiction detection.
+
+## [2026-05-14] ingest | PgSearchBackend — PostgreSQL + pgvector Search Backend
+
+Added source. Key claims: synchronous PostgreSQL + pgvector search backend; hybrid FTS/vector search with configurable weights; CJK-aware full-text via zhparser/bigram fallback; "did you mean" suggestions via pg_trgm; type-based ranking boosts (entity 1.2x, concept 1.1x); analytics logging with graceful failure; connection pooling via psycopg2 ThreadedConnectionPool; embedding rebuild via Ollama nomic-embed-text. Complements existing [[WikiSearchEngine]] SQLite backend via [[SearchBackend]] abstraction interface.
+
+## [2026-05-14] ingest | Search Backend Abstraction Layer
+
+Added source. Key claims: pluggable SearchBackend interface supporting SQLite FTS5 and PostgreSQL+pgvector via configuration; thread-safe singleton factory get_search_backend() reads config/database.yaml.
+
+## [2026-05-14] ingest | i18n Configuration — LLM Wiki Viewer Internationalization Setup
+
+Added source document `wiki-viewer/src/i18n/index.ts`. Key claims: Dual language support (en/zh-CN) via i18next + react-i18next; browser language auto-detection with localStorage persistence (key `wiki-lang`); reactive document.title and `<html lang>` sync on language change; `typeLabelKey` helper for page type translation keys; intentionally permissive typing to avoid TypeScript compiler issues. Created entity pages for [[i18next]], [[react-i18next]], [[LanguageDetector]], [[typeLabelKey]]; concept page for [[InternationalizationPattern]]; code page for [[I18nConfigModule]].
+
+## [2026-05-14] ingest | WikiStore — Zustand Global State Store
+
+Added source documenting the global Zustand store with graph data caching (1h TTL), ETag-based polling with exponential backoff (30s base, 5min max, stops after 10 failures), theme management (light/dark/system with system preference listener), debounced persistence (500ms), LRU page cache (100 entries, 5min TTL), and heartbeat health check (30s interval, 3 failures triggers offline).
+
+## [2026-05-14] ingest | NotificationStore — Zustand Notification Store with Alert & Toast Management
+
+Added source documenting notificationStore.ts — Zustand store managing notification history and toast overlay with 300ms throttle, progress support, auto-dismiss timers, and alert deduplication by source. Created entity pages for useNotificationStore, Notification, NotificationType, Severity, NotificationAction. Created concept pages for ToastThrottlePattern and AlertDeduplicationBySource. Created code page for useNotificationStore.
+
+## [2026-05-14] ingest | Ingest Job Store — Zustand Manager for Ingest Job State
+
+Added source. Key claims: Zustand store for ingest job lifecycle with LocalStorage persistence, crash recovery for running jobs lost to page navigation, auto-dismiss after 5 seconds for completed/failed jobs, and error-resilient localStorage operations. Entities created: [[IngestJob]], [[useIngestStore]], [[LocalStorage]]. Concept created: [[CrashRecoveryPattern]]. Code pages created: [[useIngestStore]], [[IngestJobInterface]], [[IngestStateInterface]].
+
+## [2026-05-14] ingest | System Configuration Store — Zustand Manager for Wiki Automation Config
+
+Added source: `configStore.ts` — Zustand store for wiki automation pipeline configuration. Manages GitHub/RSS/arXiv config with local persistence (deep merge with defaults, prototype pollution protection) and bidirectional backend YAML sync. Created entity pages for [[SystemConfig]], [[useConfigStore]], [[fetchWithRetry]], [[SafeJson]], [[deepMerge]], [[DEFAULT_CONFIG]], and the 6 YAML generation/parsing functions. Created concept pages for [[BidirectionalConfigSync]], [[ConfigPersistencePattern]], [[RegexBasedYamlParsing]]. Created code pages for all notable functions.
+
+## [2026-05-14] ingest | Agent Chat Store — Zustand Manager for Agent Execution State
+
+Added source. Key claims: Zustand store for agent execution lifecycle with full state machine, approval workflow via pending queue, and history loading from API.
+
+## [2026-05-14] ingest | useSpeechSynthesis — Browser TTS Hook for React
+
+Added source. Key claims: React hook encapsulating Web Speech Synthesis API with play/pause/stop controls, live rate adjustment that restarts active speech, voice selection with automatic default detection, and clean teardown on unmount. Uses useRef for rate/voice sync to prevent stale closures. Created entity pages for SpeechSynthesisUtterance and SpeechSynthesis browser APIs, and concept page for the SpeechSynthesisHook pattern.
+
+## [2026-05-14] ingest | useReducedMotion — OS-Level Reduced Motion Preference Hook
+
+Added source. Key claims: SSR-safe `prefers-reduced-motion` React hook with `matchMedia` reactive listener and clean teardown. Connects to [[LLMWikiViewer]] animating components ([[RootLayout]], [[GraphPage]], [[PageTransition]], [[Header]], [[useCountUp]], [[useToast]], [[CommandPalette]], [[AnimatePresence]], [[LazyLoading]], [[SmartScrollRestoration]]).
+
+## [2026-05-14] ingest | useJarvisMood — J.A.R.V.I.S. Mood State Hook
+
+Added source documenting the `useJarvisMood` React hook for managing J.A.R.V.I.S. avatar mood with minimum thinking duration enforcement. Created entity page for [[JarvisAvatar]], concept page for [[MinimumThinkingDuration]], and code page for the hook. Key claims: deferred state transitions away from 'thinking' with configurable minimum time, synchronized moodRef to avoid stale closures, docking position control.
+
+## [2026-05-14] ingest | useSWUpdate — Service Worker Update Hook
+
+Added source. Key claims: detects waiting/installing service workers on mount; polls for updates every 30 minutes; exposes applyUpdate that posts SKIP_WAITING message; automatic page reload on controllerchange with guard against duplicate reloads; returns updateAvailable boolean and applyUpdate callback; zero external dependencies beyond React; graceful degradation if service workers unsupported.
+
+## [2026-05-14] ingest | useToast — Toast Notification Hook
+
+Added source. Key claims: auto-dismiss timer using setInterval with progress bar (3s lifetime), pause-on-hover support, manual removal with timer cleanup, unique ID generation via Math.random(), zero extra dependencies. Created entity pages for [Toast], code page for [useToast hook], and concept page for [ToastNotificationPattern].
+
+## [2026-05-14] ingest | usePWAInstall — PWA Install Hook
+
+Added source. Key claims: React hook for PWA installation flow, captures beforeinstallprompt event, detects installed state via display-mode: standalone media query, exposes canInstall/install/isInstalled, zero dependencies besides React.
+
+## [2026-05-14] ingest | useNetworkStatus — Network Connectivity Hook
+
+Added source. Key claims: tracks browser online/offline status via navigator.onLine lazy initializer and 'online'/'offline' window events; returns single boolean with clean event teardown; used by RootLayout for offline indicator and Header for status icon.
+
+## [2026-05-14] ingest | useBodyScrollLock — Body Scroll Lock Hook
+
+Added source. Key claims: lightweight body scroll lock hook using useEffect cleanup to save/restore overflow; zero dependencies beyond React.
+
+## [2026-05-14] ingest | useFocusTrap — Focus Trap Hook for React
+
+Added source. Key claims: Focus trap hook that restricts Tab navigation to focusable elements within a container, remembers and restores previous focus on deactivation, uses comprehensive CSS selector (buttons, links, inputs, contenteditables, etc.), and provides focus wrapping for both Tab and Shift+Tab when focus escapes. Connected to CommandPalette, ChatSearchPanel, NotificationDropdown, and Sidebar for accessible modal/dropdown keyboard navigation.
+
+## [2026-05-14] ingest | useKeyboardShortcuts — Global Keyboard Shortcuts Hook
+
+Added source. Key claims: Global keyboard shortcuts hook with input-aware filtering, `/` focuses search, Ctrl/Cmd+G/C/H navigate to graph/chat/home. Connected to Header (search target), RouterDefinition (routes), GraphPage, ChatPage, and HomePage.
+
+## [2026-05-14] ingest | useDocumentTitle — Document Title Hook
+
+Added source. Key claims: dynamic document title based on page heading + i18n base; live update on language switch; cleanup on unmount.
+
+## [2026-05-14] ingest | useCountUp — Animated Counter Hook with Cubic Ease-Out
+
+Added source documenting the useCountUp.ts hook. Key claims: cubic ease-out animation, graceful mid-animation target changes, requestAnimationFrame-driven, configurable duration. Created concept pages for CubicEaseOut and EasingFunction. Created code page for the hook.
+
+## [2026-05-14] ingest | useDebounce — Debounce Hook for React
+
+Added source. Key claims: Generic debounce hook for React with configurable delay (default 300ms), proper cleanup on unmount, and generic type support. Created concept page for [[DebouncePattern]] and code page for [[UseDebounce]].
+
+## [2026-05-14] ingest | useIngestStream — Ingest Job SSE Stream Consumer Hook
+
+Added source. Key claims: Module-level activeConnections Map prevents duplicate SSE connections per jobId; four named SSE events (start, log, stderr, complete) with structured JSON payloads for progress tracking; useIngestStreamManager React hook auto-connects/disconnects based on job store state; disconnectIngestStream enables manual abort.
+
+## [2026-05-14] ingest | useEventStream — SSE EventStream Consumer Hook
+
+Added source. Key claims: severity-based event routing (critical/warning→banners, info/success→toasts), exponential backoff reconnection (5s→15s→30s, max 3 retries), action button generation for lint/graph/pipeline navigation, connection state tracking for UI indicators. Created entity [[useEventStream]], concept [[SSEEventStreamPattern]], and code page [[UseEventStreamHook]].
+
+## [2026-05-14] ingest | useAgentChat — Agent Execution Chat Hook
+
+Added source. Key claims: SSE-based Agent execution hook with full lifecycle (plan → step_start → approval_required → tool_call → tool_result → reflection → content → done/error), human-in-the-loop approval workflow via pending approvals, AbortController-based cancellation, and configurable execution strategy. Connected entities: AgentChatStore, AbortController, ApprovalWorkflow. Concepts: AgentExecutionLifecycle.
+
+## [2026-05-14] ingest | useChat — Agent Kit Chat State Management Hook
+
+Added source for `useChat.ts` — streaming chat hook with knowledge-based MCP/Skill generation. Key claims: dual-mode chat (free-form + knowledge gen), debounced localStorage persistence (500ms), stream deduplication via StreamDeduplicator, abort support, quick prompts for code review/tool suggestions, and editor integration. Created entity pages: [[useChat]], [[StreamDeduplicator]], [[agentKitLLMService]], [[KnowledgeGeneration]], [[ChatMessage]]. Created concept pages: [[DualModeChat]], [[DebouncedPersistence]]. Created code page: [[useChatHook]].
+
+## [2026-05-14] ingest | NotificationDropdown — Notification Bell Dropdown Component for LLM Wiki Viewer
+
+Added source. Key claims: icon-mapped notification types (success/error/info/progress), severity-based alert styling (critical/warning with left border), unread badge with spring animation, auto mark-read on hover/focus, keyboard accessibility with focus trapping, i18n support with notification.* keys, footer link to /log page.
+
+## [2026-05-14] ingest | CommandPalette — Keyboard-Accessible Command Palette Component for LLM Wiki Viewer
+
+Added source. Key claims: Cmd/Ctrl+K modal with fuzzy-like search over wiki graph nodes, recent pages, and favorites; keyboard navigation with focus trap and scroll lock; i18n support via react-i18next; glassmorphism design with FramerMotion animations. Created entity pages for [[CommandPalette]], [[useFocusTrap]], and [[useBodyScrollLock]]; concept page for [[CommandPaletteUX]]; code page for the component.
+
+## [2026-05-14] ingest | ErrorBoundary — Route Error Handling Component
+
+Added source. Key claims: React Router error boundary with dual error detection (route vs runtime error), animated FramerMotion entrance, i18n support, and refresh/home recovery actions. Created entity pages for ErrorBoundary and useRouteError, concept page for RouteErrorBoundary pattern, and code page for ErrorBoundary.tsx.
+
+## [2026-05-14] ingest | LazyPage — Lazy Loading Page Component for LLM Wiki Viewer
+
+Added source. Key claims: Suspense-based lazy loading wrapper with FramerMotion animated progress bar (0→70→90% loop); minimal surface area with only `children` prop; related to RootLayout and PageSkeleton.
+
+Source: `LazyPage.tsx` (TypeScript/React component)
+- Entity created: [[LazyPage]]
+- Code page created: [[code/LazyPageComponent|LazyPage Component]]
+
+## [2026-05-14] ingest | RootLayout — Main Application Layout Component for LLM Wiki Viewer
+
+Added source. Key claims: top-level application shell with animated page transitions, dynamic ResumeObserver-based banner height measurement, PWA integration, smart scroll restoration exempting detail pages, three-state rendering (loading/error/normal), and sidebar-responsive main content area. Created entities: RootLayout, AnimatePresence, PageTransition, PageSkeleton, useEventStream, useKeyboardShortcuts, useNetworkStatus, usePWAInstall, useSWUpdate, useNotificationStore, ResizeObserver. Created concepts: AdaptivePageTransitions, DynamicBannerHeightMeasurement, SmartScrollRestoration. Created code pages: RootLayoutComponent, GetPageAnimation, PageTransitionComponent.
+
+## [2026-05-14] ingest | Sidebar Component — Navigation Sidebar for LLM Wiki Viewer
+
+Added source. Key claims: Four navigation groups (Core, Workspace, Advanced, System) with collapsible sections; active page highlighting via `isItemActive()`; mobile responsive overlay with spring slide-in animation; integrates with Zustand WikiStore for collapsed state; uses i18next for all labels.
+
+## [2026-05-14] ingest | Header Component — Wiki Viewer Navigation Bar
+
+Added source. Key claims: Apple glassmorphism top navigation bar with 150ms debounced search popover (keyboard navigable, `combobox` a11y), light/system/dark theme toggle, sidebar collapse/expand, SSE status indicator, language switcher, notification dropdown, and graph link. Created `Header`, `LanguageSwitcher` entities, `DebouncedSearchPopover` concept, and code pages for both components.
+
+## [2026-05-14] ingest | ChatSearchPanel — Search Panel Component for LLM Wiki Viewer
+
+Added source. Key claims: dual-mode (wiki/web) search with 400ms debounce, per-mode search history in LocalStorage (max 10 entries), quote-to-chat hover action on results, AbortController for cancellation, auto-focus on mount.
+
+## [2026-05-14] ingest | ChatHistory — Chat Session Sidebar Component
+
+Added source. Key claims: collapsible date-grouped chat session sidebar with search/filter, rename, delete, new session, Framer Motion animation, i18next localization, and active session highlighting for LLM Wiki Viewer ChatPage.
+
+## [2026-05-14] ingest | ChatInput — Chat Input Component for LLM Wiki Viewer
+
+Added source. Key claims: multi-function toolbar with search, summarization (4 styles), Skill/MCP generation, auto-resizing textarea, Enter-to-send with streaming-aware send/stop button, click-outside menu close, offline mode, and full i18n integration.
+
+## [2026-05-14] ingest | ChatConversation — Chat Message List Component for LLM Wiki Viewer
+
+Added source. Key claims: virtual scrolling via renderWindow property to bound DOM node count; date dividers with i18n (Today/Yesterday/date); scroll-to-bottom floating button; loading/empty placeholder states; all interaction callbacks passed as props for pure presentational design; formatTime/formatDateDivider utilities; no local state.
+
+## [2026-05-14] ingest | UploadPage — File Upload & Management Component for LLM Wiki Viewer
+
+Added source. Key claims: drag-and-drop file upload with image ingest via vision API; three add methods (file, paste text, URL fetch); batch selection and delete; file preview and error log dialog; Framer Motion animations.
+
+## [2026-05-14] ingest | GraphPage — Interactive Knowledge Graph Visualization Component
+
+Added source. Key claims: Interactive vis-network knowledge graph for LLM Wiki Viewer with dark-mode-adaptive theming, three edge types (extracted/inferred/ambiguous), physics stabilization with progress bar, type/community filtering, layout save/restore via LocalStorage, edit mode, export (PNG/SVG/CSV/GraphML/GEXF), graph query panel, rebuild support, first-run onboarding overlay, and real-time statistics. Created entity pages: [[GraphPage]], [[GraphStats]]. Created concept pages: [[GraphExportFormats]], [[LayoutPersistence]], [[AdaptiveGraphTheming]], [[PhysicsStabilization]]. Created code page: [[GraphPage (Component)]].
+
+## [2026-05-14] ingest | SearchPage — Wiki Search & AI Chat Interface Component
+
+Added source. Key claims: Three-tab search/chat/generate architecture with tiered backend→local search fallback, wiki-grounded SSE chat streaming with AbortController cancellation and automatic context attachment, semantic search toggle with localStorage persistence, web search tab stub, URL state sync via React Router search params, Framer Motion animations, and Apple-style UI with loading skeletons and empty states.
+
+## [2026-05-14] ingest | ChatPage — Chat Interface Component
+
+Added source for ChatPage.tsx. Key claims: full-featured chat UI with wiki-aware streaming, session management via localStorage, @mention system for wiki page references, slash commands, generate-from-knowledge panel for Skill/MCP packages, summarization with style selection, find-in-page, and three-column collapsible layout.
+
+## [2026-05-14] ingest | Router Configuration
+
+Added source. Key claims: Defines 26 routes under RootLayout; uses typed URL patterns (/s/:slug, /e/:name, /c/:name, /y/:slug) for wiki content types; implements lazy loading via React.lazy() for 16 heavy/less visited pages; each route has dedicated ErrorBoundary; /chat redirects to /search
+
+## [2026-05-14] ingest | Data Service (dataService.ts)
+
+Added source page on the unified frontend API client. Key claims: request deduplication via `dedupe()`, safe JSON parsing with `safeJson()`, two-tier graph fetch (API server → static fallback), full file management and ingestion pipeline, React Query hooks for all endpoints, and crawler/export/graph query tools.
+
+## [2026-05-14] ingest | Chat Service — Wiki Chat & SSE Stream Client
+
+Added source. Key claims: unified SSE streaming client for wiki chat and LLM chat with 60s timeout; wiki search via backend API; chat session CRUD with localStorage-to-PostgreSQL migration; web search is a stub (not yet implemented on backend).
+
+## [2026-05-14] ingest | Shared LLM Module (tools/shared/llm.py)
+
+Added source. Key claims: central LLM config/calling utility with J.A.R.V.I.S. persona, per-model circuit breaker (LLMCircuitBreaker), daily budget tracker (LLMBudgetTracker), error classifier (LLMErrorClassifier), and call_llm with exponential backoff retry. State persisted to JSON files in state/ directory. Created entity pages: LLMCircuitBreaker, LLMBudgetTracker, LLMErrorClassifier, LLMUnavailableError, LLMModelCost. Created concept pages: CircuitBreakerPattern, BudgetTracking. Created code pages: call_llm, LLMErrorClassifier, LLMCircuitBreaker, LLMBudgetTracker, LLMUnavailableError, LLMModelCost.
+
+## [2026-05-14] ingest | Health Tool (health.py) — Structural Health Checker
+
+Added source. Key claims: deterministic structural health checker with zero LLM calls; performs empty/stub file detection, index sync validation, broken link checking, and log coverage analysis; supports auto-fix mode (`--fix`) and JSON output (`--json`); designed as pre-flight check before every ingest session.
+
+## [2026-05-14] ingest | TypeScript/JavaScript Code Parser (typescript_parser.py) — Tree-sitter Based AST Extractor
+
+Added source. Key claims: tree-sitter based TypeScript and JavaScript AST extractor paired with [[PythonParser]] in the code graph extraction framework. [[TypeScriptParser]] handles .ts/.tsx with arrow function promotion; [[JavaScriptParser]] handles .js/.jsx. Both produce code_module, code_class, code_func nodes and IMPORTS, CONTAINS, INHERITS edges. Registered via [[CodeGraphRegistry]] as siblings to the existing [[PythonParser]].
+
+## [2026-05-14] ingest | Python Code Parser (python_parser.py) — Tree-sitter Based Python AST Extractor
+
+Added source. Key claims: Implements CodeParser for .py files using TreeSitter; produces module/class/function nodes with IMPORTS, CONTAINS, INHERITS edges; supports decorated definitions and nested class bodies; registers via CodeGraphRegistry.
+
+## [2026-05-14] ingest | Query Tool (query.py)
+
+Added source page for `tools/query.py`. Key claims: natural language wiki interface with CJK-aware page relevance, graph-based context expansion, agent memory injection, atomic file writes, and optional synthesis saving.
+
+## [2026-05-14] ingest | Code Graph Builder (builder.py) — High-Level Code Graph Construction
+
+Added source. Key claims: Directory scanning with exclusion/size limits; full build with node/edge deduplication; incremental build with SHA256 hash-based change detection; deleted file handling in incremental mode; save function writes graph.json-compatible output.
+
+## [2026-05-14] ingest | Build Graph Tool (build_graph.py) — Knowledge Graph Builder
+
+Added source documenting the two-pass knowledge graph builder with Louvain/Leiden community detection, SHA256-cached incremental builds, interactive vis.js visualization, and graph health reports. Created entity pages for [[Louvain]], [[Leiden]], [[Leidenalg]], [[NetworkX]], [[IGraph]], [[VisJS]], [[CommunityDetection]], [[GraphHTML]], [[GraphJSON]], [[GraphHealthReport]]. Created concept pages for [[GraphInference]], [[ExtractedEdge]], [[InferredEdge]], [[AmbiguousEdge]], [[TwoPassGraphBuild]], [[GraphHealthReport]], [[SHA256GraphCache]], [[IncrementalGraphBuild]]. Created code pages for [[BuildGraphMain]] and [[GenerateReport]]. Updated overview to include Domain 4 (LLM Wiki Tool Infrastructure).
+
+## [2026-05-14] ingest | API Server (api_server.py) — FastAPI Backend for LLM Wiki Viewer
+
+Added source. Key claims: FastAPI server serving wiki content/search/graph/chat/upload/webhook endpoints; J.A.R.V.I.S. persona for chat; page cache with TTL; whitelisted tool execution; WebSocket progress streaming; SPA static file serving.
+
+## [2026-05-14] ingest | Ingest Tool (ingest.py) — Source Document Processing Engine
+
+Added source. Key claims: auto-converts 20+ formats via markitdown; processes code files with AST extraction; supports batch/resume/incremental/validate-only modes; atomic file writes for data safety; post-ingest validation of wikilinks and index coverage.
+
+## [2026-05-14] ingest | Code Graph Extraction Base Protocol
+
+Added source. Key claims: defines CodeNode/CodeEdge dataclasses and CodeParser protocol for language-agnostic code graph extraction. Created concept pages for CodeParser, CodeNode, CodeEdge.
+
 ## [2026-05-13] lint | Wiki health check
 
 Ran lint. See lint-report.md for details.
@@ -562,7 +798,7 @@ Auto-ingested from https://finance.sina.com.cn/stock/
 
 ## [2026-05-12] auto-ingest | Things we learned about LLMs in 2024
 
-Auto-ingested from fetched content → [[Things we learned about LLMs in 2024|sources/things-we-learned-about-llms-in-2024-1]]. Quality: C.
+Auto-ingested from fetched content → [[things-we-learned-about-llms-in-2024|sources/things-we-learned-about-llms-in-2024-1]]. Quality: C.
 
 ## [2026-05-12] auto-ingest | 新浪新闻
 
@@ -602,15 +838,15 @@ Auto-ingested from fetched content → [[焦点|sources/article-e0096f]]. Qualit
 
 ## [2026-05-12] auto-ingest | Untitled
 
-Auto-ingested from fetched content → [[Untitled|sources/untitled]]. Quality: A.
+Auto-ingested from fetched content → [[untitled|sources/untitled]]. Quality: A.
 
 ## [2026-05-12] auto-ingest | Untitled
 
-Auto-ingested from fetched content → [[Untitled|sources/untitled-1]]. Quality: A.
+Auto-ingested from fetched content → [[untitled|sources/untitled-1]]. Quality: A.
 
 ## [2026-05-12] auto-ingest | Untitled
 
-Auto-ingested from fetched content → [[Untitled|sources/untitled-2]]. Quality: A.
+Auto-ingested from fetched content → [[untitled|sources/untitled-2]]. Quality: A.
 ## [2026-05-12] graph | Knowledge graph rebuilt
 
 303 nodes, 2322 edges (1268 extracted, 1054 inferred).
@@ -625,7 +861,7 @@ Auto-ingested from fetched content → [[实战｜Tushare 量化数据接口入�
 
 ## [2026-05-12] auto-ingest | Untitled
 
-Auto-ingested from fetched content → [[Untitled|sources/untitled-3]]. Quality: A.
+Auto-ingested from fetched content → [[untitled|sources/untitled-3]]. Quality: A.
 ## [2026-05-12] graph | Knowledge graph rebuilt
 
 309 nodes, 2328 edges (1274 extracted, 1054 inferred).
@@ -805,3 +1041,21 @@ Ingested from raw/untitled-3.md
 
 ## [2026-05-13] ingest | untitled
 Ingested from raw/untitled.md
+
+## [2026-05-14]
+
+## [2026-05-14] graph | Knowledge graph rebuilt
+
+301 nodes, 1425 edges (1425 extracted, 0 inferred).
+## [2026-05-14] ingest | Test Ingest Script
+
+Added source. Key claims: works.
+## [2026-05-14] graph | Knowledge graph rebuilt
+
+2558 nodes, 4932 edges (2926 extracted, 0 inferred).
+## [2026-05-14] heal | Auto-healed missing entities
+
+Created entity pages for: useAgentChat, StateManagement, pgvector, BatchCompiler, BatchIngest, BuildGraphTool, IngestTool, SQLite, LLMWiki Viewer, FastAPI, Litellm, LLM, Lucide, LLMWikiViewer, ChatHistory, MCP, generateFromKnowledge, Skill, RefreshCcw, AlertTriangle, Home, graph.json, FramerMotion, PageName, wikilinks, SUPPORTED_LANGUAGES, AppleSelect, database.yaml, IngestProgress, ScrollToTop, ToastContainer, AlertBanner, searchWeb, FileUtils, useWikiStore, useCountUp, useEffect, React, AgentKit, saveAgentKitFile, RequestAnimationFrame, useState, Map, useRef, Header Component — Wiki Viewer Navigation Bar, wikilink, useJarvisMood, useSpeechSynthesis, Loader2.
+## [2026-05-14] graph | Knowledge graph rebuilt
+
+2612 nodes, 5397 edges (3391 extracted, 0 inferred).

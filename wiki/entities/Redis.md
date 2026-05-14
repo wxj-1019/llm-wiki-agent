@@ -19,7 +19,7 @@ last_updated: 2026-05-12
 - **AI 请求优化**：[[AIRequestOptimizer]] 通过 Redis 缓存 LLM 响应，减少重复 API 调用
 
 ### 任务队列
-- **回测任务队列**：[[BacktestEngine]] 使用 Redis Hash/List 存储异步回测任务，最大并发 3 个，7 天 TTL
+- **回测任务队列**：[[backtest-engine]] 使用 Redis Hash/List 存储异步回测任务，最大并发 3 个，7 天 TTL
 - **定时任务调度**：[[APScheduler]] 通过 Redis 管理调度状态和任务锁
 
 ### 认证与安全

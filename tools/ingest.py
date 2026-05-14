@@ -151,7 +151,9 @@ CONVERTIBLE_EXTENSIONS = {
     ".yaml", ".yml", ".tsv",
     ".wav", ".mp3",  # audio transcription via markitdown
 }
-ALL_SUPPORTED_EXTENSIONS = {".md"} | CONVERTIBLE_EXTENSIONS
+# Code files are ingested as plain text (no conversion) with optional AST analysis.
+CODE_EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".jsx"}
+ALL_SUPPORTED_EXTENSIONS = {".md"} | CONVERTIBLE_EXTENSIONS | CODE_EXTENSIONS
 SCHEMA_FILE = REPO_ROOT / "CLAUDE.md"
 
 
@@ -259,6 +261,93 @@ def build_wiki_context(max_page_chars: int = 2000) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+def _extract_code_ast_summary(file_path: Path, repo_root: Path) -> str:
+    """Extract a human-readable AST summary from a code file for LLM context.
+
+    Returns empty string if tree-sitter is unavailable or parsing fails.
+    """
+    try:
+        from tools.shared.code_graph.registry import get_parser
+    except ImportError:
+        return ""
+
+    # Ensure absolute path so relative_to works in parsers
+    file_path = file_path.resolve()
+    repo_root = repo_root.resolve()
+
+    parser = get_parser(str(file_path))
+    if not parser:
+        return ""
+
+    try:
+        nodes, edges = parser.parse(file_path, repo_root)
+    except Exception as exc:
+        logger.warning("Code AST parse failed | file=%s error=%s", file_path.name, exc)
+        return ""
+
+    module = None
+    classes: list[dict] = []
+    functions: list[dict] = []
+    imports: list[str] = []
+    inherits: dict[str, list[str]] = {}
+    contains: dict[str, list[str]] = {}
+
+    for n in nodes:
+        t = n.type if hasattr(n, "type") else n.get("type")
+        if t == "code_module":
+            module = n.to_dict() if hasattr(n, "to_dict") else n
+        elif t == "code_class":
+            classes.append(n.to_dict() if hasattr(n, "to_dict") else n)
+        elif t == "code_func":
+            functions.append(n.to_dict() if hasattr(n, "to_dict") else n)
+
+    seen_imports: set[str] = set()
+    for e in edges:
+        et = e.edge_type if hasattr(e, "edge_type") else e.get("type")
+        target = e.target if hasattr(e, "target") else e.get("to")
+        source_id = e.source if hasattr(e, "source") else e.get("from")
+        if et == "IMPORTS":
+            if target and target not in seen_imports:
+                seen_imports.add(target)
+                imports.append(target)
+        elif et == "INHERITS":
+            inherits.setdefault(source_id, []).append(target)
+        elif et == "CONTAINS":
+            contains.setdefault(source_id, []).append(target)
+
+    lines: list[str] = []
+    if module:
+        label = module.get("label", "?")
+        lang = module.get("language", "?")
+        lines.append(f"- Module: `{label}` ({lang})")
+
+    if classes:
+        lines.append("- Classes:")
+        for c in classes:
+            label = c.get("label", "?")
+            line_start = c.get("line_start", "?")
+            cls_id = c.get("id", "")
+            extra = ""
+            if cls_id in inherits:
+                bases = [b.split("#")[-1] for b in inherits[cls_id]]
+                extra = f" inherits {', '.join(f'`{b}`' for b in bases)}"
+            lines.append(f"  - `{label}` (line {line_start}){extra}")
+
+    if functions:
+        lines.append("- Functions:")
+        for f in functions:
+            label = f.get("label", "?")
+            line_start = f.get("line_start", "?")
+            lines.append(f"  - `{label}` (line {line_start})")
+
+    if imports:
+        lines.append("- Imports:")
+        for i in imports:
+            lines.append(f"  - `{i}`")
+
+    return "\n".join(lines) if lines else ""
+
+
 def parse_json_from_response(text: str) -> dict:
     text = re.sub(r"^```(?:json)?\s*", "", text.strip())
     text = re.sub(r"\s*```$", "", text.strip())
@@ -296,7 +385,7 @@ def parse_json_from_response(text: str) -> dict:
 def update_index(new_entry: str, section: str = "Sources"):
     content = read_file(INDEX_FILE)
     if not content:
-        content = "# Wiki Index\n\n## Overview\n- [Overview](overview.md) — living synthesis\n\n## Sources\n\n## Entities\n\n## Concepts\n\n## Syntheses\n"
+        content = "# Wiki Index\n\n## Overview\n- [Overview](overview.md) — living synthesis\n\n## Sources\n\n## Entities\n\n## Concepts\n\n## Code\n\n## Syntheses\n"
     # Deduplication: skip if exact line already present
     if new_entry.strip() in content:
         return
@@ -477,9 +566,10 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
         print(f"Error: file not found: {source_path}")
         raise IngestError(f"File not found: {source_path}")
 
-    # Auto-convert non-markdown files
+    # Auto-convert non-markdown files (skip conversion for code files)
     converted_path = None
-    if source.suffix.lower() != ".md":
+    is_code = source.suffix.lower() in CODE_EXTENSIONS
+    if source.suffix.lower() != ".md" and not is_code:
         if not auto_convert:
             print(f"  Skipping non-.md file (--no-convert): {source.name}")
             return {"success": False, "error": f"Skipped non-.md file: {source.name}"}
@@ -509,8 +599,28 @@ def ingest(source_path: str, auto_convert: bool = True, checkpoint: dict | None 
 
     source_content = source.read_text(encoding="utf-8")
 
+    # Extract AST summary for code files (best-effort, graceful fallback)
+    code_context = ""
+    if is_code:
+        code_context = _extract_code_ast_summary(source, REPO_ROOT)
+        if code_context:
+            print(f"  🔍 AST summary extracted ({len(code_context)} chars)")
+        # Smart truncation for large code files to keep prompt size reasonable
+        n_lines = source_content.count("\n")
+        if n_lines > 300:
+            lines = source_content.splitlines()
+            head = "\n".join(lines[:200])
+            tail = "\n".join(lines[-50:])
+            source_content = (
+                f"{head}\n\n"
+                f"[... {n_lines - 250} lines truncated; full AST structure summary provided above ...]\n\n"
+                f"{tail}"
+            )
+            print(f"  ✂️  Code truncated ({n_lines} → ~250 lines) to fit prompt budget")
+
     print(f"\nIngesting: {source.name}  (hash: {source_hash})")
-    logger.info("Ingest start | file=%s hash=%s source_chars=%d", source.name, source_hash, len(source_content))
+    logger.info("Ingest start | file=%s hash=%s source_chars=%d code_ast=%s",
+                source.name, source_hash, len(source_content), bool(code_context))
 
     wiki_context = build_wiki_context()
     schema = read_file(SCHEMA_FILE)
@@ -531,6 +641,7 @@ New source to ingest (file: {source.relative_to(REPO_ROOT) if source.is_relative
 {source_content}
 === SOURCE END ===
 
+{f"Code structure analysis (AST):\n{code_context}\n" if code_context else ""}
 Today's date: {today}
 
 Return ONLY a valid JSON object with these fields (no markdown fences, no prose outside the JSON):
@@ -554,6 +665,9 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
   ],
   "concept_pages": [
     {{"path": "concepts/ConceptName.md", "content": "full markdown content"}}
+  ],
+  "code_pages": [
+    {{"path": "code/ModuleOrClassName.md", "content": "full markdown content with YAML frontmatter (type: code_module|code_class|code_func). Use this ONLY for source code files to document notable modules, classes, or public functions. Include signature, purpose, parameters/returns, and wikilinks to related code/entity/concept pages."}}
   ],
   "contradictions": ["describe any contradiction with existing wiki content, or empty list"],
   "log_entry": "## [{today}] ingest | <title>\\n\\nAdded source. Key claims: ..."
@@ -630,6 +744,17 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
         update_index(entry, section="Concepts")
         logger.debug("Concept page written | path=%s title=%s", page_path.relative_to(WIKI_DIR), title)
 
+    code_pages = data.get("code_pages", [])
+    if code_pages:
+        logger.info("Code pages returned | count=%d", len(code_pages))
+    for page in code_pages:
+        page_path = sanitize_wiki_path(page["path"], WIKI_DIR)
+        write_file(page_path, page["content"])
+        title = _extract_title_from_content(page["content"], page_path.stem)
+        entry = f"- [{title}]({page_path.relative_to(WIKI_DIR).as_posix()}) — auto-created code page"
+        update_index(entry, section="Code")
+        logger.debug("Code page written | path=%s title=%s", page_path.relative_to(WIKI_DIR), title)
+
     if data.get("overview_update"):
         write_file(OVERVIEW_FILE, data["overview_update"])
         logger.info("Overview updated")
@@ -649,6 +774,8 @@ CRITICAL NAMING RULES — violations cause broken links and unindexed pages:
     for page in data.get("entity_pages", []):
         created_pages.append(page["path"])
     for page in data.get("concept_pages", []):
+        created_pages.append(page["path"])
+    for page in data.get("code_pages", []):
         created_pages.append(page["path"])
     updated_pages = ["index.md", "log.md"]
     if data.get("overview_update"):
@@ -756,6 +883,7 @@ if __name__ == "__main__":
         print("       python tools/ingest.py --resume       # skip previously successful files")
         print("       python tools/ingest.py --incremental  # skip unchanged files (hash-based)")
         print(f"\nSupported formats: {', '.join(sorted(ALL_SUPPORTED_EXTENSIONS))}")
+        print("       Code files are ingested as plain text with optional AST analysis.")
         sys.exit(1)
 
     resume = "--resume" in sys.argv

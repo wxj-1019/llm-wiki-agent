@@ -40,3 +40,9 @@ pymupdf4llm>=0.1.0
 
 # JS rendering for web_fetcher.py SPA/JS-heavy pages
 playwright>=1.40.0
+
+# Code AST analysis (optional — enables code-to-wiki ingestion)
+tree-sitter>=0.25.0
+tree-sitter-python>=0.25.0
+tree-sitter-typescript>=0.23.0
+tree-sitter-javascript>=0.25.0

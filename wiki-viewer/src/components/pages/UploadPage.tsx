@@ -633,7 +633,7 @@ export function UploadPage() {
         multiple
         className="hidden"
         onChange={handleFileInput}
-        accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.html,.csv,.json,.xml,.rst,.rtf,.epub,.ipynb,.yaml,.yml,.tsv,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg"
+        accept=".md,.txt,.pdf,.docx,.pptx,.xlsx,.html,.csv,.json,.xml,.rst,.rtf,.epub,.ipynb,.yaml,.yml,.tsv,.png,.jpg,.jpeg,.gif,.webp,.bmp,.svg,.py,.js,.ts,.tsx,.jsx"
       />
 
       {/* Preview Panel */}

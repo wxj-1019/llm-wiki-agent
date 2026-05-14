@@ -27,6 +27,8 @@ class CodeNode:
             "type": self.type,
             "path": self.path,
             "language": self.language,
+            "line_start": self.line_start,
+            "line_end": self.line_end,
         }
         if self.parent:
             d["parent"] = self.parent

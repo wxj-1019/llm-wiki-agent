@@ -1,0 +1,10 @@
+---
+title: "BuildGraphTool"
+type: entity
+tags: [graph, tool, build, knowledge-graph]
+sources: [overview.md, AutoIngestModule.md, GenerateReport.md, RefreshToolRefreshPy.md, WikiWatcher.md, auto-ingest-pipeline-auto-ingest-py.md, build-graph-tool-knowledge-graph-builder.md, refresh-tool-stale-source-page-refresher.md, wiki-watcher-file-system-watcher.md]
+---
+
+# BuildGraphTool
+
+`BuildGraphTool` (implemented as `build_graph.py`) is the knowledge graph generation engine for the Personal LLM Wiki. It performs a two-pass graph construction: a **first pass** that parses all explicit `[[wikilinks]]` from wiki source pages to produce `EXTRACTED` edges, and a **second pass** that uses LLM inference to detect implicit semantic relationships, generating `INFERRED` edges with associated confidence scores. The tool supports Louvain or Leiden community detection algorithms, produces an interactive vis.js HTML visualization of the resulting graph, and can optionally incorporate project source code files for a more complete picture of project structure. It features incremental rebuild via SHA256-based caching to avoid redundant work, checkpoint resume for the LLM inference pass (critical for large wikis), and a comprehensive graph health report that identifies orphan nodes, god nodes, fragile bridges, and phantom hubs. Several automation components integrate with `BuildGraphTool`: the `auto_ingest` module optionally triggers a graph rebuild after ingesting new content, the `watcher` daemon can automatically rebuild the graph when source code or wiki files change, and the `refresh` tool's stale-page detection pipeline may also initiate rebuilds to keep the knowledge graph current. The graph output is stored in the `graph/` directory and is referenced by the wiki's search backend and overview synthesis.

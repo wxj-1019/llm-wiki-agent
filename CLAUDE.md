@@ -106,7 +106,7 @@ All scripts in `tools/` are standalone and require `litellm` (and optionally `ma
 
 | Script | Purpose | LLM Calls? | Usage |
 |---|---|---|---|
-| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files; supports batch, `--no-convert`, `--validate-only` |
+| `ingest.py` | Ingest source documents into wiki | Yes | `python tools/ingest.py <path>` — auto-converts non-.md files; **code files** (`.py`, `.ts`, `.tsx`, `.js`, `.jsx`) ingested as plain text with AST analysis; supports batch, `--no-convert`, `--validate-only` |
 | `query.py` | Query wiki and synthesize answers | Yes | `python tools/query.py "<question>" [--save [<path>]]` |
 | `lint.py` | Content quality checks | Yes (semantic) | `python tools/lint.py [--save]` — orphans, broken links, contradictions, missing entities, sparse pages, data gaps |
 | `health.py` | Structural integrity checks | **No** | `python tools/health.py [--save] [--json]` — empty stubs, index sync, log coverage |
@@ -365,7 +365,7 @@ Every wiki page uses this frontmatter:
 ```yaml
 ---
 title: "Page Title"
-type: source | entity | concept | synthesis
+type: source | entity | concept | synthesis | code_module | code_class | code_func
 tags: []
 sources: []       # list of source slugs that inform this page
 last_updated: YYYY-MM-DD
@@ -380,7 +380,7 @@ Use `[[PageName]]` wikilinks to link to other wiki pages.
 
 Triggered by: *"ingest <file>"* or `/wiki-ingest`
 
-**Supported formats:** Markdown (`.md`) ingested directly. Non-markdown files (`.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.txt`, `.csv`, `.json`, `.xml`, `.rst`, `.rtf`, `.epub`, `.ipynb`, `.yaml`, `.yml`, `.tsv`, `.wav`, `.mp3`) auto-converted to markdown via [markitdown](https://github.com/microsoft/markitdown) before ingestion. Use `--no-convert` to skip auto-conversion.
+**Supported formats:** Markdown (`.md`) ingested directly. Non-markdown files (`.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.txt`, `.csv`, `.json`, `.xml`, `.rst`, `.rtf`, `.epub`, `.ipynb`, `.yaml`, `.yml`, `.tsv`, `.wav`, `.mp3`) auto-converted to markdown via [markitdown](https://github.com/microsoft/markitdown) before ingestion. **Code files** (`.py`, `.js`, `.ts`, `.tsx`, `.jsx`) ingested as plain text with automatic AST extraction (requires `tree-sitter`). Use `--no-convert` to skip auto-conversion.
 
 Steps (in order):
 1. Read the source document fully using the Read tool (auto-convert if non-markdown)

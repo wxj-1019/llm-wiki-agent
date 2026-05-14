@@ -25,6 +25,12 @@ dependencies = [
 [project.optional-dependencies]
 browser = ["playwright (>=1.40.0,<2.0.0)"]
 pdf = ["pymupdf4llm"]
+code = [
+    "tree-sitter (>=0.25.0,<0.30.0)",
+    "tree-sitter-python (>=0.25.0,<0.30.0)",
+    "tree-sitter-typescript (>=0.23.0,<0.30.0)",
+    "tree-sitter-javascript (>=0.25.0,<0.30.0)",
+]
 
 [tool.poetry]
 package-mode = false
